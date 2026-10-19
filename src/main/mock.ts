@@ -1,7 +1,8 @@
 import type { NotePromptInput } from './llm'
 import type { TranscriptSegment } from '../shared/types'
 
-export const demoMode = process.env.AULA_MOCK_AI === '1'
+export const demoMode =
+  (process.env.EZNOTES_MOCK_AI ?? process.env.AULA_MOCK_AI) === '1'
 
 const LIVE_LINES = [
   'Bom dia. Hoje vamos começar com a definição de derivada.',

@@ -1,6 +1,6 @@
 {
-  "name": "aula",
-  "version": "0.1.2",
+  "name": "eznotes",
+  "version": "0.2.0",
   "description": "Lecture notes that listen, filter, and structure themselves.",
   "main": "./out/main/index.js",
   "author": "Rafal",
@@ -38,8 +38,8 @@
     "vite": "^8.3.4"
   },
   "build": {
-    "appId": "app.aula.notes",
-    "productName": "Aula",
+    "appId": "app.eznotes",
+    "productName": "ezNotes",
     "directories": {
       "output": "release"
     },

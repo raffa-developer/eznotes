@@ -57,22 +57,22 @@ export function AppProvider({ children }: { children: ReactNode }): React.JSX.El
   const toastId = useRef(1)
 
   const refreshSettings = useCallback(async () => {
-    const next = await window.aula.settings.get()
+    const next = await window.ezNotes.settings.get()
     setSettings(next)
   }, [])
 
   const refreshSchedule = useCallback(async () => {
-    const next = await window.aula.schedule.get()
+    const next = await window.ezNotes.schedule.get()
     setSchedule(next)
   }, [])
 
   const refreshNotes = useCallback(async () => {
-    const next = await window.aula.notes.list()
+    const next = await window.ezNotes.notes.list()
     setNotes(next)
   }, [])
 
   const refreshUpcoming = useCallback(async () => {
-    const next = await window.aula.schedule.upcoming()
+    const next = await window.ezNotes.schedule.upcoming()
     setUpcoming(next)
   }, [])
 
@@ -91,11 +91,11 @@ export function AppProvider({ children }: { children: ReactNode }): React.JSX.El
   useEffect(() => {
     let mounted = true
     Promise.all([
-      window.aula.settings.get(),
-      window.aula.schedule.get(),
-      window.aula.schedule.upcoming(),
-      window.aula.notes.list(),
-      window.aula.recording.state()
+      window.ezNotes.settings.get(),
+      window.ezNotes.schedule.get(),
+      window.ezNotes.schedule.upcoming(),
+      window.ezNotes.notes.list(),
+      window.ezNotes.recording.state()
     ])
       .then(([nextSettings, nextSchedule, nextUpcoming, nextNotes, nextRecording]) => {
         if (!mounted) return
@@ -112,14 +112,14 @@ export function AppProvider({ children }: { children: ReactNode }): React.JSX.El
         if (mounted) setLoading(false)
       })
 
-    const unsubscribe = window.aula.recording.onEvent((event) => {
+    const unsubscribe = window.ezNotes.recording.onEvent((event) => {
       if (event.type === 'state') setRecording(event.snapshot)
       if (event.type === 'level') setLevel(event.level)
       if (event.type === 'notice') toast(event.message, event.level)
     })
 
     const interval = window.setInterval(() => {
-      void window.aula.schedule.upcoming().then(setUpcoming)
+      void window.ezNotes.schedule.upcoming().then(setUpcoming)
     }, 60_000)
 
     return () => {

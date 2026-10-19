@@ -29,9 +29,9 @@ export default function AppShell(): React.JSX.Element {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <button className="brand" onClick={() => navigate('/')} aria-label="Aula home">
+        <button className="brand" onClick={() => navigate('/')} aria-label="ezNotes home">
           <span className="brand-mark" />
-          <span className="brand-name">aula</span>
+          <span className="brand-name">ezNotes</span>
           <span className="brand-tag">notes</span>
         </button>
 
@@ -88,14 +88,14 @@ export default function AppShell(): React.JSX.Element {
 
         <button
           className="sidebar-folder"
-          onClick={() => void window.aula.notes.openFolder()}
+          onClick={() => void window.ezNotes.notes.openFolder()}
         >
           <FolderOpen size={15} />
           <span>Notes folder</span>
         </button>
 
         <div className="sidebar-foot">
-          <span>Aula {settings?.appVersion ?? ''}</span>
+          <span>ezNotes {settings?.appVersion ?? ''}</span>
           <span className="sidebar-foot-dot" />
           <span>local-first</span>
         </div>

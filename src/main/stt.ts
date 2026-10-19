@@ -5,7 +5,9 @@ import { pcmToWav, readPcmRange, readWavInfo, SAMPLE_RATE, wavHeader } from './w
 import { demoMode, mockFileTranscript, mockLiveTranscript } from './mock'
 
 const GROQ_BASE =
-  process.env.AULA_GROQ_BASE_URL ?? 'https://api.groq.com/openai/v1'
+  process.env.EZNOTES_GROQ_BASE_URL ??
+  process.env.AULA_GROQ_BASE_URL ??
+  'https://api.groq.com/openai/v1'
 const MAX_CHUNK_BYTES = 15 * 1024 * 1024
 
 export interface SttOptions {
@@ -59,7 +61,7 @@ async function requestTranscription(
       method: 'POST',
       headers: {
         Authorization: `Bearer ${options.apiKey}`,
-        'User-Agent': 'Aula/0.1'
+        'User-Agent': 'ezNotes/0.2.0'
       },
       body: form,
       signal: AbortSignal.timeout(300_000)
@@ -273,7 +275,7 @@ export async function testGroqKey(apiKey: string): Promise<TestResult> {
     const response = await fetch(`${GROQ_BASE}/models`, {
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        'User-Agent': 'Aula/0.1'
+        'User-Agent': 'ezNotes/0.2.0'
       },
       signal: AbortSignal.timeout(30_000)
     })

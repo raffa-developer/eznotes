@@ -12,8 +12,21 @@ interface NotesIndex {
   notes: NoteMeta[]
 }
 
+function notesMetaDir(notesDir: string): string {
+  const current = path.join(notesDir, '.eznotes')
+  const legacy = path.join(notesDir, '.aula')
+  if (!fs.existsSync(current) && fs.existsSync(legacy)) {
+    try {
+      fs.renameSync(legacy, current)
+    } catch {
+      // Keep using the legacy folder if it is locked.
+    }
+  }
+  return fs.existsSync(legacy) && !fs.existsSync(current) ? legacy : current
+}
+
 function indexFile(notesDir: string): string {
-  return path.join(notesDir, '.aula', 'index.json')
+  return path.join(notesMetaDir(notesDir), 'index.json')
 }
 
 export function noteRecordingDir(recordingId: string): string {
@@ -21,7 +34,7 @@ export function noteRecordingDir(recordingId: string): string {
 }
 
 export function noteTranscriptDir(notesDir: string): string {
-  return path.join(notesDir, '.aula', 'transcripts')
+  return path.join(notesMetaDir(notesDir), 'transcripts')
 }
 
 export function noteTranscriptPath(notesDir: string, noteId: string): string {

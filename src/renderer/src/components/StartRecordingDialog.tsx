@@ -33,7 +33,7 @@ export default function StartRecordingDialog({
     }
     setStarting(true)
     try {
-      await window.aula.recording.start({
+      await window.ezNotes.recording.start({
         courseId: course.id,
         courseName: course.name,
         title: title.trim() || undefined,
@@ -53,7 +53,7 @@ export default function StartRecordingDialog({
     <Modal
       open={open}
       title="Start a lecture"
-      subtitle="Aula will listen, transcribe, and write the notes."
+      subtitle="ezNotes will listen, transcribe, and write the notes."
       onClose={onClose}
       footer={
         <>
@@ -104,7 +104,7 @@ export default function StartRecordingDialog({
           </Field>
           <div className="dialog-note">
             <span className="pulse-dot" />
-            Recording uses your microphone. Aula asks about keeping the audio after class.
+            Recording uses your microphone. ezNotes asks about keeping the audio after class.
           </div>
         </div>
       )}

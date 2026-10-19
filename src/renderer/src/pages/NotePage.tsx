@@ -38,7 +38,7 @@ export default function NotePage(): React.JSX.Element {
   useEffect(() => {
     if (!id) return
     setLoading(true)
-    window.aula.notes
+    window.ezNotes.notes
       .get(id)
       .then((next) => setNote(next))
       .catch((error) => toast(error instanceof Error ? error.message : String(error), 'error'))
@@ -51,7 +51,7 @@ export default function NotePage(): React.JSX.Element {
     if (!note) return
     setRegenerating(true)
     try {
-      const updated = await window.aula.notes.regenerate(note.id)
+      const updated = await window.ezNotes.notes.regenerate(note.id)
       setNote(updated)
       await refreshNotes()
       toast('Notes regenerated from the same transcript.', 'success')
@@ -66,7 +66,7 @@ export default function NotePage(): React.JSX.Element {
     if (!note) return
     setDeleting(true)
     try {
-      await window.aula.notes.delete(note.id)
+      await window.ezNotes.notes.delete(note.id)
       await refreshNotes()
       toast('Note deleted.', 'success')
       navigate('/library')
@@ -80,7 +80,7 @@ export default function NotePage(): React.JSX.Element {
     if (!note) return
     setDeletingAudio(true)
     try {
-      const updated = await window.aula.notes.deleteAudio(note.id)
+      const updated = await window.ezNotes.notes.deleteAudio(note.id)
       setNote(updated)
       await refreshNotes()
       setAudioOpen(false)
@@ -112,7 +112,7 @@ export default function NotePage(): React.JSX.Element {
         <EmptyState
           icon={<FileText size={24} />}
           title="Note not found"
-          body="It may have been moved or deleted outside Aula."
+          body="It may have been moved or deleted outside ezNotes."
           action={
             <Button variant="outline" onClick={() => navigate('/library')}>
               Back to library
@@ -134,7 +134,7 @@ export default function NotePage(): React.JSX.Element {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => void window.aula.notes.reveal(note.id)}
+              onClick={() => void window.ezNotes.notes.reveal(note.id)}
             >
               <FolderOpen size={15} />
               Reveal file
@@ -216,7 +216,7 @@ export default function NotePage(): React.JSX.Element {
                     onClick={(event) => {
                       event.preventDefault()
                       if (href && /^https?:\/\//.test(href)) {
-                        void window.aula.app.openExternal(href)
+                        void window.ezNotes.app.openExternal(href)
                       }
                     }}
                   >
@@ -244,10 +244,10 @@ export default function NotePage(): React.JSX.Element {
               </div>
               <audio
                 ref={audioRef}
-                data-aula-audio
+                data-eznotes-audio
                 controls
                 preload="metadata"
-                src={`aula://audio/${note.recordingId}`}
+                src={`eznotes://audio/${note.recordingId}`}
               />
               <div className="audio-actions">
                 <Button

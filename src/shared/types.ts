@@ -188,7 +188,7 @@ export interface LlmMessage {
   content: string
 }
 
-export interface AulaApi {
+export interface EzNotesApi {
   app: {
     info: () => Promise<AppInfo>
     openExternal: (url: string) => Promise<void>

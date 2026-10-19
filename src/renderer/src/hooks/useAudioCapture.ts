@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useApp } from '../state/AppContext'
 
 const WORKLET_SOURCE = `
-class AulaCaptureProcessor extends AudioWorkletProcessor {
+class EzNotesCaptureProcessor extends AudioWorkletProcessor {
   constructor() {
     super()
     this.buffer = new Float32Array(2048)
@@ -25,7 +25,7 @@ class AulaCaptureProcessor extends AudioWorkletProcessor {
     return true
   }
 }
-registerProcessor('aula-capture', AulaCaptureProcessor)
+registerProcessor('eznotes-capture', EzNotesCaptureProcessor)
 `
 
 export function useAudioCapture(): void {
@@ -122,7 +122,7 @@ export function useAudioCapture(): void {
     }
 
     const source = context.createMediaStreamSource(stream)
-    const node = new AudioWorkletNode(context, 'aula-capture')
+    const node = new AudioWorkletNode(context, 'eznotes-capture')
     const gain = context.createGain()
     gain.gain.value = 0
     source.connect(node)
@@ -137,7 +137,7 @@ export function useAudioCapture(): void {
         outputRate === 16000
           ? new Uint8Array(event.data).buffer
           : new Uint8Array(resample(samples, outputRate, 16000)).buffer
-      window.aula.recording.sendAudio(buffer)
+      window.ezNotes.recording.sendAudio(buffer)
     }
 
     streamRef.current = stream

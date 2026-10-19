@@ -73,7 +73,76 @@ export function defaultSettings(): Settings {
     ...DEFAULT_SETTINGS,
     stt: { ...DEFAULT_SETTINGS.stt },
     llm: { ...DEFAULT_SETTINGS.llm },
-    notesDir: path.join(app.getPath('documents'), 'Aula')
+    notesDir: path.join(app.getPath('documents'), 'ezNotes')
+  }
+}
+
+function migrateNotesDirectory(settings: Settings): boolean {
+  const documents = app.getPath('documents')
+  const legacy = path.join(documents, 'Aula')
+  const current = path.join(documents, 'ezNotes')
+  let changed = false
+
+  if (path.resolve(settings.notesDir) === path.resolve(legacy)) {
+    if (!fs.existsSync(current) && fs.existsSync(legacy)) {
+      try {
+        fs.renameSync(legacy, current)
+      } catch {
+        return false
+      }
+    }
+    if (!fs.existsSync(current)) {
+      try {
+        fs.mkdirSync(current, { recursive: true })
+      } catch {
+        return false
+      }
+    }
+    if (path.resolve(settings.notesDir) !== path.resolve(current)) {
+      settings.notesDir = current
+      changed = true
+    }
+    migrateMetaFolder(current, legacy)
+  } else {
+    migrateMetaFolder(settings.notesDir, settings.notesDir)
+  }
+
+  return changed
+}
+
+function migrateMetaFolder(notesDir: string, legacyRoot: string): void {
+  const legacyMeta = path.join(notesDir, '.aula')
+  const currentMeta = path.join(notesDir, '.eznotes')
+
+  if (!fs.existsSync(currentMeta) && fs.existsSync(legacyMeta)) {
+    try {
+      fs.renameSync(legacyMeta, currentMeta)
+    } catch {
+      // Fall back to the legacy folder if it is locked.
+    }
+  }
+
+  const meta = fs.existsSync(currentMeta) ? currentMeta : legacyMeta
+  const index = path.join(meta, 'index.json')
+  if (!fs.existsSync(index)) return
+
+  try {
+    const data = JSON.parse(fs.readFileSync(index, 'utf8')) as {
+      notes?: Array<{ path?: string }>
+    }
+    if (!Array.isArray(data.notes)) return
+
+    let changed = false
+    data.notes = data.notes.map((note) => {
+      if (typeof note.path !== 'string') return note
+      const next = note.path.replace(legacyRoot, notesDir)
+      if (next === note.path) return note
+      changed = true
+      return { ...note, path: next }
+    })
+    if (changed) fs.writeFileSync(index, `${JSON.stringify(data, null, 2)}\n`)
+  } catch {
+    // The library can rebuild its index from the Markdown files.
   }
 }
 
@@ -88,6 +157,7 @@ export function loadSettings(): Settings {
   }
 
   if (!settings.notesDir) settings.notesDir = defaults.notesDir
+  const notesMoved = migrateNotesDirectory(settings)
   settings.retentionDays = clamp(Number(settings.retentionDays) || 30, 1, 365)
   settings.notifyBeforeMinutes = clamp(
     Number(settings.notifyBeforeMinutes) || 5,
@@ -95,6 +165,7 @@ export function loadSettings(): Settings {
     120
   )
 
+  if (notesMoved) writeJson(settingsFile(), settings)
   ensureDir(settings.notesDir)
   return settings
 }

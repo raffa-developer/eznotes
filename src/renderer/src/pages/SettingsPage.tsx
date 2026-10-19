@@ -116,7 +116,7 @@ export default function SettingsPage(): React.JSX.Element {
     if (!settings) return
     setSaving(true)
     try {
-      await window.aula.settings.update({
+      await window.ezNotes.settings.update({
         stt: { provider: settings.settings.stt.provider, model: sttModel, language },
         llm: { provider, baseURL, model },
         retentionDays: retention,
@@ -140,7 +140,7 @@ export default function SettingsPage(): React.JSX.Element {
       return
     }
     try {
-      await window.aula.settings.setSecret(key, value.trim())
+      await window.ezNotes.settings.setSecret(key, value.trim())
       setGroqKey('')
       setLlmKey('')
       await refreshSettings()
@@ -152,7 +152,7 @@ export default function SettingsPage(): React.JSX.Element {
 
   async function clearKey(key: 'groqApiKey' | 'llmApiKey'): Promise<void> {
     try {
-      await window.aula.settings.clearSecret(key)
+      await window.ezNotes.settings.clearSecret(key)
       await refreshSettings()
       toast('Key removed.', 'success')
     } catch (error) {
@@ -165,8 +165,8 @@ export default function SettingsPage(): React.JSX.Element {
     try {
       const result =
         key === 'stt'
-          ? await window.aula.settings.testStt()
-          : await window.aula.settings.testLlm()
+          ? await window.ezNotes.settings.testStt()
+          : await window.ezNotes.settings.testLlm()
       setTestResult((current) => ({ ...current, [key]: result }))
       toast(result.message, result.ok ? 'success' : 'error')
     } finally {
@@ -175,7 +175,7 @@ export default function SettingsPage(): React.JSX.Element {
   }
 
   async function chooseFolder(): Promise<void> {
-    const next = await window.aula.settings.chooseNotesDir()
+    const next = await window.ezNotes.settings.chooseNotesDir()
     await refreshSettings()
     toast(`Notes folder: ${next.notesDir}`, 'success')
   }
@@ -183,7 +183,7 @@ export default function SettingsPage(): React.JSX.Element {
   async function changeTheme(next: Theme): Promise<void> {
     setTheme(next)
     try {
-      await window.aula.settings.update({ theme: next })
+      await window.ezNotes.settings.update({ theme: next })
       await refreshSettings()
     } catch (error) {
       toast(error instanceof Error ? error.message : String(error), 'error')
@@ -257,7 +257,7 @@ export default function SettingsPage(): React.JSX.Element {
                 Encrypted with Windows DPAPI. Get a key at{' '}
                 <button
                   className="inline-link"
-                  onClick={() => void window.aula.app.openExternal('https://console.groq.com/keys')}
+                  onClick={() => void window.ezNotes.app.openExternal('https://console.groq.com/keys')}
                 >
                   console.groq.com <ExternalLink size={11} />
                 </button>
@@ -465,7 +465,7 @@ export default function SettingsPage(): React.JSX.Element {
               </Button>
               <Button
                 variant="ghost"
-                onClick={() => void window.aula.notes.openFolder()}
+                onClick={() => void window.ezNotes.notes.openFolder()}
               >
                 Open
               </Button>
@@ -567,7 +567,7 @@ export default function SettingsPage(): React.JSX.Element {
               <ul>
                 <li>Audio chunks go to Groq for transcription</li>
                 <li>The transcript goes to OpenCode for note writing</li>
-                <li>No analytics or telemetry from Aula</li>
+                <li>No analytics or telemetry from ezNotes</li>
               </ul>
             </div>
           </div>
@@ -575,20 +575,20 @@ export default function SettingsPage(): React.JSX.Element {
             <ShieldCheck size={16} />
             <span>
               Recording a lecture may require consent. Inform the lecturer and follow
-              your institution's rules. Aula shows a visible recording indicator.
+              your institution's rules. ezNotes shows a visible recording indicator.
             </span>
           </div>
           <div className="privacy-foot">
-            <span>Aula {settings.appVersion}</span>
+            <span>ezNotes {settings.appVersion}</span>
             <button
               className="inline-link"
-              onClick={() => void window.aula.app.openExternal('https://opencode.ai/console')}
+              onClick={() => void window.ezNotes.app.openExternal('https://opencode.ai/console')}
             >
               OpenCode Console <ExternalLink size={11} />
             </button>
             <button
               className="inline-link"
-              onClick={() => void window.aula.app.openExternal('https://console.groq.com')}
+              onClick={() => void window.ezNotes.app.openExternal('https://console.groq.com')}
             >
               Groq Console <ExternalLink size={11} />
             </button>

@@ -244,7 +244,7 @@ export default function Dashboard(): React.JSX.Element {
             <EmptyState
               icon={<CalendarDays size={24} />}
               title="No upcoming classes"
-              body="Add your weekly timetable and Aula will always show the next lecture here."
+              body="Add your weekly timetable and ezNotes will always show the next lecture here."
               action={
                 <Button variant="outline" onClick={() => navigate('/schedule')}>
                   Open schedule
@@ -366,7 +366,7 @@ export default function Dashboard(): React.JSX.Element {
       </div>
 
       <p className="footnote">
-        Recording a lecture may require permission. Aula shows a recording indicator;
+        Recording a lecture may require permission. ezNotes shows a recording indicator;
         you are responsible for informing the lecturer and following your institution's rules.
       </p>
 

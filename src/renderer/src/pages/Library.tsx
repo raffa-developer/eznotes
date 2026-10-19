@@ -40,7 +40,7 @@ export default function Library(): React.JSX.Element {
 
   async function openFolder(): Promise<void> {
     try {
-      await window.aula.notes.openFolder()
+      await window.ezNotes.notes.openFolder()
     } catch (error) {
       toast(error instanceof Error ? error.message : String(error), 'error')
     }
@@ -181,7 +181,7 @@ export default function Library(): React.JSX.Element {
           body={
             notes.length
               ? 'Try a different course, title, or keyword.'
-              : 'Record your first lecture and Aula will write the structured note here.'
+              : 'Record your first lecture and ezNotes will write the structured note here.'
           }
           action={
             notes.length ? (

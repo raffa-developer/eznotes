@@ -7,7 +7,7 @@ export function log(scope: string, message: string, data?: unknown): void {
   const line = `${new Date().toISOString()} [${scope}] ${message}${suffix}`
   console.log(line)
   try {
-    fs.appendFileSync(path.join(app.getPath('userData'), 'aula.log'), `${line}\n`)
+    fs.appendFileSync(path.join(app.getPath('userData'), 'eznotes.log'), `${line}\n`)
   } catch {
     // Logging must never break the app.
   }

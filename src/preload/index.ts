@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type {
-  AulaApi,
+  EzNotesApi,
   FinalizeRecordingInput,
   RecordingEvent,
   Schedule,
@@ -9,7 +9,7 @@ import type {
   StartRecordingInput
 } from '../shared/types'
 
-const api: AulaApi = {
+const api: EzNotesApi = {
   app: {
     info: () => ipcRenderer.invoke('app:info'),
     openExternal: (url) => ipcRenderer.invoke('app:openExternal', url)
@@ -58,4 +58,4 @@ const api: AulaApi = {
   }
 }
 
-contextBridge.exposeInMainWorld('aula', api)
+contextBridge.exposeInMainWorld('ezNotes', api)

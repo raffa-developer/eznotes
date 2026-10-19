@@ -101,7 +101,7 @@ export class RecordingManager {
       id,
       startedAt: new Date(),
       status: 'recording',
-      title: input.title?.trim() || input.courseName || 'Aula',
+      title: input.title?.trim() || input.courseName || 'Apontamentos',
       courseId: input.courseId,
       courseName: input.courseName || 'Geral',
       glossary: input.glossary ?? [],

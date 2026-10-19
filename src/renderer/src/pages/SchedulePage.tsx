@@ -67,7 +67,7 @@ export default function SchedulePage(): React.JSX.Element {
   async function persist(next: typeof schedule): Promise<void> {
     setSaving(true)
     try {
-      await window.aula.schedule.save(next)
+      await window.ezNotes.schedule.save(next)
       await refreshSchedule()
       await refreshUpcoming()
     } catch (error) {
@@ -196,7 +196,7 @@ export default function SchedulePage(): React.JSX.Element {
           <p className="eyebrow">Timetable</p>
           <h1>Your week</h1>
           <p className="page-sub">
-            Aula uses this to know which course a lecture belongs to and what to put
+            ezNotes uses this to know which course a lecture belongs to and what to put
             in the note header.
           </p>
         </div>

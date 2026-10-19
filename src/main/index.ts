@@ -33,6 +33,9 @@ import { RecordingManager } from './recording'
 import { generateNotes, testLlm } from './llm'
 import { testGroqKey } from './stt'
 import { demoMode } from './mock'
+import { migrateUserData } from './migrate'
+
+migrateUserData()
 
 let mainWindow: BrowserWindow | null = null
 let quitting = false
@@ -42,7 +45,7 @@ const recording = new RecordingManager((event) => {
 
 protocol.registerSchemesAsPrivileged([
   {
-    scheme: 'aula',
+    scheme: 'eznotes',
     privileges: {
       standard: true,
       secure: true,
@@ -61,7 +64,7 @@ function createWindow(): void {
     minHeight: 700,
     show: false,
     backgroundColor: '#0f1110',
-    title: 'Aula',
+    title: 'ezNotes',
     icon: path.join(__dirname, '../../resources/icon.png'),
     autoHideMenuBar: true,
     webPreferences: {
@@ -88,7 +91,7 @@ function createWindow(): void {
     void dialog.showMessageBox(mainWindow!, {
       type: 'info',
       title: 'Finish this recording first',
-      message: 'Aula still has a recording open.',
+      message: 'ezNotes still has a recording open.',
       detail:
         'Stop the recording and choose what happens to the audio before closing the window.',
       buttons: ['OK']
@@ -138,7 +141,7 @@ function registerIpc(): void {
   ipcMain.handle('settings:chooseNotesDir', async () => {
     const current = loadSettings()
     const options: OpenDialogOptions = {
-      title: 'Choose where Aula saves your notes',
+      title: 'Choose where ezNotes saves your notes',
       defaultPath: current.notesDir,
       properties: ['openDirectory', 'createDirectory']
     }
@@ -261,7 +264,7 @@ function settingsStatusFor(settings: Settings) {
 }
 
 function registerAudioProtocol(): void {
-  protocol.handle('aula', async (request) => {
+  protocol.handle('eznotes', async (request) => {
     try {
       const url = new URL(request.url)
       if (url.hostname !== 'audio') {
@@ -334,7 +337,7 @@ if (!gotLock) {
   })
 
   app.whenReady().then(() => {
-    app.setAppUserModelId('app.aula.notes')
+    app.setAppUserModelId('app.eznotes')
     Menu.setApplicationMenu(null)
     session.defaultSession.setPermissionRequestHandler(
       (_webContents, permission, callback) => {
@@ -351,7 +354,7 @@ if (!gotLock) {
 
     const removed = recording.cleanupExpiredRecordings()
     if (removed.length) {
-      console.log(`[aula] removed ${removed.length} expired recording(s)`)
+      console.log(`[eznotes] removed ${removed.length} expired recording(s)`)
     }
     setInterval(() => recording.cleanupExpiredRecordings(), 6 * 60 * 60 * 1000)
 
@@ -372,7 +375,7 @@ if (!gotLock) {
     event.preventDefault()
     const options = {
       type: 'warning' as const,
-      title: 'Aula is still recording',
+      title: 'ezNotes is still recording',
       message: 'A lecture is in progress.',
       detail:
         'If you quit now, the current audio stays on disk but will not be turned into a note.',

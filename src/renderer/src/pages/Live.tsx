@@ -71,7 +71,7 @@ export default function Live(): React.JSX.Element {
 
   useEffect(() => {
     let cancelled = false
-    const unsubscribe = window.aula.recording.onEvent((event) => {
+    const unsubscribe = window.ezNotes.recording.onEvent((event) => {
       if (event.type === 'transcript') {
         setSegments((current) => {
           if (current.some((item) => item.id === event.segment.id)) return current
@@ -89,7 +89,7 @@ export default function Live(): React.JSX.Element {
       }
     })
 
-    void window.aula.recording
+    void window.ezNotes.recording
       .live()
       .then((state) => {
         if (cancelled) return
@@ -136,7 +136,7 @@ export default function Live(): React.JSX.Element {
   async function stopRecording(): Promise<void> {
     setStopConfirm(false)
     try {
-      const result = await window.aula.recording.stop()
+      const result = await window.ezNotes.recording.stop()
       setStopped(result)
       setElapsed(result.durationSec)
     } catch (error) {
@@ -151,7 +151,7 @@ export default function Live(): React.JSX.Element {
     setFinalizeError(null)
     setProcessing({ step: 'Preparing the lecture', progress: 0.02 })
     try {
-      const result = await window.aula.recording.finalize({
+      const result = await window.ezNotes.recording.finalize({
         id: stopped.id,
         keepAudio,
         courseId: recording.courseId,
@@ -180,8 +180,8 @@ export default function Live(): React.JSX.Element {
   }
 
   async function discard(): Promise<void> {
-    if (stopped) await window.aula.recording.discard(stopped.id)
-    else if (recording) await window.aula.recording.discard(recording.id)
+    if (stopped) await window.ezNotes.recording.discard(stopped.id)
+    else if (recording) await window.ezNotes.recording.discard(recording.id)
     setStopped(null)
     setProcessing(null)
     setRecording(null)
@@ -303,7 +303,7 @@ export default function Live(): React.JSX.Element {
                       className="transcript-time"
                       onClick={() => {
                         const audio = document.querySelector<HTMLAudioElement>(
-                          'audio[data-aula-audio]'
+                          'audio[data-eznotes-audio]'
                         )
                         if (audio) audio.currentTime = segment.start
                       }}
@@ -421,7 +421,7 @@ export default function Live(): React.JSX.Element {
           {isPaused ? (
             <Button
               variant="soft"
-              onClick={() => void window.aula.recording.resume()}
+              onClick={() => void window.ezNotes.recording.resume()}
               disabled={isProcessing}
             >
               <Play size={16} />
@@ -430,7 +430,7 @@ export default function Live(): React.JSX.Element {
           ) : (
             <Button
               variant="soft"
-              onClick={() => void window.aula.recording.pause()}
+              onClick={() => void window.ezNotes.recording.pause()}
               disabled={!isRecording || isProcessing}
             >
               <Pause size={16} />
@@ -451,7 +451,7 @@ export default function Live(): React.JSX.Element {
       <Modal
         open={stopConfirm}
         title="Finish this lecture?"
-        subtitle="Aula will transcribe the full recording and write structured notes."
+        subtitle="ezNotes will transcribe the full recording and write structured notes."
         onClose={() => setStopConfirm(false)}
         footer={
           <>

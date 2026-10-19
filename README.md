@@ -1,9 +1,7 @@
-# Aula
+# ezNotes
 
 A Windows desktop app that listens to lectures, transcribes them in European
 Portuguese, throws away the filler, and writes structured Markdown notes.
-
-![Aula dashboard](screenshots/dashboard.png)
 
 It is built for the case where you want notes, not a recording archive:
 
@@ -18,6 +16,10 @@ It is built for the case where you want notes, not a recording archive:
 
 Working MVP, tested end-to-end in demo mode and against local mock Groq/OpenCode
 endpoints on Windows. Real Groq and OpenCode calls are implemented but need your keys.
+
+> **Renamed from Aula.** On first launch, ezNotes 0.2.0 moves the old
+> `%APPDATA%\aula` data and `Documents\Aula` notes to the new ezNotes folders
+> automatically. Existing notes, keys, schedule, and recordings are preserved.
 
 ## Requirements
 
@@ -45,7 +47,7 @@ On first launch:
 To try the whole flow without any API keys or API spend:
 
 ```powershell
-$env:AULA_MOCK_AI="1"
+$env:EZNOTES_MOCK_AI="1"
 npm run dev
 ```
 
@@ -92,7 +94,7 @@ Microphone
   → timestamped transcript
   → OpenCode model
   → importance filter + structured Markdown
-  → Documents\Aula\<Course>\<date> <title>.md
+  → Documents\ezNotes\<Course>\<date> <title>.md
 ```
 
 - Live transcription sends 7.5-second chunks every 5 seconds and removes overlapping
@@ -105,20 +107,20 @@ Microphone
 
 ## Files and folders
 
-- Notes: `Documents\Aula\<Course>\`
-- Transcripts: `Documents\Aula\.aula\transcripts\`
-- Audio: `%APPDATA%\aula\recordings\<recording-id>\audio.wav`
-- Settings/schedule/encrypted keys: `%APPDATA%\aula\`
+- Notes: `Documents\ezNotes\<Course>\`
+- Transcripts: `Documents\ezNotes\.eznotes\transcripts\`
+- Audio: `%APPDATA%\ezNotes\recordings\<recording-id>\audio.wav`
+- Settings/schedule/encrypted keys: `%APPDATA%\ezNotes\`
 
 ## Troubleshooting
 
-- **A note is empty or incomplete** — open it and click **Regenerate**. Aula keeps the
+- **A note is empty or incomplete** — open it and click **Regenerate**. ezNotes keeps the
   transcript even when the audio is deleted, and it now retries the model with a larger
   output budget and a compact prompt. If the model still fails, a transcript-only note is
   saved instead of an empty file.
 - **Transcription or notes fail** — the audio and transcript stay on disk. Check the keys
   in Settings, then retry from the recording or regenerate the note.
-- **Logs** — `%APPDATA%\aula\aula.log` contains model/finish-reason diagnostics, without
+- **Logs** — `%APPDATA%\ezNotes\eznotes.log` contains model/finish-reason diagnostics, without
   API keys or full transcripts.
 
 ## Packaging
@@ -136,7 +138,7 @@ binary with a trusted code-signing certificate before distributing it.
 
 - Audio is sent to Groq for transcription.
 - The transcript is sent to the chosen OpenCode/OpenAI-compatible endpoint for notes.
-- No analytics or telemetry is built into Aula.
+- No analytics or telemetry is built into ezNotes.
 - Recording a lecture may require consent. Inform the lecturer and follow your
   institution's rules. The live screen always shows a recording indicator.
 
