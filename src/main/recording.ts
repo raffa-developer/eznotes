@@ -35,6 +35,7 @@ import {
 } from './notes'
 import { readWavInfo, wavHeader } from './wav'
 import { demoMode } from './mock'
+import { log } from './log'
 
 const SAMPLE_RATE = 16000
 const LIVE_INTERVAL_MS = 5_000
@@ -242,6 +243,11 @@ export class RecordingManager {
     session.status = 'processing'
     session.error = undefined
     this.emitState()
+    log('recording', 'finalize started', {
+      id: session.id,
+      course: session.courseName,
+      keepAudio: input.keepAudio
+    })
 
     try {
       const groqKey = getSecret('groqApiKey')
@@ -265,6 +271,11 @@ export class RecordingManager {
         segments = result.segments
         writeCachedTranscript(session.dir, segments)
       }
+
+      log('recording', 'transcript ready', {
+        id: session.id,
+        segments: segments.length
+      })
 
       if (!segments.length) {
         throw new Error('No speech was detected in the recording.')
@@ -312,7 +323,7 @@ export class RecordingManager {
               baseURL: settings.llm.baseURL,
               model: settings.llm.model,
               sessionId: session.id,
-              maxTokens: 7000
+              maxTokens: 16_000
             }
           )
         } catch (error) {
@@ -325,6 +336,10 @@ export class RecordingManager {
       }
 
       const title = extractTitle(markdown, session.title)
+      log('recording', 'notes generated', {
+        id: session.id,
+        characters: markdown.length
+      })
       const meta = saveNote({
         id: noteId,
         title,
@@ -346,6 +361,12 @@ export class RecordingManager {
       }
 
       session.status = 'done'
+      log('recording', 'note saved', {
+        id: session.id,
+        noteId: meta.id,
+        path: meta.path,
+        audioKept: input.keepAudio
+      })
       this.emitState()
 
       const note = getNote(settings.notesDir, meta.id)
@@ -361,6 +382,10 @@ export class RecordingManager {
     } catch (error) {
       session.status = 'error'
       session.error = error instanceof Error ? error.message : String(error)
+      log('recording', 'finalize failed', {
+        id: session.id,
+        message: session.error
+      })
       this.emitState()
       this.notice(session.error, 'error')
       throw error

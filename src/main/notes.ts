@@ -208,6 +208,9 @@ export function saveNote(input: SaveNoteInput): NoteMeta {
   const baseName = `${formatDateForFilename(date)} - ${sanitizeFilename(title)}`
   const file = uniquePath(folder, baseName, '.md')
   const cleanMarkdown = input.markdown.trim()
+  if (!cleanMarkdown) {
+    throw new Error('Refusing to save an empty note.')
+  }
   const finalTitle = extractTitle(cleanMarkdown, title)
   const summary = extractSummary(cleanMarkdown)
   const wordCount = cleanMarkdown.split(/\s+/).filter(Boolean).length
@@ -261,18 +264,20 @@ export function updateNoteMarkdown(
 
   const raw = fs.readFileSync(meta.path, 'utf8')
   const { attributes } = splitFrontmatter(raw)
+  const cleanMarkdown = markdown.trim()
+  const nextTitle = extractTitle(cleanMarkdown, meta.title)
+  attributes.title = nextTitle
   const headerLines = ['---']
   for (const [key, value] of Object.entries(attributes)) {
     headerLines.push(`${key}: ${JSON.stringify(value)}`)
   }
   headerLines.push('---', '')
 
-  const cleanMarkdown = markdown.trim()
   fs.writeFileSync(meta.path, `${headerLines.join('\n')}${cleanMarkdown}\n`, 'utf8')
 
   const next: NoteMeta = {
     ...meta,
-    title: extractTitle(cleanMarkdown, meta.title),
+    title: nextTitle,
     summary: extractSummary(cleanMarkdown),
     wordCount: cleanMarkdown.split(/\s+/).filter(Boolean).length
   }

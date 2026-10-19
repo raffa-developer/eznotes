@@ -225,7 +225,7 @@ function registerIpc(): void {
         baseURL: settings.llm.baseURL,
         model: settings.llm.model,
         sessionId: `regen_${note.id}`,
-        maxTokens: 7000
+        maxTokens: 16_000
       }
     )
     updateNoteMarkdown(notesDir, id, markdown)

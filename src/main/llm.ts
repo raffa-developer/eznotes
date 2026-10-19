@@ -1,6 +1,7 @@
 import type { LlmMessage, TestResult, TranscriptSegment } from '../shared/types'
 import { formatTimestamp, transcriptToText } from './stt'
 import { demoMode, MOCK_OUTLINE, mockNote } from './mock'
+import { log } from './log'
 
 export interface LlmOptions {
   apiKey: string
@@ -14,10 +15,31 @@ export interface LlmOptions {
 
 interface ChatResponse {
   choices?: Array<{
-    message?: { content?: string | Array<{ type?: string; text?: string }> }
+    finish_reason?: string
+    message?: {
+      content?: string | Array<{ type?: string; text?: string }>
+      reasoning_content?: string
+      reasoning?: string
+    }
     text?: string
   }>
+  usage?: {
+    completion_tokens?: number
+    total_tokens?: number
+    completion_tokens_details?: { reasoning_tokens?: number }
+  }
   error?: { message?: string }
+}
+
+export class EmptyModelResponseError extends Error {
+  constructor(readonly finishReason?: string) {
+    super(
+      finishReason === 'length'
+        ? 'The notes model ran out of output tokens before writing the note.'
+        : 'The notes model returned an empty response.'
+    )
+    this.name = 'EmptyModelResponseError'
+  }
 }
 
 export async function chat(
@@ -56,17 +78,21 @@ export async function chat(
     }
 
     const data = JSON.parse(raw) as ChatResponse
-    const content = data.choices?.[0]?.message?.content
-    if (typeof content === 'string') return content.trim()
-    if (Array.isArray(content)) {
-      return content
-        .map((part) => part.text ?? '')
-        .join('')
-        .trim()
-    }
-    const legacy = data.choices?.[0]?.text
-    if (typeof legacy === 'string') return legacy.trim()
-    throw new Error('The notes model returned an empty response.')
+    const choice = data.choices?.[0]
+    const text = textFromChoice(choice)
+    if (text !== null && text.trim().length > 0) return text.trim()
+
+    const reasoning =
+      choice?.message?.reasoning_content ?? choice?.message?.reasoning
+    log('llm', 'model returned no final content', {
+      model: options.model,
+      finishReason: choice?.finish_reason,
+      messageKeys: Object.keys(choice?.message ?? {}),
+      contentLength: text?.length ?? null,
+      reasoningLength: typeof reasoning === 'string' ? reasoning.length : null,
+      usage: data.usage
+    })
+    throw new EmptyModelResponseError(choice?.finish_reason)
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       throw new Error('The notes model timed out. Try again or use a faster model.')
@@ -75,6 +101,25 @@ export async function chat(
   } finally {
     clearTimeout(timeout)
   }
+}
+
+function textFromChoice(
+  choice:
+    | {
+        message?: {
+          content?: string | Array<{ type?: string; text?: string }>
+        }
+        text?: string
+      }
+    | undefined
+): string | null {
+  const content = choice?.message?.content
+  if (typeof content === 'string') return content
+  if (Array.isArray(content)) {
+    return content.map((part) => part.text ?? '').join('')
+  }
+  if (typeof choice?.text === 'string') return choice.text
+  return null
 }
 
 export async function testLlm(options: LlmOptions): Promise<TestResult> {
@@ -90,7 +135,7 @@ export async function testLlm(options: LlmOptions): Promise<TestResult> {
         },
         { role: 'user', content: 'Reply with exactly: OK' }
       ],
-      { ...options, maxTokens: 20, temperature: 0, timeoutMs: 45_000 }
+      { ...options, maxTokens: 1024, temperature: 0, timeoutMs: 45_000 }
     )
     return {
       ok: true,
@@ -153,7 +198,67 @@ Produz os apontamentos em Markdown, seguindo exatamente a estrutura pedida.`
     }
   ]
 
-  return chat(messages, { ...options, maxTokens: 7000, temperature: 0.15 })
+  try {
+    const first = await chat(messages, {
+      ...options,
+      maxTokens: 16_000,
+      temperature: 0.15,
+      timeoutMs: Math.max(options.timeoutMs ?? 180_000, 240_000)
+    })
+    if (isUsableNote(first)) {
+      log('llm', 'notes generated', {
+        model: options.model,
+        attempt: 1,
+        length: first.length
+      })
+      return first
+    }
+    log('llm', 'notes output was too short; retrying', {
+      model: options.model,
+      length: first.trim().length
+    })
+  } catch (error) {
+    if (!(error instanceof EmptyModelResponseError)) throw error
+    log('llm', 'notes output was empty; retrying', {
+      model: options.model,
+      finishReason: error.finishReason
+    })
+  }
+
+  const retry = await chat(
+    [
+      { role: 'system', content: NOTES_RETRY_SYSTEM_PROMPT },
+      { role: 'user', content: messages[1].content }
+    ],
+    {
+      ...options,
+      maxTokens: 20_000,
+      temperature: 0.25,
+      timeoutMs: Math.max(options.timeoutMs ?? 180_000, 240_000)
+    }
+  )
+
+  if (isUsableNote(retry)) {
+    log('llm', 'notes generated', {
+      model: options.model,
+      attempt: 2,
+      length: retry.length
+    })
+    return retry
+  }
+
+  log('llm', 'notes retry was unusable', {
+    model: options.model,
+    length: retry.trim().length
+  })
+  throw new Error(
+    'The notes model returned an empty or incomplete note. Try again, or switch to another Chat Completions model in Settings.'
+  )
+}
+
+function isUsableNote(markdown: string): boolean {
+  const trimmed = markdown.trim()
+  return trimmed.length >= 120 && /(^|\n)#{1,3}\s+\S/.test(trimmed)
 }
 
 export async function generateOutline(
@@ -192,7 +297,7 @@ Transcrição recente:
 ${recentTranscript.slice(-5000)}`
       }
     ],
-    { ...options, maxTokens: 220, temperature: 0.1, timeoutMs: 45_000 }
+    { ...options, maxTokens: 1200, temperature: 0.1, timeoutMs: 45_000 }
   )
 
   return reply
@@ -252,6 +357,44 @@ Explicação clara, em parágrafos curtos e bullets. Inclui timestamps.
 | ... | ... |
 
 Não incluas a transcrição completa no fim. Não uses HTML. Não uses frontmatter.`
+
+const NOTES_RETRY_SYSTEM_PROMPT = `És um assistente de estudo. Escreve apenas os apontamentos finais em Markdown, em português europeu (pt-PT).
+
+Não mostres raciocínio, análise, prefácio nem comentários sobre o pedido. Começa diretamente com um título "# ...".
+
+Usa esta estrutura:
+# <título>
+**Disciplina:** ...
+**Data:** ...
+**Duração:** ...
+**Tópicos:** ...
+
+## Resumo
+- ...
+
+## Conceitos-chave
+### <conceito>
+- **Definição:** ...
+
+## Apontamentos
+### <tópico>
+...
+
+## Exemplos e aplicações
+- ...
+
+## Para o exame
+- ...
+
+## Dúvidas a esclarecer
+- ...
+
+## Glossário
+| Termo | Significado |
+| --- | --- |
+| ... | ... |
+
+Omite secções vazias. Não inventes conteúdo que não esteja na transcrição. Ignora logística e conversa social.`
 
 export interface Cue {
   start: number

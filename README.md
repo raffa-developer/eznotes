@@ -110,6 +110,17 @@ Microphone
 - Audio: `%APPDATA%\aula\recordings\<recording-id>\audio.wav`
 - Settings/schedule/encrypted keys: `%APPDATA%\aula\`
 
+## Troubleshooting
+
+- **A note is empty or incomplete** — open it and click **Regenerate**. Aula keeps the
+  transcript even when the audio is deleted, and it now retries the model with a larger
+  output budget and a compact prompt. If the model still fails, a transcript-only note is
+  saved instead of an empty file.
+- **Transcription or notes fail** — the audio and transcript stay on disk. Check the keys
+  in Settings, then retry from the recording or regenerate the note.
+- **Logs** — `%APPDATA%\aula\aula.log` contains model/finish-reason diagnostics, without
+  API keys or full transcripts.
+
 ## Packaging
 
 ```powershell

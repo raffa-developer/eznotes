@@ -186,6 +186,23 @@ export default function NotePage(): React.JSX.Element {
         </div>
       </header>
 
+      {note.wordCount < 5 ? (
+        <div className="banner banner-error" style={{ marginBottom: 18 }}>
+          <FileText size={17} />
+          <span>
+            This note has no content yet. The transcript is safe; use{' '}
+            <button
+              className="inline-link"
+              onClick={() => void regenerate()}
+              disabled={regenerating}
+            >
+              Regenerate
+            </button>{' '}
+            to write it again.
+          </span>
+        </div>
+      ) : null}
+
       <div className="note-grid">
         <Card className="note-content-card">
           <article className="markdown-body">
