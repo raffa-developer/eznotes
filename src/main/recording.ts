@@ -6,6 +6,7 @@ import type {
   FinalizeRecordingResult,
   LiveTranscriptSegment,
   RecordingEvent,
+  RecordingLiveState,
   RecordingSnapshot,
   StartRecordingInput,
   StoppedRecording,
@@ -76,6 +77,7 @@ type EventSender = (event: RecordingEvent) => void
 
 export class RecordingManager {
   private session: Session | null = null
+  private processing: { step: string; progress: number } | null = null
   private readonly send: EventSender
 
   constructor(send: EventSender) {
@@ -124,6 +126,7 @@ export class RecordingManager {
     }
 
     this.session = session
+    this.processing = null
     this.emitState()
 
     if (!getSecret('groqApiKey')) {
@@ -242,6 +245,7 @@ export class RecordingManager {
     const warnings: string[] = []
     session.status = 'processing'
     session.error = undefined
+    this.processing = { step: 'Preparing the lecture', progress: 0.02 }
     this.emitState()
     log('recording', 'finalize started', {
       id: session.id,
@@ -372,6 +376,7 @@ export class RecordingManager {
       const note = getNote(settings.notesDir, meta.id)
       if (!note) throw new Error('The note was saved but could not be read back.')
 
+      this.processing = null
       this.session = null
 
       return {
@@ -382,6 +387,7 @@ export class RecordingManager {
     } catch (error) {
       session.status = 'error'
       session.error = error instanceof Error ? error.message : String(error)
+      this.processing = null
       log('recording', 'finalize failed', {
         id: session.id,
         message: session.error
@@ -403,12 +409,30 @@ export class RecordingManager {
     }
     fs.rmSync(session.dir, { recursive: true, force: true })
     this.session = null
+    this.processing = null
     this.send({ type: 'state', snapshot: null })
   }
 
   state(): RecordingSnapshot | null {
     if (!this.session || this.session.status === 'done') return null
     return this.snapshot()
+  }
+
+  liveState(): RecordingLiveState {
+    if (!this.session) {
+      return {
+        snapshot: null,
+        segments: [],
+        outline: [],
+        processing: null
+      }
+    }
+    return {
+      snapshot: this.snapshot(),
+      segments: [...this.session.liveSegments],
+      outline: [...this.session.outline],
+      processing: this.processing
+    }
   }
 
   cleanupExpiredRecordings(): string[] {
@@ -546,7 +570,12 @@ export class RecordingManager {
   }
 
   private progress(step: string, progress: number): void {
-    this.send({ type: 'processing', step, progress: Math.min(1, Math.max(0, progress)) })
+    const next = {
+      step,
+      progress: Math.min(1, Math.max(0, progress))
+    }
+    this.processing = next
+    this.send({ type: 'processing', ...next })
   }
 
   private notice(message: string, level: 'info' | 'warn' | 'error'): void {

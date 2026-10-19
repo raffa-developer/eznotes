@@ -126,6 +126,13 @@ export interface LiveOutline {
   updatedAt: number
 }
 
+export interface RecordingLiveState {
+  snapshot: RecordingSnapshot | null
+  segments: LiveTranscriptSegment[]
+  outline: string[]
+  processing: { step: string; progress: number } | null
+}
+
 export type RecordingEvent =
   | { type: 'state'; snapshot: RecordingSnapshot | null }
   | { type: 'transcript'; segment: LiveTranscriptSegment }
@@ -217,6 +224,7 @@ export interface AulaApi {
     finalize: (input: FinalizeRecordingInput) => Promise<FinalizeRecordingResult>
     discard: (id: string) => Promise<void>
     state: () => Promise<RecordingSnapshot | null>
+    live: () => Promise<RecordingLiveState>
     sendAudio: (chunk: ArrayBuffer) => void
     onEvent: (callback: (event: RecordingEvent) => void) => () => void
   }

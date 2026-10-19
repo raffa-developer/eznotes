@@ -247,6 +247,7 @@ function registerIpc(): void {
     recording.discard(id)
   )
   ipcMain.handle('recording:state', () => recording.state())
+  ipcMain.handle('recording:live', () => recording.liveState())
   ipcMain.on('recording:audio', (_event, chunk: ArrayBuffer) => {
     recording.appendAudio(chunk)
   })

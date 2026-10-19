@@ -70,6 +70,7 @@ export default function Live(): React.JSX.Element {
   }, [isRecording])
 
   useEffect(() => {
+    let cancelled = false
     const unsubscribe = window.aula.recording.onEvent((event) => {
       if (event.type === 'transcript') {
         setSegments((current) => {
@@ -87,8 +88,39 @@ export default function Live(): React.JSX.Element {
         setProcessing(null)
       }
     })
-    return unsubscribe
-  }, [])
+
+    void window.aula.recording
+      .live()
+      .then((state) => {
+        if (cancelled) return
+        setRecording(state.snapshot)
+        if (state.snapshot) {
+          setElapsed((current) => Math.max(current, state.snapshot!.elapsedSec))
+        }
+        if (state.segments.length) {
+          setSegments((current) => mergeLiveSegments(state.segments, current))
+        }
+        if (state.outline.length) {
+          setOutline(state.outline)
+        }
+        if (state.processing) {
+          setProcessing(state.processing)
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          toast(
+            `Could not restore the live view: ${error instanceof Error ? error.message : String(error)}`,
+            'warn'
+          )
+        }
+      })
+
+    return () => {
+      cancelled = true
+      unsubscribe()
+    }
+  }, [setRecording, toast])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
@@ -529,6 +561,15 @@ export default function Live(): React.JSX.Element {
       ) : null}
     </div>
   )
+}
+
+function mergeLiveSegments(
+  primary: LiveTranscriptSegment[],
+  extra: LiveTranscriptSegment[]
+): LiveTranscriptSegment[] {
+  const byId = new Map(primary.map((segment) => [segment.id, segment]))
+  for (const segment of extra) byId.set(segment.id, segment)
+  return [...byId.values()].sort((a, b) => a.start - b.start)
 }
 
 function SparkIcon(): React.JSX.Element {

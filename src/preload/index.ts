@@ -47,6 +47,7 @@ const api: AulaApi = {
       ipcRenderer.invoke('recording:finalize', input),
     discard: (id: string) => ipcRenderer.invoke('recording:discard', id),
     state: () => ipcRenderer.invoke('recording:state'),
+    live: () => ipcRenderer.invoke('recording:live'),
     sendAudio: (chunk: ArrayBuffer) => ipcRenderer.send('recording:audio', chunk),
     onEvent: (callback: (event: RecordingEvent) => void) => {
       const listener = (_event: Electron.IpcRendererEvent, payload: RecordingEvent) =>
