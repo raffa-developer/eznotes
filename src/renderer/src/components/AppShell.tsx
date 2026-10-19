@@ -1,0 +1,112 @@
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import {
+  CalendarDays,
+  FolderOpen,
+  Home,
+  Library,
+  Mic,
+  Settings as SettingsIcon
+} from 'lucide-react'
+import { useApp } from '../state/AppContext'
+import { ToastStack } from './ui'
+import { AudioCapture } from '../hooks/useAudioCapture'
+import { countdown, formatTime } from '../lib/format'
+
+const NAV = [
+  { to: '/', label: 'Home', icon: Home, end: true },
+  { to: '/library', label: 'Library', icon: Library },
+  { to: '/schedule', label: 'Schedule', icon: CalendarDays },
+  { to: '/settings', label: 'Settings', icon: SettingsIcon }
+]
+
+export default function AppShell(): React.JSX.Element {
+  const { nextClass, recording, toasts, dismissToast, settings } = useApp()
+  const navigate = useNavigate()
+  const activeRecording =
+    recording &&
+    ['recording', 'paused', 'processing', 'error'].includes(recording.status)
+
+  return (
+    <div className="app-shell">
+      <aside className="sidebar">
+        <button className="brand" onClick={() => navigate('/')} aria-label="Aula home">
+          <span className="brand-mark" />
+          <span className="brand-name">aula</span>
+          <span className="brand-tag">notes</span>
+        </button>
+
+        <nav className="nav">
+          {NAV.map(({ to, label, icon: Icon, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            >
+              <Icon size={18} strokeWidth={1.8} />
+              <span>{label}</span>
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="sidebar-spacer" />
+
+        {activeRecording ? (
+          <button className="sidebar-recording" onClick={() => navigate('/live')}>
+            <span className={`rec-dot ${recording.status}`} />
+            <span>
+              <strong>
+                {recording.status === 'processing'
+                  ? 'Writing notes'
+                  : recording.status === 'paused'
+                    ? 'Paused'
+                    : recording.status === 'error'
+                      ? 'Needs attention'
+                      : 'Recording'}
+              </strong>
+              <small>{recording.courseName}</small>
+            </span>
+            <Mic size={16} />
+          </button>
+        ) : nextClass ? (
+          <button className="next-mini" onClick={() => navigate('/schedule')}>
+            <span
+              className="next-mini-dot"
+              style={{ background: nextClass.course.color }}
+            />
+            <span>
+              <small>
+                {nextClass.isNow ? 'Happening now' : countdown(nextClass.startsAt)}
+              </small>
+              <strong>{nextClass.course.name}</strong>
+              <small>
+                {formatTime(nextClass.slot.startTime)} · {nextClass.slot.room || 'No room'}
+              </small>
+            </span>
+          </button>
+        ) : null}
+
+        <button
+          className="sidebar-folder"
+          onClick={() => void window.aula.notes.openFolder()}
+        >
+          <FolderOpen size={15} />
+          <span>Notes folder</span>
+        </button>
+
+        <div className="sidebar-foot">
+          <span>Aula {settings?.appVersion ?? ''}</span>
+          <span className="sidebar-foot-dot" />
+          <span>local-first</span>
+        </div>
+      </aside>
+
+      <main className="main">
+        <Outlet />
+      </main>
+
+      <AudioCapture />
+      <ToastStack toasts={toasts} dismiss={dismissToast} />
+    </div>
+  )
+}

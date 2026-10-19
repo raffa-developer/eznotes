@@ -1,0 +1,362 @@
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
+import 'katex/dist/katex.min.css'
+import {
+  ArrowLeft,
+  CalendarDays,
+  Clock,
+  FileText,
+  FolderOpen,
+  Mic,
+  Music,
+  RefreshCw,
+  Tag,
+  Trash2
+} from 'lucide-react'
+import type { NoteDetail } from '../../../shared/types'
+import { useApp } from '../state/AppContext'
+import { Badge, Button, Card, EmptyState, Modal } from '../components/ui'
+import { formatDate, formatDuration, formatTimestamp } from '../lib/format'
+
+export default function NotePage(): React.JSX.Element {
+  const { id } = useParams<{ id: string }>()
+  const { schedule, refreshNotes, toast, settings } = useApp()
+  const navigate = useNavigate()
+  const [note, setNote] = useState<NoteDetail | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [regenerating, setRegenerating] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [audioOpen, setAudioOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deletingAudio, setDeletingAudio] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  useEffect(() => {
+    if (!id) return
+    setLoading(true)
+    window.aula.notes
+      .get(id)
+      .then((next) => setNote(next))
+      .catch((error) => toast(error instanceof Error ? error.message : String(error), 'error'))
+      .finally(() => setLoading(false))
+  }, [id, toast])
+
+  const course = schedule.courses.find((item) => item.id === note?.courseId)
+
+  async function regenerate(): Promise<void> {
+    if (!note) return
+    setRegenerating(true)
+    try {
+      const updated = await window.aula.notes.regenerate(note.id)
+      setNote(updated)
+      await refreshNotes()
+      toast('Notes regenerated from the same transcript.', 'success')
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'error')
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
+  async function remove(): Promise<void> {
+    if (!note) return
+    setDeleting(true)
+    try {
+      await window.aula.notes.delete(note.id)
+      await refreshNotes()
+      toast('Note deleted.', 'success')
+      navigate('/library')
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'error')
+      setDeleting(false)
+    }
+  }
+
+  async function removeAudio(): Promise<void> {
+    if (!note) return
+    setDeletingAudio(true)
+    try {
+      const updated = await window.aula.notes.deleteAudio(note.id)
+      setNote(updated)
+      await refreshNotes()
+      setAudioOpen(false)
+      toast('Audio deleted. The transcript and note are untouched.', 'success')
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'error')
+    } finally {
+      setDeletingAudio(false)
+    }
+  }
+
+  function seek(seconds: number): void {
+    if (!audioRef.current) return
+    audioRef.current.currentTime = seconds
+    void audioRef.current.play()
+  }
+
+  if (loading) {
+    return (
+      <div className="page">
+        <div className="note-skeleton" />
+      </div>
+    )
+  }
+
+  if (!note) {
+    return (
+      <div className="page">
+        <EmptyState
+          icon={<FileText size={24} />}
+          title="Note not found"
+          body="It may have been moved or deleted outside Aula."
+          action={
+            <Button variant="outline" onClick={() => navigate('/library')}>
+              Back to library
+            </Button>
+          }
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="page note-page">
+      <header className="note-head">
+        <div className="note-head-top">
+          <Link to="/library" className="back-link">
+            <ArrowLeft size={15} /> Library
+          </Link>
+          <div className="note-actions">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => void window.aula.notes.reveal(note.id)}
+            >
+              <FolderOpen size={15} />
+              Reveal file
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => void regenerate()}
+              disabled={regenerating || !note.transcript.length}
+            >
+              <RefreshCw size={15} className={regenerating ? 'spin' : ''} />
+              {regenerating ? 'Rewriting…' : 'Regenerate'}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setDeleteOpen(true)}>
+              <Trash2 size={15} />
+              Delete
+            </Button>
+          </div>
+        </div>
+
+        <div className="note-kicker">
+          <span
+            className="course-line"
+            style={{ background: course?.color ?? '#d8ff6a' }}
+          />
+          <span>{note.courseName}</span>
+          {course?.code ? <Badge tone="neutral">{course.code}</Badge> : null}
+        </div>
+        <h1>{note.title}</h1>
+        <div className="note-meta-row">
+          <span>
+            <CalendarDays size={14} />
+            {formatDate(note.date)}
+          </span>
+          <span>
+            <Clock size={14} />
+            {formatDuration(note.durationSec)}
+          </span>
+          <span>
+            <FileText size={14} />
+            {note.wordCount.toLocaleString()} words
+          </span>
+          {note.hasAudio ? (
+            <span>
+              <Mic size={14} />
+              Audio available
+            </span>
+          ) : null}
+        </div>
+      </header>
+
+      <div className="note-grid">
+        <Card className="note-content-card">
+          <article className="markdown-body">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm, remarkMath]}
+              rehypePlugins={[rehypeKatex]}
+              components={{
+                a: ({ href, children }) => (
+                  <a
+                    href={href}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      if (href && /^https?:\/\//.test(href)) {
+                        void window.aula.app.openExternal(href)
+                      }
+                    }}
+                  >
+                    {children}
+                  </a>
+                )
+              }}
+            >
+              {note.markdown}
+            </ReactMarkdown>
+          </article>
+        </Card>
+
+        <aside className="note-side">
+          {note.hasAudio && note.recordingId ? (
+            <Card className="audio-card">
+              <div className="audio-head">
+                <span className="audio-icon">
+                  <Music size={17} />
+                </span>
+                <div>
+                  <strong>Lecture audio</strong>
+                  <small>Kept for {settings?.settings.retentionDays ?? 30} days</small>
+                </div>
+              </div>
+              <audio
+                ref={audioRef}
+                data-aula-audio
+                controls
+                preload="metadata"
+                src={`aula://audio/${note.recordingId}`}
+              />
+              <div className="audio-actions">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setAudioOpen(true)}
+                >
+                  <Trash2 size={14} />
+                  Delete audio early
+                </Button>
+              </div>
+            </Card>
+          ) : null}
+
+          <Card className="detail-card">
+            <h3>Details</h3>
+            <dl>
+              <div>
+                <dt>Course</dt>
+                <dd>{note.courseName}</dd>
+              </div>
+              {course?.lecturer ? (
+                <div>
+                  <dt>Lecturer</dt>
+                  <dd>{course.lecturer}</dd>
+                </div>
+              ) : null}
+              <div>
+                <dt>Date</dt>
+                <dd>{formatDate(note.date)}</dd>
+              </div>
+              <div>
+                <dt>Duration</dt>
+                <dd>{formatDuration(note.durationSec)}</dd>
+              </div>
+              <div>
+                <dt>File</dt>
+                <dd className="detail-path">{note.path.split(/[\\/]/).slice(-2).join('/')}</dd>
+              </div>
+            </dl>
+            {note.tags.length ? (
+              <div className="tag-row">
+                {note.tags.map((tag) => (
+                  <span key={tag} className="tag">
+                    <Tag size={11} />
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </Card>
+
+          {note.transcript.length ? (
+            <Card className="transcript-card-side">
+              <details>
+                <summary>
+                  <span>
+                    <strong>Transcript</strong>
+                    <small>{note.transcript.length} segments</small>
+                  </span>
+                  <span className="summary-hint">Show</span>
+                </summary>
+                <div className="transcript-side-scroll">
+                  {note.transcript.map((segment) => (
+                    <button
+                      key={segment.id}
+                      className="transcript-side-line"
+                      onClick={() => seek(segment.start)}
+                    >
+                      <span>{formatTimestamp(segment.start)}</span>
+                      <p>{segment.text}</p>
+                    </button>
+                  ))}
+                </div>
+              </details>
+            </Card>
+          ) : null}
+        </aside>
+      </div>
+
+      <Modal
+        open={deleteOpen}
+        title="Delete this note?"
+        subtitle="The Markdown file and its transcript will be removed."
+        onClose={() => setDeleteOpen(false)}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDeleteOpen(false)} disabled={deleting}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={() => void remove()} disabled={deleting}>
+              <Trash2 size={15} />
+              {deleting ? 'Deleting…' : 'Delete note'}
+            </Button>
+          </>
+        }
+      >
+        <p className="modal-text">
+          <strong>{note.title}</strong> will be deleted from your notes folder. This
+          cannot be undone.
+          {note.hasAudio ? ' The lecture audio will also be deleted.' : ''}
+        </p>
+      </Modal>
+
+      <Modal
+        open={audioOpen}
+        title="Delete the audio?"
+        subtitle="The note and transcript stay in your library."
+        onClose={() => setAudioOpen(false)}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setAudioOpen(false)} disabled={deletingAudio}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={() => void removeAudio()} disabled={deletingAudio}>
+              <Trash2 size={15} />
+              {deletingAudio ? 'Deleting…' : 'Delete audio'}
+            </Button>
+          </>
+        }
+      >
+        <p className="modal-text">
+          You will no longer be able to replay this lecture or jump to its timestamps.
+          The written notes are kept.
+        </p>
+      </Modal>
+    </div>
+  )
+}
