@@ -131,10 +131,11 @@ function metaFromFile(file: string): NoteMeta {
     typeof attributes.id === 'string'
       ? attributes.id
       : `note_${createHash('sha1').update(path.resolve(file)).digest('hex').slice(0, 16)}`
-  const date =
-    typeof attributes.date === 'string'
-      ? new Date(attributes.date).toISOString()
-      : stat.mtime.toISOString()
+  const parsedDate =
+    typeof attributes.date === 'string' ? new Date(attributes.date) : stat.mtime
+  const date = Number.isNaN(parsedDate.getTime())
+    ? stat.mtime.toISOString()
+    : parsedDate.toISOString()
   const duration =
     typeof attributes.duration === 'number' ? attributes.duration : 0
   const recordingId =
