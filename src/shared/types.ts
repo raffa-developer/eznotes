@@ -93,6 +93,14 @@ export interface NoteDetail extends NoteMeta {
   transcript: TranscriptSegment[]
 }
 
+export type NoteExportFormat = 'markdown' | 'pdf' | 'obsidian' | 'clipboard' | 'notion'
+
+export interface NoteExportResult {
+  canceled: boolean
+  path?: string
+  message: string
+}
+
 export type RecordingStatus =
   | 'idle'
   | 'recording'
@@ -212,6 +220,8 @@ export interface EzNotesApi {
     get: (id: string) => Promise<NoteDetail | null>
     delete: (id: string) => Promise<void>
     deleteAudio: (id: string) => Promise<NoteDetail | null>
+    copy: (id: string) => Promise<NoteExportResult>
+    export: (id: string, format: NoteExportFormat) => Promise<NoteExportResult>
     reveal: (id: string) => Promise<void>
     openFolder: () => Promise<void>
     regenerate: (id: string) => Promise<NoteDetail>

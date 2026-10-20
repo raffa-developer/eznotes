@@ -225,7 +225,8 @@ export default function Dashboard(): React.JSX.Element {
                   {nextClass.course.glossary.length ? (
                     <span>
                       <BookOpen size={14} />
-                      {nextClass.course.glossary.length} glossary terms
+                      {nextClass.course.glossary.length}{' '}
+                      {nextClass.course.glossary.length === 1 ? 'glossary term' : 'glossary terms'}
                     </span>
                   ) : null}
                 </div>

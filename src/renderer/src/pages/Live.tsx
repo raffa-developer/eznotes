@@ -211,7 +211,7 @@ export default function Live(): React.JSX.Element {
           <div className="live-course-line">
             <span
               className="course-line"
-              style={{ background: course?.color ?? '#d8ff6a' }}
+              style={{ background: course?.color ?? '#f2c14e' }}
             />
             <span>{recording.courseName}</span>
             <Badge tone={isRecording ? 'danger' : isPaused ? 'warn' : 'neutral'}>
@@ -287,7 +287,7 @@ export default function Live(): React.JSX.Element {
               <h2>Transcript</h2>
               <p>
                 {segments.length
-                  ? `${segments.length} segments · Portuguese`
+                  ? `${segments.length} ${segments.length === 1 ? 'segment' : 'segments'} · Portuguese`
                   : 'Listening for speech…'}
               </p>
             </div>

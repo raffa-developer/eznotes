@@ -1,31 +1,38 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
+import rehypeSlug from 'rehype-slug'
 import 'katex/dist/katex.min.css'
 import {
   ArrowLeft,
   CalendarDays,
+  Check,
   Clock,
+  Copy,
   FileText,
   FolderOpen,
+  List,
   Mic,
   Music,
   RefreshCw,
   Tag,
   Trash2
 } from 'lucide-react'
-import type { NoteDetail } from '../../../shared/types'
+import type { NoteDetail, NoteExportFormat } from '../../../shared/types'
 import { useApp } from '../state/AppContext'
 import { Badge, Button, Card, EmptyState, Modal } from '../components/ui'
+import ExportMenu from '../components/ExportMenu'
 import { formatDate, formatDuration, formatTimestamp } from '../lib/format'
 
 export default function NotePage(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
   const { schedule, refreshNotes, toast, settings } = useApp()
   const navigate = useNavigate()
+  const location = useLocation()
+  const printMode = new URLSearchParams(location.search).get('print') === '1'
   const [note, setNote] = useState<NoteDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [regenerating, setRegenerating] = useState(false)
@@ -33,6 +40,9 @@ export default function NotePage(): React.JSX.Element {
   const [audioOpen, setAudioOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deletingAudio, setDeletingAudio] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [toc, setToc] = useState<Array<{ id: string; text: string; level: number }>>([])
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
@@ -92,11 +102,72 @@ export default function NotePage(): React.JSX.Element {
     }
   }
 
+  useEffect(() => {
+    document.body.dataset.print = printMode ? '1' : '0'
+    return () => {
+      delete document.body.dataset.print
+      delete document.body.dataset.printReady
+    }
+  }, [printMode])
+
+  useEffect(() => {
+    if (!note) return
+    const timer = window.setTimeout(() => {
+      if (printMode) {
+        document.body.dataset.printReady = '1'
+        return
+      }
+      const headings = Array.from(
+        document.querySelectorAll<HTMLElement>('.markdown-body h2, .markdown-body h3')
+      )
+      setToc(
+        headings
+          .filter((heading) => heading.id)
+          .map((heading) => ({
+            id: heading.id,
+            text: heading.textContent ?? '',
+            level: heading.tagName === 'H2' ? 2 : 3
+          }))
+      )
+    }, 100)
+    return () => window.clearTimeout(timer)
+  }, [note, printMode])
+
+  async function copyNote(): Promise<void> {
+    if (!note) return
+    try {
+      const result = await window.ezNotes.notes.copy(note.id)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1800)
+      toast(result.message, 'success')
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'error')
+    }
+  }
+
+  async function exportNote(format: NoteExportFormat): Promise<void> {
+    if (!note) return
+    setExporting(true)
+    try {
+      const result = await window.ezNotes.notes.export(note.id, format)
+      if (!result.canceled) toast(result.message, 'success')
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'error')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   function seek(seconds: number): void {
     if (!audioRef.current) return
     audioRef.current.currentTime = seconds
     void audioRef.current.play()
   }
+
+  const readMinutes = Math.max(1, Math.ceil((note?.wordCount ?? 0) / 200))
+  const displayMarkdown = note
+    ? note.markdown.replace(/^\s*#\s+.+(?:\r?\n)+/, '')
+    : ''
 
   if (loading) {
     return (
@@ -131,14 +202,11 @@ export default function NotePage(): React.JSX.Element {
             <ArrowLeft size={15} /> Library
           </Link>
           <div className="note-actions">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => void window.ezNotes.notes.reveal(note.id)}
-            >
-              <FolderOpen size={15} />
-              Reveal file
+            <Button variant="primary" size="sm" onClick={() => void copyNote()}>
+              {copied ? <Check size={15} /> : <Copy size={15} />}
+              {copied ? 'Copied' : 'Copy note'}
             </Button>
+            <ExportMenu onExport={exportNote} busy={exporting} />
             <Button
               variant="ghost"
               size="sm"
@@ -148,20 +216,34 @@ export default function NotePage(): React.JSX.Element {
               <RefreshCw size={15} className={regenerating ? 'spin' : ''} />
               {regenerating ? 'Rewriting…' : 'Regenerate'}
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setDeleteOpen(true)}>
-              <Trash2 size={15} />
-              Delete
-            </Button>
+            <button
+              className="icon-button"
+              onClick={() => void window.ezNotes.notes.reveal(note.id)}
+              aria-label="Reveal note file"
+              title="Reveal note file"
+            >
+              <FolderOpen size={16} />
+            </button>
+            <button
+              className="icon-button danger"
+              onClick={() => setDeleteOpen(true)}
+              aria-label="Delete note"
+              title="Delete note"
+            >
+              <Trash2 size={16} />
+            </button>
           </div>
         </div>
 
         <div className="note-kicker">
           <span
             className="course-line"
-            style={{ background: course?.color ?? '#d8ff6a' }}
+            style={{ background: course?.color ?? '#f2c14e' }}
           />
           <span>{note.courseName}</span>
-          {course?.code ? <Badge tone="neutral">{course.code}</Badge> : null}
+          {course?.code && course.code !== note.courseName ? (
+            <Badge tone="neutral">{course.code}</Badge>
+          ) : null}
         </div>
         <h1>{note.title}</h1>
         <div className="note-meta-row">
@@ -175,7 +257,12 @@ export default function NotePage(): React.JSX.Element {
           </span>
           <span>
             <FileText size={14} />
-            {note.wordCount.toLocaleString()} words
+            {note.wordCount.toLocaleString()}{' '}
+            {note.wordCount === 1 ? 'word' : 'words'}
+          </span>
+          <span>
+            <Clock size={14} />
+            {readMinutes} min read
           </span>
           {note.hasAudio ? (
             <span>
@@ -208,7 +295,7 @@ export default function NotePage(): React.JSX.Element {
           <article className="markdown-body">
             <ReactMarkdown
               remarkPlugins={[remarkGfm, remarkMath]}
-              rehypePlugins={[rehypeKatex]}
+              rehypePlugins={[rehypeKatex, rehypeSlug]}
               components={{
                 a: ({ href, children }) => (
                   <a
@@ -225,12 +312,35 @@ export default function NotePage(): React.JSX.Element {
                 )
               }}
             >
-              {note.markdown}
+              {displayMarkdown}
             </ReactMarkdown>
           </article>
         </Card>
 
         <aside className="note-side">
+          {toc.length > 2 ? (
+            <Card className="toc-card">
+              <h3>
+                <List size={14} /> Contents
+              </h3>
+              <nav>
+                {toc.map((item) => (
+                  <button
+                    key={item.id}
+                    className={item.level === 3 ? 'toc-sub' : ''}
+                    onClick={() =>
+                      document
+                        .getElementById(item.id)
+                        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    }
+                  >
+                    {item.text}
+                  </button>
+                ))}
+              </nav>
+            </Card>
+          ) : null}
+
           {note.hasAudio && note.recordingId ? (
             <Card className="audio-card">
               <div className="audio-head">

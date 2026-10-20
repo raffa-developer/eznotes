@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type {
   EzNotesApi,
   FinalizeRecordingInput,
+  NoteExportFormat,
   RecordingEvent,
   Schedule,
   SecretKey,
@@ -34,6 +35,9 @@ const api: EzNotesApi = {
     get: (id: string) => ipcRenderer.invoke('notes:get', id),
     delete: (id: string) => ipcRenderer.invoke('notes:delete', id),
     deleteAudio: (id: string) => ipcRenderer.invoke('notes:deleteAudio', id),
+    copy: (id: string) => ipcRenderer.invoke('notes:copy', id),
+    export: (id: string, format: NoteExportFormat) =>
+      ipcRenderer.invoke('notes:export', id, format),
     reveal: (id: string) => ipcRenderer.invoke('notes:reveal', id),
     openFolder: () => ipcRenderer.invoke('notes:openFolder'),
     regenerate: (id: string) => ipcRenderer.invoke('notes:regenerate', id)

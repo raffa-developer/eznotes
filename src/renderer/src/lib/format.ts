@@ -1,5 +1,6 @@
 export function formatDuration(seconds: number): string {
   const total = Math.max(0, Math.round(seconds))
+  if (total < 60) return `${total}s`
   const hours = Math.floor(total / 3600)
   const minutes = Math.round((total % 3600) / 60)
   if (hours > 0) return `${hours}h ${String(minutes).padStart(2, '0')}m`

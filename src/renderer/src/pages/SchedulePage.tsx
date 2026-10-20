@@ -47,6 +47,7 @@ export default function SchedulePage(): React.JSX.Element {
   const [slotForm, setSlotForm] = useState<SlotForm | null>(null)
   const [deleteCourse, setDeleteCourse] = useState<Course | null>(null)
   const [saving, setSaving] = useState(false)
+  const todayWeekday = ((new Date().getDay() + 6) % 7) + 1
 
   const slotsByDay = useMemo(() => {
     const map = new Map<number, ClassSlot[]>()
@@ -241,11 +242,32 @@ export default function SchedulePage(): React.JSX.Element {
               <CalendarDays size={20} className="panel-icon" />
             </div>
 
+            <div className="week-overview">
+              {WEEKDAYS.map((day) => {
+                const count = slotsByDay.get(day.value)?.length ?? 0
+                return (
+                  <button
+                    key={day.value}
+                    className={day.value === todayWeekday ? 'today' : ''}
+                    aria-label={`Jump to ${day.long}`}
+                    onClick={() =>
+                      document
+                        .getElementById(`week-day-${day.value}`)
+                        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    }
+                  >
+                    <span>{day.short}</span>
+                    <strong>{count || '–'}</strong>
+                  </button>
+                )
+              })}
+            </div>
+
             <div className="week-list">
               {WEEKDAYS.map((day) => {
                 const slots = slotsByDay.get(day.value) ?? []
                 return (
-                  <div key={day.value} className="week-day">
+                  <div key={day.value} className="week-day" id={`week-day-${day.value}`}>
                     <div className="week-day-head">
                       <span>{day.long}</span>
                       <button
@@ -312,7 +334,9 @@ export default function SchedulePage(): React.JSX.Element {
                   />
                   <div className="course-card-title">
                     <h3>{course.name}</h3>
-                    {course.code ? <Badge tone="neutral">{course.code}</Badge> : null}
+                    {course.code && course.code !== course.name ? (
+                      <Badge tone="neutral">{course.code}</Badge>
+                    ) : null}
                   </div>
                   <div className="course-card-actions">
                     <button
@@ -340,7 +364,10 @@ export default function SchedulePage(): React.JSX.Element {
                   <span>
                     <Clock size={13} />{' '}
                     {schedule.slots.filter((slot) => slot.courseId === course.id).length}{' '}
-                    weekly
+                    {schedule.slots.filter((slot) => slot.courseId === course.id).length === 1
+                      ? 'class'
+                      : 'classes'}{' '}
+                    / week
                   </span>
                 </div>
                 {course.glossary.length ? (

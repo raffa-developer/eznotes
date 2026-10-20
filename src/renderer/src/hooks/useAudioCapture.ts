@@ -41,8 +41,10 @@ export function useAudioCapture(): void {
     (recording?.status === 'recording' || recording?.status === 'paused')
   const micId = settings?.settings.microphoneId ?? null
   const recordingId = recording?.id ?? null
+  const printMode = new URLSearchParams(window.location.search).get('print') === '1'
 
   useEffect(() => {
+    if (printMode) return
     if (!shouldCapture || !recordingId) {
       cleanup()
       return
@@ -60,7 +62,7 @@ export function useAudioCapture(): void {
       .finally(() => {
         startingRef.current = false
       })
-  }, [shouldCapture, recordingId, micId, toast])
+  }, [shouldCapture, recordingId, micId, printMode, toast])
 
   useEffect(() => {
     return () => cleanup()

@@ -57,7 +57,7 @@ export async function chat(
       headers: {
         Authorization: `Bearer ${options.apiKey}`,
         'Content-Type': 'application/json',
-        'User-Agent': 'ezNotes/0.2.0',
+        'User-Agent': 'ezNotes/0.3.0',
         ...(options.sessionId ? { 'x-opencode-session': options.sessionId } : {})
       },
       body: JSON.stringify({

@@ -11,6 +11,8 @@ It is built for the case where you want notes, not a recording archive:
 - **Your files** — one Markdown note per lecture, organised by course and date.
 - **Local first** — audio, transcripts, notes, and keys stay on the PC, apart from
   the explicit Groq/OpenCode requests.
+- **Take notes with you** — copy a note, save Markdown or PDF, send it to an Obsidian
+  vault, or copy it for Notion.
 
 ## Status
 
@@ -83,6 +85,19 @@ https://opencode.ai/inference/openai/v1
 ```
 
 You can also choose **Custom OpenAI-compatible** and point it at any provider.
+
+## Copy and export
+
+On a note page, use **Copy note** or the **Export** menu:
+
+- **Copy Markdown** — the note body on the clipboard.
+- **Save as Markdown** — a portable `.md` file.
+- **Save as PDF** — A4, using the same styled note view you read in the app.
+- **Send to Obsidian** — choose a vault; ezNotes writes
+  `<vault>\ezNotes\<Course>\<date> <title>.md`.
+- **Copy for Notion** — Markdown on the clipboard, ready to paste into a Notion page.
+
+The library also has a quick copy button on every note.
 
 ## How the pipeline works
 

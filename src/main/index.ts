@@ -1,11 +1,24 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, session, shell } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  clipboard,
+  dialog,
+  ipcMain,
+  Menu,
+  protocol,
+  session,
+  shell
+} from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import { Readable } from 'node:stream'
+import { pathToFileURL } from 'node:url'
 import type { OpenDialogOptions } from 'electron'
 import type {
   AppInfo,
   FinalizeRecordingInput,
+  NoteExportFormat,
+  NoteExportResult,
   Schedule,
   SecretKey,
   Settings,
@@ -27,6 +40,7 @@ import {
   getNote,
   listNotes,
   removeNoteAudio,
+  sanitizeFilename,
   updateNoteMarkdown
 } from './notes'
 import { RecordingManager } from './recording'
@@ -112,8 +126,80 @@ function createWindow(): void {
   }
 }
 
-function registerIpc(): void {
-  ipcMain.handle('app:info', (): AppInfo => ({
+async function chooseSavePath(
+  defaultName: string,
+  extension: string,
+  filterName: string
+): Promise<string | null> {
+  const options = {
+    defaultPath: path.join(app.getPath('downloads'), defaultName),
+    filters: [{ name: filterName, extensions: [extension] }]
+  }
+  const result = mainWindow
+    ? await dialog.showSaveDialog(mainWindow, options)
+    : await dialog.showSaveDialog(options)
+  return result.canceled || !result.filePath ? null : result.filePath
+}
+
+function uniqueFile(file: string): string {
+  if (!fs.existsSync(file)) return file
+  const extension = path.extname(file)
+  const base = file.slice(0, file.length - extension.length)
+  let counter = 2
+  while (fs.existsSync(`${base} (${counter})${extension}`)) counter += 1
+  return `${base} (${counter})${extension}`
+}
+
+async function exportNotePdf(noteId: string, target: string): Promise<void> {
+  const printWindow = new BrowserWindow({
+    show: false,
+    width: 900,
+    height: 1200,
+    backgroundColor: '#ffffff',
+    skipTaskbar: true,
+    webPreferences: {
+      preload: path.join(__dirname, '../preload/index.js'),
+      sandbox: false,
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  })
+
+  try {
+    const rendererURL = process.env['ELECTRON_RENDERER_URL']
+    const url = rendererURL
+      ? `${rendererURL}#/notes/${noteId}?print=1`
+      : `${pathToFileURL(path.join(__dirname, '../renderer/index.html')).toString()}#/notes/${noteId}?print=1`
+
+    await printWindow.loadURL(url)
+
+    let ready = false
+    for (let attempt = 0; attempt < 80; attempt += 1) {
+      ready = await printWindow.webContents
+        .executeJavaScript("document.body.dataset.printReady === '1'")
+        .catch(() => false)
+      if (ready) break
+      await new Promise((resolve) => setTimeout(resolve, 200))
+    }
+    if (!ready) {
+      throw new Error('The note view did not finish loading for PDF export.')
+    }
+
+    await printWindow.webContents.executeJavaScript(
+      'document.fonts.ready.then(() => true)'
+    )
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    const pdf = await printWindow.webContents.printToPDF({
+      printBackground: true,
+      pageSize: 'A4'
+    })
+    fs.writeFileSync(target, pdf)
+  } finally {
+    if (!printWindow.isDestroyed()) printWindow.destroy()
+  }
+}
+
+function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
     version: app.getVersion(),
     platform: process.platform,
     notesDir: loadSettings().notesDir,
@@ -191,6 +277,92 @@ function registerIpc(): void {
     removeNoteAudio(notesDir, id)
     return getNote(notesDir, id)
   })
+  ipcMain.handle('notes:copy', (_event, id: string): NoteExportResult => {
+    const note = getNote(loadSettings().notesDir, id)
+    if (!note) throw new Error('Note not found.')
+    clipboard.writeText(note.markdown)
+    return {
+      canceled: false,
+      message: 'Note copied to the clipboard.'
+    }
+  })
+
+  ipcMain.handle(
+    'notes:export',
+    async (_event, id: string, format: NoteExportFormat): Promise<NoteExportResult> => {
+      const notesDir = loadSettings().notesDir
+      const note = getNote(notesDir, id)
+      if (!note) throw new Error('Note not found.')
+
+      if (format === 'clipboard' || format === 'notion') {
+        clipboard.writeText(note.markdown)
+        return {
+          canceled: false,
+          message:
+            format === 'notion'
+              ? 'Markdown copied. Paste it into a Notion page.'
+              : 'Note copied to the clipboard.'
+        }
+      }
+
+      if (format === 'obsidian') {
+        const options: OpenDialogOptions = {
+          title: 'Choose your Obsidian vault folder',
+          properties: ['openDirectory', 'createDirectory']
+        }
+        const result = mainWindow
+          ? await dialog.showOpenDialog(mainWindow, options)
+          : await dialog.showOpenDialog(options)
+        if (result.canceled || !result.filePaths[0]) {
+          return { canceled: true, message: 'Export canceled.' }
+        }
+
+        const vault = result.filePaths[0]
+        const folder = path.join(vault, 'ezNotes', sanitizeFilename(note.courseName))
+        fs.mkdirSync(folder, { recursive: true })
+        const target = uniqueFile(path.join(folder, path.basename(note.path)))
+        fs.writeFileSync(target, fs.readFileSync(note.path, 'utf8'))
+        return {
+          canceled: false,
+          path: target,
+          message: `Saved to Obsidian: ${target}`
+        }
+      }
+
+      if (format === 'markdown') {
+        const target = await chooseSavePath(
+          `${sanitizeFilename(note.title)}.md`,
+          'md',
+          'Markdown'
+        )
+        if (!target) return { canceled: true, message: 'Export canceled.' }
+        fs.writeFileSync(target, fs.readFileSync(note.path, 'utf8'))
+        return {
+          canceled: false,
+          path: target,
+          message: `Markdown exported: ${target}`
+        }
+      }
+
+      if (format === 'pdf') {
+        const target = await chooseSavePath(
+          `${sanitizeFilename(note.title)}.pdf`,
+          'pdf',
+          'PDF'
+        )
+        if (!target) return { canceled: true, message: 'Export canceled.' }
+        await exportNotePdf(id, target)
+        return {
+          canceled: false,
+          path: target,
+          message: `PDF exported: ${target}`
+        }
+      }
+
+      throw new Error(`Unsupported export format: ${format}`)
+    }
+  )
+
   ipcMain.handle('notes:reveal', (_event, id: string) => {
     const note = getNote(loadSettings().notesDir, id)
     if (note) shell.showItemInFolder(note.path)

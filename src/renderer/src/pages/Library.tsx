@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   BookOpen,
+  Check,
   Clock,
+  Copy,
   FileText,
   FolderOpen,
   Search,
@@ -17,6 +19,7 @@ export default function Library(): React.JSX.Element {
   const [query, setQuery] = useState('')
   const [courseId, setCourseId] = useState<string>('all')
   const [sort, setSort] = useState<'newest' | 'oldest' | 'longest'>('newest')
+  const [copyingId, setCopyingId] = useState<string | null>(null)
   const navigate = useNavigate()
 
   const filtered = useMemo(() => {
@@ -43,6 +46,18 @@ export default function Library(): React.JSX.Element {
       await window.ezNotes.notes.openFolder()
     } catch (error) {
       toast(error instanceof Error ? error.message : String(error), 'error')
+    }
+  }
+
+  async function copyNote(id: string): Promise<void> {
+    setCopyingId(id)
+    try {
+      const result = await window.ezNotes.notes.copy(id)
+      toast(result.message, 'success')
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'error')
+    } finally {
+      window.setTimeout(() => setCopyingId(null), 1200)
     }
   }
 
@@ -142,7 +157,7 @@ export default function Library(): React.JSX.Element {
                 </div>
                 <div
                   className="note-stripe"
-                  style={{ background: course?.color ?? '#d8ff6a' }}
+                  style={{ background: course?.color ?? '#f2c14e' }}
                 />
                 <div className="note-main">
                   <div className="note-title-line">
@@ -156,7 +171,10 @@ export default function Library(): React.JSX.Element {
                     <span>·</span>
                     <Clock size={13} /> {formatDuration(note.durationSec)}
                     <span>·</span>
-                    <FileText size={13} /> {note.wordCount.toLocaleString()} words
+                    <FileText size={13} /> {note.wordCount.toLocaleString()}{' '}
+                    {note.wordCount === 1 ? 'word' : 'words'}
+                    <span>·</span>
+                    {Math.max(1, Math.ceil(note.wordCount / 200))} min read
                   </p>
                   {note.summary ? <p className="note-summary">{note.summary}</p> : null}
                   {note.tags.length ? (
@@ -169,6 +187,17 @@ export default function Library(): React.JSX.Element {
                     </div>
                   ) : null}
                 </div>
+                <button
+                  className="note-quick-copy"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    void copyNote(note.id)
+                  }}
+                  aria-label="Copy note"
+                  title="Copy note to clipboard"
+                >
+                  {copyingId === note.id ? <Check size={15} /> : <Copy size={15} />}
+                </button>
                 <span className="note-open">Open →</span>
               </Card>
             )
