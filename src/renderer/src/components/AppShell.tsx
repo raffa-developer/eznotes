@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   CalendarDays,
@@ -5,6 +6,8 @@ import {
   Home,
   Library,
   Mic,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings as SettingsIcon
 } from 'lucide-react'
 import { useApp } from '../state/AppContext'
@@ -22,17 +25,34 @@ const NAV = [
 export default function AppShell(): React.JSX.Element {
   const { nextClass, recording, toasts, dismissToast, settings } = useApp()
   const navigate = useNavigate()
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem('eznotes.sidebar') === 'collapsed'
+  )
   const activeRecording =
     recording &&
     ['recording', 'paused', 'processing', 'error'].includes(recording.status)
 
+  useEffect(() => {
+    localStorage.setItem('eznotes.sidebar', collapsed ? 'collapsed' : 'expanded')
+  }, [collapsed])
+
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${collapsed ? 'sidebar-collapsed' : ''}`}>
       <aside className="sidebar">
         <button className="brand" onClick={() => navigate('/')} aria-label="ezNotes home">
           <span className="brand-mark" />
           <span className="brand-name">ezNotes</span>
           <span className="brand-tag">notes</span>
+        </button>
+
+        <button
+          className="sidebar-toggle"
+          onClick={() => setCollapsed((value) => !value)}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+          <span>{collapsed ? 'Expand' : 'Collapse'}</span>
         </button>
 
         <nav className="nav">
@@ -41,6 +61,7 @@ export default function AppShell(): React.JSX.Element {
               key={to}
               to={to}
               end={end}
+              title={label}
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
             >
               <Icon size={18} strokeWidth={1.8} />
@@ -52,7 +73,11 @@ export default function AppShell(): React.JSX.Element {
         <div className="sidebar-spacer" />
 
         {activeRecording ? (
-          <button className="sidebar-recording" onClick={() => navigate('/live')}>
+          <button
+            className="sidebar-recording"
+            onClick={() => navigate('/live')}
+            title="Open live lecture"
+          >
             <span className={`rec-dot ${recording.status}`} />
             <span>
               <strong>
@@ -69,7 +94,11 @@ export default function AppShell(): React.JSX.Element {
             <Mic size={16} />
           </button>
         ) : nextClass ? (
-          <button className="next-mini" onClick={() => navigate('/schedule')}>
+          <button
+            className="next-mini"
+            onClick={() => navigate('/schedule')}
+            title={`${nextClass.course.name} · ${formatTime(nextClass.slot.startTime)}`}
+          >
             <span
               className="next-mini-dot"
               style={{ background: nextClass.course.color }}
@@ -89,6 +118,7 @@ export default function AppShell(): React.JSX.Element {
         <button
           className="sidebar-folder"
           onClick={() => void window.ezNotes.notes.openFolder()}
+          title="Open notes folder"
         >
           <FolderOpen size={15} />
           <span>Notes folder</span>

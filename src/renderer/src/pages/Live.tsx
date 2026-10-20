@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   AlertTriangle,
@@ -539,26 +540,33 @@ export default function Live(): React.JSX.Element {
         ) : null}
       </Modal>
 
-      {isProcessing ? (
-        <div className="processing-overlay">
-          <div className="processing-card">
-            <span className="processing-icon">
-              <Loader2 size={26} className="spin" />
-            </span>
-            <h2>Writing your notes</h2>
-            <p>{processing?.step ?? 'Working through the lecture…'}</p>
-            <div className="progress-track">
-              <div
-                className="progress-fill"
-                style={{ width: `${Math.round((processing?.progress ?? 0.05) * 100)}%` }}
-              />
-            </div>
-            <small>
-              {processing ? `${Math.round(processing.progress * 100)}%` : 'This can take a minute.'}
-            </small>
-          </div>
-        </div>
-      ) : null}
+      {isProcessing
+        ? createPortal(
+            <div className="processing-overlay">
+              <div className="processing-card">
+                <span className="processing-icon">
+                  <Loader2 size={26} className="spin" />
+                </span>
+                <h2>Writing your notes</h2>
+                <p>{processing?.step ?? 'Working through the lecture…'}</p>
+                <div className="progress-track">
+                  <div
+                    className="progress-fill"
+                    style={{
+                      width: `${Math.round((processing?.progress ?? 0.05) * 100)}%`
+                    }}
+                  />
+                </div>
+                <small>
+                  {processing
+                    ? `${Math.round(processing.progress * 100)}%`
+                    : 'This can take a minute.'}
+                </small>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   )
 }

@@ -3,6 +3,7 @@ import {
   type ButtonHTMLAttributes,
   type ReactNode
 } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import type { Toast } from '../state/AppContext'
 
@@ -101,7 +102,7 @@ export function Modal({
 
   if (!open) return null
 
-  return (
+  return createPortal(
     <div className="modal-backdrop" onMouseDown={onClose}>
       <div
         className="modal"
@@ -123,7 +124,8 @@ export function Modal({
         <div className="modal-body">{children}</div>
         {footer ? <div className="modal-foot">{footer}</div> : null}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
