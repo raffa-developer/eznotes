@@ -5,8 +5,10 @@ import {
   ArrowRight,
   BookOpen,
   CalendarDays,
+  Check,
   CheckCircle2,
   Clock,
+  Copy,
   KeyRound,
   Mic,
   Sparkles,
@@ -33,9 +35,11 @@ export default function Dashboard(): React.JSX.Element {
     notes,
     recording,
     nextClass,
-    loading
+    loading,
+    toast
   } = useApp()
   const [startOpen, setStartOpen] = useState(false)
+  const [copiedNote, setCopiedNote] = useState<string | null>(null)
   const now = useNow()
   const navigate = useNavigate()
   const activeRecording =
@@ -54,6 +58,17 @@ export default function Dashboard(): React.JSX.Element {
   const needsLlm = settings ? !settings.hasLlmKey && !settings.demoMode : false
   const needsCourses = schedule.courses.length === 0
   const setupComplete = !needsGroq && !needsLlm && !needsCourses
+
+  async function copyRecent(noteId: string): Promise<void> {
+    try {
+      const result = await window.ezNotes.notes.copy(noteId)
+      setCopiedNote(noteId)
+      window.setTimeout(() => setCopiedNote(null), 1500)
+      toast(result.message, 'success')
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'error')
+    }
+  }
 
   if (loading) {
     return (
@@ -334,30 +349,76 @@ export default function Dashboard(): React.JSX.Element {
             </Link>
           </div>
           {recent.length ? (
-            <div className="recent-list">
-              {recent.map((note) => (
-                <button
-                  key={note.id}
-                  className="recent-note"
-                  onClick={() => navigate(`/notes/${note.id}`)}
-                >
-                  <span className="recent-date">
-                    {new Intl.DateTimeFormat('en-GB', {
-                      day: '2-digit',
-                      month: 'short'
-                    }).format(new Date(note.date))}
-                  </span>
-                  <span className="recent-main">
-                    <strong>{note.title}</strong>
-                    <small>
-                      {note.courseName} · {formatDuration(note.durationSec)}
-                    </small>
-                    {note.summary ? <em>{note.summary}</em> : null}
-                  </span>
-                  <ArrowRight size={15} />
-                </button>
-              ))}
-            </div>
+            <Card className="recent-notes-card">
+              {recent.map((note) => {
+                const course = schedule.courses.find(
+                  (item) => item.id === note.courseId
+                )
+                const readMinutes = Math.max(1, Math.ceil(note.wordCount / 200))
+                return (
+                  <div
+                    key={note.id}
+                    className="recent-note"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(`/notes/${note.id}`)}
+                    onKeyDown={(event) => {
+                      if (event.target !== event.currentTarget) return
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        navigate(`/notes/${note.id}`)
+                      }
+                    }}
+                  >
+                    <span className="recent-date">
+                      <strong>
+                        {new Intl.DateTimeFormat('en-GB', {
+                          day: '2-digit'
+                        }).format(new Date(note.date))}
+                      </strong>
+                      <small>
+                        {new Intl.DateTimeFormat('en-GB', {
+                          month: 'short'
+                        }).format(new Date(note.date))}
+                      </small>
+                    </span>
+                    <span
+                      className="recent-color"
+                      style={{ background: course?.color ?? '#f2c14e' }}
+                    />
+                    <span className="recent-main">
+                      <span className="recent-title-line">
+                        <strong>{note.title}</strong>
+                        {note.hasAudio ? <Badge tone="info">audio</Badge> : null}
+                      </span>
+                      <small>
+                        {note.courseName} · {formatDuration(note.durationSec)} ·{' '}
+                        {readMinutes} min read
+                      </small>
+                      {note.summary ? <em>{note.summary}</em> : null}
+                    </span>
+                    <span className="recent-actions">
+                      <button
+                        className="recent-copy"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          void copyRecent(note.id)
+                        }}
+                        aria-label="Copy note"
+                        title="Copy note to clipboard"
+                      >
+                        {copiedNote === note.id ? (
+                          <Check size={15} />
+                        ) : (
+                          <Copy size={15} />
+                        )}
+                      </button>
+                      <ArrowRight size={15} />
+                    </span>
+                  </div>
+                )
+              })}
+            </Card>
           ) : (
             <Card className="quiet-card">
               <p>Your first structured note will appear here after a lecture.</p>

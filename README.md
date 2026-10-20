@@ -93,8 +93,9 @@ On a note page, use **Copy note** or the **Export** menu:
 - **Copy Markdown** — the note body on the clipboard.
 - **Save as Markdown** — a portable `.md` file.
 - **Save as PDF** — A4, using the same styled note view you read in the app.
-- **Send to Obsidian** — choose a vault; ezNotes writes
-  `<vault>\ezNotes\<Course>\<date> <title>.md`.
+- **Send to Obsidian** — choose a vault once in **Settings → Exports**; ezNotes writes
+  `<vault>\ezNotes\<Course>\<date> <title>.md`. If no vault is saved yet, the first
+  export asks for one.
 - **Copy for Notion** — Markdown on the clipboard, ready to paste into a Notion page.
 
 The library also has a quick copy button on every note.

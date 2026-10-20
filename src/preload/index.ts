@@ -22,6 +22,7 @@ const api: EzNotesApi = {
       ipcRenderer.invoke('settings:setSecret', key, value),
     clearSecret: (key: SecretKey) => ipcRenderer.invoke('settings:clearSecret', key),
     chooseNotesDir: () => ipcRenderer.invoke('settings:chooseNotesDir'),
+    chooseObsidianVault: () => ipcRenderer.invoke('settings:chooseObsidianVault'),
     testLlm: () => ipcRenderer.invoke('settings:testLlm'),
     testStt: () => ipcRenderer.invoke('settings:testStt')
   },

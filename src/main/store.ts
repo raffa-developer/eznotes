@@ -20,6 +20,7 @@ const DEFAULT_SETTINGS: Settings = {
     model: 'deepseek-v4.1-flash'
   },
   notesDir: '',
+  obsidianVault: '',
   microphoneId: null,
   retentionDays: 30,
   theme: 'dark',
@@ -157,6 +158,8 @@ export function loadSettings(): Settings {
   }
 
   if (!settings.notesDir) settings.notesDir = defaults.notesDir
+  settings.obsidianVault =
+    typeof settings.obsidianVault === 'string' ? settings.obsidianVault : ''
   const notesMoved = migrateNotesDirectory(settings)
   settings.retentionDays = clamp(Number(settings.retentionDays) || 30, 1, 365)
   settings.notifyBeforeMinutes = clamp(

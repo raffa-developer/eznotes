@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  BookOpen,
   CheckCircle2,
   ExternalLink,
   FlaskConical,
@@ -178,6 +179,20 @@ export default function SettingsPage(): React.JSX.Element {
     const next = await window.ezNotes.settings.chooseNotesDir()
     await refreshSettings()
     toast(`Notes folder: ${next.notesDir}`, 'success')
+  }
+
+  async function chooseObsidianVault(): Promise<void> {
+    const next = await window.ezNotes.settings.chooseObsidianVault()
+    await refreshSettings()
+    if (next.settings.obsidianVault) {
+      toast(`Obsidian vault: ${next.settings.obsidianVault}`, 'success')
+    }
+  }
+
+  async function clearObsidianVault(): Promise<void> {
+    await window.ezNotes.settings.update({ obsidianVault: '' })
+    await refreshSettings()
+    toast('Obsidian vault cleared. Exports will ask for a folder.', 'success')
   }
 
   async function changeTheme(next: Theme): Promise<void> {
@@ -515,6 +530,49 @@ export default function SettingsPage(): React.JSX.Element {
           <p className="settings-note">
             Audio files live in the app's private data folder, not in the notes folder.
             If you keep a recording, it is removed automatically after {retention} days.
+          </p>
+        </Card>
+      </section>
+
+      <section className="settings-section">
+        <div className="settings-section-head">
+          <span className="settings-icon">
+            <BookOpen size={19} />
+          </span>
+          <div>
+            <h2>Exports</h2>
+            <p>Choose where your Obsidian notes should land.</p>
+          </div>
+        </div>
+        <Card className="settings-card">
+          <Field
+            label="Obsidian vault"
+            hint={
+              settings.settings.obsidianVault ||
+              'Not set. The first Obsidian export will ask for a folder.'
+            }
+          >
+            <div className="secret-row">
+              <input
+                value={settings.settings.obsidianVault}
+                readOnly
+                placeholder="Choose your vault folder"
+              />
+              <Button variant="outline" onClick={() => void chooseObsidianVault()}>
+                <FolderOpen size={15} />
+                Choose vault
+              </Button>
+              {settings.settings.obsidianVault ? (
+                <Button variant="ghost" onClick={() => void clearObsidianVault()}>
+                  <Trash2 size={15} />
+                  Clear
+                </Button>
+              ) : null}
+            </div>
+          </Field>
+          <p className="settings-note">
+            Notes are written to <code>&lt;vault&gt;/ezNotes/&lt;Course&gt;/</code> with
+            their frontmatter and tags. The path is saved for future exports.
           </p>
         </Card>
       </section>

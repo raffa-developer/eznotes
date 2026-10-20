@@ -16,6 +16,7 @@ export interface Settings {
     model: string
   }
   notesDir: string
+  obsidianVault: string
   microphoneId: string | null
   retentionDays: number
   theme: Theme
@@ -207,6 +208,7 @@ export interface EzNotesApi {
     setSecret: (key: SecretKey, value: string) => Promise<SettingsStatus>
     clearSecret: (key: SecretKey) => Promise<SettingsStatus>
     chooseNotesDir: () => Promise<SettingsStatus>
+    chooseObsidianVault: () => Promise<SettingsStatus>
     testLlm: () => Promise<TestResult>
     testStt: () => Promise<TestResult>
   }

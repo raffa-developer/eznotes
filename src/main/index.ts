@@ -240,6 +240,21 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
     }
     return settingsStatus()
   })
+  ipcMain.handle('settings:chooseObsidianVault', async () => {
+    const current = loadSettings()
+    const options: OpenDialogOptions = {
+      title: 'Choose your Obsidian vault folder',
+      defaultPath: current.obsidianVault || app.getPath('documents'),
+      properties: ['openDirectory', 'createDirectory']
+    }
+    const result = mainWindow
+      ? await dialog.showOpenDialog(mainWindow, options)
+      : await dialog.showOpenDialog(options)
+    if (!result.canceled && result.filePaths[0]) {
+      updateSettings({ obsidianVault: result.filePaths[0] })
+    }
+    return settingsStatus()
+  })
   ipcMain.handle('settings:testLlm', async (): Promise<TestResult> => {
     const settings = loadSettings()
     const key = getSecret('llmApiKey')
@@ -290,7 +305,8 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
   ipcMain.handle(
     'notes:export',
     async (_event, id: string, format: NoteExportFormat): Promise<NoteExportResult> => {
-      const notesDir = loadSettings().notesDir
+      const settings = loadSettings()
+      const notesDir = settings.notesDir
       const note = getNote(notesDir, id)
       if (!note) throw new Error('Note not found.')
 
@@ -306,18 +322,23 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
       }
 
       if (format === 'obsidian') {
-        const options: OpenDialogOptions = {
-          title: 'Choose your Obsidian vault folder',
-          properties: ['openDirectory', 'createDirectory']
-        }
-        const result = mainWindow
-          ? await dialog.showOpenDialog(mainWindow, options)
-          : await dialog.showOpenDialog(options)
-        if (result.canceled || !result.filePaths[0]) {
-          return { canceled: true, message: 'Export canceled.' }
+        let vault = settings.obsidianVault.trim()
+        if (!vault || !fs.existsSync(vault)) {
+          const options: OpenDialogOptions = {
+            title: 'Choose your Obsidian vault folder',
+            defaultPath: vault || app.getPath('documents'),
+            properties: ['openDirectory', 'createDirectory']
+          }
+          const result = mainWindow
+            ? await dialog.showOpenDialog(mainWindow, options)
+            : await dialog.showOpenDialog(options)
+          if (result.canceled || !result.filePaths[0]) {
+            return { canceled: true, message: 'Export canceled.' }
+          }
+          vault = result.filePaths[0]
+          updateSettings({ obsidianVault: vault })
         }
 
-        const vault = result.filePaths[0]
         const folder = path.join(vault, 'ezNotes', sanitizeFilename(note.courseName))
         fs.mkdirSync(folder, { recursive: true })
         const target = uniqueFile(path.join(folder, path.basename(note.path)))
