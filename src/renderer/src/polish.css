@@ -459,6 +459,95 @@ textarea {
   opacity: 1;
 }
 
+.today-list-card,
+.stat-card-group,
+.note-list-card,
+.course-list-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.today-list-card .today-row {
+  padding: 14px 18px;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.today-list-card .today-row:last-child {
+  border-bottom: none;
+}
+
+.today-list-card .today-row:hover {
+  background: var(--surface-2);
+}
+
+.stat-card-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.stat-card-group .stat-card {
+  padding: 15px 18px;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  flex: 0 0 auto;
+}
+
+.stat-card-group .stat-card:last-child {
+  border-bottom: none;
+}
+
+.note-list-card .note-row {
+  padding: 17px 20px;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.note-list-card .note-row:last-child {
+  border-bottom: none;
+}
+
+.note-list-card .note-row:hover {
+  background: var(--surface-2);
+}
+
+.note-list-card .note-open {
+  opacity: 0.55;
+}
+
+.note-list-card .note-row:hover .note-open {
+  opacity: 1;
+}
+
+.note-row:focus-visible,
+.recent-note:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -3px;
+}
+
+.course-list-card .course-card {
+  padding: 16px 18px;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.course-list-card .course-card:last-child {
+  border-bottom: none;
+}
+
+.course-list-card .course-card:hover {
+  background: var(--surface-2);
+}
+
 .footnote {
   max-width: 820px;
   font-size: 11px;

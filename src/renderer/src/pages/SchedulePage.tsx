@@ -325,67 +325,72 @@ export default function SchedulePage(): React.JSX.Element {
                 <Plus size={14} /> Add
               </button>
             </div>
-            {schedule.courses.map((course) => (
-              <Card key={course.id} className="course-card">
-                <div className="course-card-top">
-                  <span
-                    className="course-swatch"
-                    style={{ background: course.color }}
-                  />
-                  <div className="course-card-title">
-                    <h3>{course.name}</h3>
-                    {course.code && course.code !== course.name ? (
-                      <Badge tone="neutral">{course.code}</Badge>
-                    ) : null}
-                  </div>
-                  <div className="course-card-actions">
-                    <button
-                      className="icon-button"
-                      onClick={() => editCourse(course)}
-                      aria-label="Edit course"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                    <button
-                      className="icon-button danger"
-                      onClick={() => setDeleteCourse(course)}
-                      aria-label="Delete course"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-                <div className="course-card-meta">
-                  {course.lecturer ? (
-                    <span>
-                      <UserRound size={13} /> {course.lecturer}
-                    </span>
-                  ) : null}
-                  <span>
-                    <Clock size={13} />{' '}
-                    {schedule.slots.filter((slot) => slot.courseId === course.id).length}{' '}
-                    {schedule.slots.filter((slot) => slot.courseId === course.id).length === 1
-                      ? 'class'
-                      : 'classes'}{' '}
-                    / week
-                  </span>
-                </div>
-                {course.glossary.length ? (
-                  <div className="tag-row">
-                    {course.glossary.slice(0, 6).map((term) => (
-                      <span key={term} className="tag">
-                        {term}
-                      </span>
-                    ))}
-                    {course.glossary.length > 6 ? (
-                      <span className="tag">+{course.glossary.length - 6}</span>
-                    ) : null}
-                  </div>
-                ) : (
-                  <p className="course-glossary-hint">No glossary terms yet.</p>
-                )}
+            {schedule.courses.length ? (
+              <Card className="course-list-card">
+                {schedule.courses.map((course) => {
+                  const weeklyCount = schedule.slots.filter(
+                    (slot) => slot.courseId === course.id
+                  ).length
+                  return (
+                    <div key={course.id} className="course-card">
+                      <div className="course-card-top">
+                        <span
+                          className="course-swatch"
+                          style={{ background: course.color }}
+                        />
+                        <div className="course-card-title">
+                          <h3>{course.name}</h3>
+                          {course.code && course.code !== course.name ? (
+                            <Badge tone="neutral">{course.code}</Badge>
+                          ) : null}
+                        </div>
+                        <div className="course-card-actions">
+                          <button
+                            className="icon-button"
+                            onClick={() => editCourse(course)}
+                            aria-label="Edit course"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            className="icon-button danger"
+                            onClick={() => setDeleteCourse(course)}
+                            aria-label="Delete course"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="course-card-meta">
+                        {course.lecturer ? (
+                          <span>
+                            <UserRound size={13} /> {course.lecturer}
+                          </span>
+                        ) : null}
+                        <span>
+                          <Clock size={13} /> {weeklyCount}{' '}
+                          {weeklyCount === 1 ? 'class' : 'classes'} / week
+                        </span>
+                      </div>
+                      {course.glossary.length ? (
+                        <div className="tag-row">
+                          {course.glossary.slice(0, 6).map((term) => (
+                            <span key={term} className="tag">
+                              {term}
+                            </span>
+                          ))}
+                          {course.glossary.length > 6 ? (
+                            <span className="tag">+{course.glossary.length - 6}</span>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <p className="course-glossary-hint">No glossary terms yet.</p>
+                      )}
+                    </div>
+                  )
+                })}
               </Card>
-            ))}
+            ) : null}
           </div>
         </div>
       )}

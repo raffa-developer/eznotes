@@ -270,8 +270,8 @@ export default function Dashboard(): React.JSX.Element {
           )}
         </Card>
 
-        <div className="stat-stack">
-          <Card className="stat-card">
+        <Card className="stat-stack stat-card-group">
+          <div className="stat-card">
             <span className="stat-icon">
               <BookOpen size={17} />
             </span>
@@ -279,8 +279,8 @@ export default function Dashboard(): React.JSX.Element {
               <strong>{notes.length}</strong>
               <small>notes written</small>
             </div>
-          </Card>
-          <Card className="stat-card">
+          </div>
+          <div className="stat-card">
             <span className="stat-icon">
               <Clock size={17} />
             </span>
@@ -288,8 +288,8 @@ export default function Dashboard(): React.JSX.Element {
               <strong>{formatDuration(totalHours)}</strong>
               <small>lectures captured</small>
             </div>
-          </Card>
-          <Card className="stat-card">
+          </div>
+          <div className="stat-card">
             <span className="stat-icon">
               <CalendarDays size={17} />
             </span>
@@ -297,8 +297,8 @@ export default function Dashboard(): React.JSX.Element {
               <strong>{schedule.courses.length}</strong>
               <small>courses this term</small>
             </div>
-          </Card>
-        </div>
+          </div>
+        </Card>
       </div>
 
       <div className="two-col">
@@ -310,9 +310,9 @@ export default function Dashboard(): React.JSX.Element {
             </Link>
           </div>
           {todayClasses.length ? (
-            <div className="today-list">
+            <Card className="today-list-card">
               {todayClasses.map((item) => (
-                <Card key={`${item.slot.id}-${item.startsAt}`} className="today-row">
+                <div key={`${item.slot.id}-${item.startsAt}`} className="today-row">
                   <span className="today-time">
                     {formatTime(item.slot.startTime)}
                     <small>{formatTime(item.slot.endTime)}</small>
@@ -331,9 +331,9 @@ export default function Dashboard(): React.JSX.Element {
                   <Badge tone={item.isNow ? 'accent' : 'neutral'}>
                     {item.isNow ? 'Now' : countdown(item.startsAt, now)}
                   </Badge>
-                </Card>
+                </div>
               ))}
-            </div>
+            </Card>
           ) : (
             <Card className="quiet-card">
               <p>No classes today. A good day to revisit your notes.</p>

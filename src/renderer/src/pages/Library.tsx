@@ -128,17 +128,18 @@ export default function Library(): React.JSX.Element {
           ))}
         </div>
       ) : filtered.length ? (
-        <div className="note-list">
+        <Card className="note-list-card">
           {filtered.map((note) => {
             const course = schedule.courses.find((item) => item.id === note.courseId)
             return (
-              <Card
+              <div
                 key={note.id}
                 className="note-row"
                 onClick={() => navigate(`/notes/${note.id}`)}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(event) => {
+                  if (event.target !== event.currentTarget) return
                   if (event.key === 'Enter') navigate(`/notes/${note.id}`)
                 }}
               >
@@ -199,10 +200,10 @@ export default function Library(): React.JSX.Element {
                   {copyingId === note.id ? <Check size={15} /> : <Copy size={15} />}
                 </button>
                 <span className="note-open">Open →</span>
-              </Card>
+              </div>
             )
           })}
-        </div>
+        </Card>
       ) : (
         <EmptyState
           icon={<Search size={24} />}
