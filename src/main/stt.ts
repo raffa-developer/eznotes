@@ -61,7 +61,7 @@ async function requestTranscription(
       method: 'POST',
       headers: {
         Authorization: `Bearer ${options.apiKey}`,
-        'User-Agent': 'ezNotes/0.4.0'
+        'User-Agent': 'ezNotes/0.4.1'
       },
       body: form,
       signal: AbortSignal.timeout(300_000)
@@ -275,7 +275,7 @@ export async function testGroqKey(apiKey: string): Promise<TestResult> {
     const response = await fetch(`${GROQ_BASE}/models`, {
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        'User-Agent': 'ezNotes/0.4.0'
+        'User-Agent': 'ezNotes/0.4.1'
       },
       signal: AbortSignal.timeout(30_000)
     })
