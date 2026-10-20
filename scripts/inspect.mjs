@@ -7,7 +7,11 @@ if (expression.startsWith('@')) {
 
 const cdpPort = process.env.CDP_PORT || '9222'
 const targets = await (await fetch(`http://127.0.0.1:${cdpPort}/json`)).json()
-const target = targets.find((item) => item.type === 'page')
+const target = targets.find(
+  (item) =>
+    item.type === 'page' &&
+    (!process.env.CDP_TARGET || item.url.includes(process.env.CDP_TARGET))
+)
 if (!target) {
   console.error('No page target found')
   process.exit(1)

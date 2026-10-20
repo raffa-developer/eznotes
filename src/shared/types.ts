@@ -207,6 +207,11 @@ export interface EzNotesApi {
   app: {
     info: () => Promise<AppInfo>
     openExternal: (url: string) => Promise<void>
+    openMainWindow: () => Promise<void>
+    openNote: (id: string) => Promise<void>
+    hideIsland: () => Promise<void>
+    setIslandExpanded: (expanded: boolean, height?: number) => Promise<void>
+    onOpenNote: (callback: (noteId: string) => void) => () => void
   }
   settings: {
     get: () => Promise<SettingsStatus>

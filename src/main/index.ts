@@ -6,6 +6,7 @@ import {
   ipcMain,
   Menu,
   protocol,
+  screen,
   session,
   shell
 } from 'electron'
@@ -52,9 +53,24 @@ import { migrateUserData } from './migrate'
 migrateUserData()
 
 let mainWindow: BrowserWindow | null = null
+let islandWindow: BrowserWindow | null = null
 let quitting = false
+const ISLAND_COLLAPSED = { width: 390, height: 60 }
+const ISLAND_EXPANDED = { width: 430, height: 258 }
+
 const recording = new RecordingManager((event) => {
   mainWindow?.webContents.send('recording:event', event)
+  islandWindow?.webContents.send('recording:event', event)
+  if (
+    event.type === 'state' &&
+    event.snapshot &&
+    mainWindow?.isMinimized() &&
+    ['recording', 'paused', 'processing', 'stopped', 'error'].includes(
+      event.snapshot.status
+    )
+  ) {
+    showIsland()
+  }
 })
 
 protocol.registerSchemesAsPrivileged([
@@ -94,7 +110,21 @@ function createWindow(): void {
   })
 
   mainWindow.on('closed', () => {
+    islandWindow?.close()
+    islandWindow = null
     mainWindow = null
+  })
+
+  mainWindow.on('minimize', () => {
+    if (recording.state()) showIsland()
+  })
+
+  mainWindow.on('restore', () => {
+    hideIsland()
+  })
+
+  mainWindow.on('show', () => {
+    hideIsland()
   })
 
   mainWindow.on('close', (event) => {
@@ -124,6 +154,101 @@ function createWindow(): void {
       hash: '/'
     })
   }
+}
+
+function islandUrl(): string {
+  const base = process.env['ELECTRON_RENDERER_URL']
+  if (base) return `${base}#/island`
+  return `${pathToFileURL(path.join(__dirname, '../renderer/index.html')).toString()}#/island`
+}
+
+function createIslandWindow(): BrowserWindow {
+  if (islandWindow) return islandWindow
+
+  islandWindow = new BrowserWindow({
+    width: ISLAND_COLLAPSED.width,
+    height: ISLAND_COLLAPSED.height,
+    show: false,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    maximizable: false,
+    minimizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    hasShadow: false,
+    backgroundColor: '#00000000',
+    webPreferences: {
+      preload: path.join(__dirname, '../preload/index.js'),
+      sandbox: false,
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  })
+
+  islandWindow.setAlwaysOnTop(true, 'floating')
+  islandWindow.setMenuBarVisibility(false)
+  islandWindow.loadURL(islandUrl())
+  islandWindow.once('ready-to-show', () => {
+    if (!islandWindow) return
+    positionIsland()
+    islandWindow.showInactive()
+  })
+  islandWindow.on('closed', () => {
+    islandWindow = null
+  })
+
+  return islandWindow
+}
+
+function positionIsland(): void {
+  if (!islandWindow) return
+  const [width, height] = islandWindow.getSize()
+  const display = mainWindow
+    ? screen.getDisplayMatching(mainWindow.getBounds())
+    : screen.getPrimaryDisplay()
+  const area = display.workArea
+  islandWindow.setPosition(
+    Math.round(area.x + (area.width - width) / 2),
+    area.y + 10
+  )
+}
+
+function showIsland(): void {
+  const window = createIslandWindow()
+  positionIsland()
+  if (!window.webContents.isLoading()) {
+    window.showInactive()
+  }
+}
+
+function hideIsland(): void {
+  if (islandWindow?.isVisible()) islandWindow.hide()
+}
+
+function resizeIsland(expanded: boolean, height?: number): void {
+  if (!islandWindow) return
+  const width = expanded ? ISLAND_EXPANDED.width : ISLAND_COLLAPSED.width
+  const requestedHeight = Number.isFinite(height)
+    ? Math.round(height as number)
+    : expanded
+      ? ISLAND_EXPANDED.height
+      : ISLAND_COLLAPSED.height
+  const safeHeight = Math.max(
+    ISLAND_COLLAPSED.height,
+    Math.min(ISLAND_EXPANDED.height, requestedHeight)
+  )
+  islandWindow.setSize(width, safeHeight)
+  positionIsland()
+}
+
+function restoreMainWindow(): void {
+  if (!mainWindow) return
+  if (mainWindow.isMinimized()) mainWindow.restore()
+  mainWindow.show()
+  mainWindow.focus()
+  hideIsland()
 }
 
 async function chooseSavePath(
@@ -210,6 +335,20 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
   ipcMain.handle('app:openExternal', async (_event, url: string) => {
     if (!/^https?:\/\//i.test(url)) throw new Error('Invalid URL.')
     await shell.openExternal(url)
+  })
+
+  ipcMain.handle('app:openMainWindow', () => {
+    restoreMainWindow()
+  })
+  ipcMain.handle('app:openNote', (_event, id: string) => {
+    restoreMainWindow()
+    mainWindow?.webContents.send('app:openNote', id)
+  })
+  ipcMain.handle('app:hideIsland', () => {
+    hideIsland()
+  })
+  ipcMain.handle('app:setIslandExpanded', (_event, expanded: boolean, height?: number) => {
+    resizeIsland(Boolean(expanded), height)
   })
 
   ipcMain.handle('settings:get', () => settingsStatus())

@@ -3,7 +3,11 @@ import fs from 'node:fs'
 const port = process.env.CDP_PORT || '9222'
 const output = process.argv[2] || 'screenshots/app.png'
 const targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json()
-const target = targets.find((item) => item.type === 'page')
+const target = targets.find(
+  (item) =>
+    item.type === 'page' &&
+    (!process.env.CDP_TARGET || item.url.includes(process.env.CDP_TARGET))
+)
 if (!target) throw new Error('No page target')
 
 const socket = new WebSocket(target.webSocketDebuggerUrl)
@@ -35,12 +39,14 @@ await new Promise((resolve, reject) => {
 
 await send('Page.enable')
 await send('Emulation.setFocusEmulationEnabled', { enabled: true })
-await send('Emulation.setDeviceMetricsOverride', {
-  width: 1360,
-  height: 820,
-  deviceScaleFactor: 1,
-  mobile: false
-})
+if (!process.env.CDP_NO_RESIZE) {
+  await send('Emulation.setDeviceMetricsOverride', {
+    width: 1360,
+    height: 820,
+    deviceScaleFactor: 1,
+    mobile: false
+  })
+}
 const result = await send('Page.captureScreenshot', {
   format: 'png',
   fromSurface: false,

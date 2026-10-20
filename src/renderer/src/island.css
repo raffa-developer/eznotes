@@ -1,0 +1,347 @@
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body.island {
+  margin: 0;
+  overflow: hidden;
+  background: transparent !important;
+  color: #f2eee3;
+  font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  user-select: none;
+}
+
+.island-root {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  padding: 3px;
+  box-sizing: border-box;
+}
+
+.island {
+  width: 100%;
+  height: fit-content;
+  align-self: flex-start;
+  overflow: hidden;
+  border: 1px solid rgba(231, 236, 246, 0.16);
+  border-radius: 17px;
+  background: rgba(13, 19, 28, 0.96);
+  box-shadow:
+    0 16px 44px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  color: #f2eee3;
+  -webkit-app-region: drag;
+}
+
+.island-bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 52px;
+  padding: 0 8px 0 13px;
+}
+
+.island-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff7f77;
+  box-shadow: 0 0 0 0 rgba(255, 127, 119, 0.5);
+  animation: island-pulse 1.6s infinite;
+  flex: none;
+}
+
+.island-dot.paused {
+  background: #f4c95d;
+  animation: none;
+}
+
+.island-dot.processing {
+  background: #8db4ff;
+  animation: island-pulse 1.2s infinite;
+}
+
+.island-dot.error {
+  background: #ff7f77;
+  animation: none;
+}
+
+.island-course {
+  overflow: hidden;
+  max-width: 90px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.island-timer {
+  color: #f2eee3;
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  opacity: 0.85;
+  flex: none;
+}
+
+.island-level {
+  display: flex;
+  align-items: center;
+  gap: 1.5px;
+  height: 18px;
+  margin-left: 1px;
+  flex: none;
+}
+
+.island-level i {
+  display: block;
+  width: 2px;
+  min-height: 3px;
+  border-radius: 2px;
+  background: #8db4ff;
+  transition: height 100ms ease, opacity 100ms ease;
+}
+
+.island-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 27px;
+  height: 27px;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #a7b2c2;
+  -webkit-app-region: no-drag;
+  cursor: pointer;
+  flex: none;
+}
+
+.island-icon-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f2eee3;
+}
+
+.island-icon-button.danger {
+  color: #ff7f77;
+}
+
+.island-icon-button.danger:hover {
+  background: rgba(255, 127, 119, 0.12);
+}
+
+.island-icon-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.island-phase {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #a7b2c2;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.island-phase.success {
+  color: #8ce99a;
+}
+
+.island-phase.error {
+  color: #ff7f77;
+}
+
+.island-panel {
+  max-height: 198px;
+  overflow-y: auto;
+  padding: 0 13px 12px;
+  border-top: 1px solid rgba(231, 236, 246, 0.09);
+  -webkit-app-region: no-drag;
+}
+
+.island-transcript {
+  padding-top: 4px;
+}
+
+.island-transcript-line {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 7px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(231, 236, 246, 0.07);
+}
+
+.island-transcript-line:last-child {
+  border-bottom: none;
+}
+
+.island-transcript-line span {
+  padding-top: 2px;
+  color: #8db4ff;
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 9px;
+}
+
+.island-transcript-line p {
+  margin: 0;
+  color: #f2eee3;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.island-outline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding-top: 7px;
+}
+
+.island-outline span {
+  padding: 2px 6px;
+  border: 1px solid rgba(231, 236, 246, 0.09);
+  border-radius: 999px;
+  color: #a7b2c2;
+  font-size: 9.5px;
+}
+
+.island-muted {
+  margin: 9px 0 2px;
+  color: #a7b2c2;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.island-decision {
+  padding-top: 10px;
+}
+
+.island-decision > p {
+  margin: 0;
+  color: #f2eee3;
+  font-size: 12px;
+}
+
+.island-ready,
+.island-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.4;
+}
+
+.island-ready {
+  color: #8ce99a !important;
+}
+
+.island-error {
+  color: #ff9a93 !important;
+  font-size: 11px !important;
+}
+
+.island-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.island-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 10px;
+  border: 1px solid rgba(231, 236, 246, 0.12);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #d8dde6;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.island-action:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.island-action.primary {
+  border-color: transparent;
+  background: #f4c95d;
+  color: #1a1405;
+}
+
+.island-action.primary:hover {
+  background: #ffd875;
+}
+
+.island-action.danger {
+  border-color: rgba(255, 127, 119, 0.2);
+  background: rgba(255, 127, 119, 0.1);
+  color: #ff9a93;
+}
+
+.island-action:focus-visible {
+  outline: 2px solid #8db4ff;
+  outline-offset: 1px;
+}
+
+.island-progress {
+  padding-top: 12px;
+}
+
+.island-progress p {
+  margin: 0 0 8px;
+  color: #a7b2c2;
+  font-size: 11px;
+}
+
+.island-progress-track {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.island-progress-track > div {
+  height: 100%;
+  border-radius: inherit;
+  background: #8db4ff;
+  transition: width 300ms ease;
+}
+
+.island-progress small {
+  display: block;
+  margin-top: 5px;
+  color: #758397;
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 9px;
+}
+
+.island::-webkit-scrollbar,
+.island-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.island-panel::-webkit-scrollbar-thumb {
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+@keyframes island-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 127, 119, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(255, 127, 119, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 127, 119, 0);
+  }
+}

@@ -109,6 +109,14 @@ https://opencode.ai/inference/openai/v1
 
 You can also choose **Custom OpenAI-compatible** and point it at any provider.
 
+## Recording island
+
+When a lecture is recording and you minimize the main window, a small always-on-top
+pill appears at the top centre of the display. It shows the timer and live level, and
+offers pause/resume, stop, expand, and open-app controls. After stopping, you can keep
+or delete the audio directly from the island; when notes are ready, it can open the
+finished note.
+
 ## Copy and export
 
 On a note page, use **Copy note** or the **Export** menu:

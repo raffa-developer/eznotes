@@ -13,7 +13,18 @@ import type {
 const api: EzNotesApi = {
   app: {
     info: () => ipcRenderer.invoke('app:info'),
-    openExternal: (url) => ipcRenderer.invoke('app:openExternal', url)
+    openExternal: (url) => ipcRenderer.invoke('app:openExternal', url),
+    openMainWindow: () => ipcRenderer.invoke('app:openMainWindow'),
+    openNote: (id: string) => ipcRenderer.invoke('app:openNote', id),
+    hideIsland: () => ipcRenderer.invoke('app:hideIsland'),
+    setIslandExpanded: (expanded: boolean, height?: number) =>
+      ipcRenderer.invoke('app:setIslandExpanded', expanded, height),
+    onOpenNote: (callback: (noteId: string) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, noteId: string) =>
+        callback(noteId)
+      ipcRenderer.on('app:openNote', listener)
+      return () => ipcRenderer.removeListener('app:openNote', listener)
+    }
   },
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),

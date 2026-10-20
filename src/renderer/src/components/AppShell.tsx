@@ -36,6 +36,12 @@ export default function AppShell(): React.JSX.Element {
     localStorage.setItem('eznotes.sidebar', collapsed ? 'collapsed' : 'expanded')
   }, [collapsed])
 
+  useEffect(() => {
+    return window.ezNotes.app.onOpenNote((noteId) => {
+      navigate(`/notes/${noteId}`)
+    })
+  }, [navigate])
+
   return (
     <div className={`app-shell ${collapsed ? 'sidebar-collapsed' : ''}`}>
       <aside className="sidebar">

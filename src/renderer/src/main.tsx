@@ -6,13 +6,24 @@ import '@fontsource/atkinson-hyperlegible/400.css'
 import '@fontsource/atkinson-hyperlegible/700.css'
 import '@fontsource/atkinson-hyperlegible/400-italic.css'
 import App from './App'
+import Island from './pages/Island'
 import './styles.css'
 import './polish.css'
+import './island.css'
 
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-  <React.StrictMode>
-    <HashRouter>
-      <App />
-    </HashRouter>
-  </React.StrictMode>
-)
+const islandMode = window.location.hash.startsWith('#/island')
+if (islandMode) document.body.classList.add('island')
+
+const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)
+
+if (islandMode) {
+  root.render(<Island />)
+} else {
+  root.render(
+    <React.StrictMode>
+      <HashRouter>
+        <App />
+      </HashRouter>
+    </React.StrictMode>
+  )
+}
