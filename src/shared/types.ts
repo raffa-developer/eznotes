@@ -1,7 +1,12 @@
 export type Theme = 'dark' | 'light' | 'system'
 export type UiLanguage = 'en' | 'pt'
 
-export type LlmProvider = 'opencode-go' | 'opencode-console' | 'custom'
+export type LlmProvider =
+  | 'opencode-go'
+  | 'opencode-console'
+  | 'groq'
+  | 'ollama'
+  | 'custom'
 export type SttProvider = 'groq'
 
 export interface Settings {
@@ -9,6 +14,7 @@ export interface Settings {
     provider: SttProvider
     model: string
     language: string
+    liveTranscript: boolean
   }
   llm: {
     provider: LlmProvider

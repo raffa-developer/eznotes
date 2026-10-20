@@ -55,9 +55,11 @@ export async function chat(
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${options.apiKey}`,
         'Content-Type': 'application/json',
-        'User-Agent': 'ezNotes/0.3.3',
+        ...(options.apiKey
+          ? { Authorization: `Bearer ${options.apiKey}` }
+          : {}),
+        'User-Agent': 'ezNotes/0.4.0',
         ...(options.sessionId ? { 'x-opencode-session': options.sessionId } : {})
       },
       body: JSON.stringify({

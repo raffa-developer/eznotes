@@ -57,6 +57,29 @@ Demo mode returns canned Portuguese transcript lines and a canned structured not
 It exercises recording, WAV writing, the live view, the retention dialog, Markdown
 output, the library, and note rendering.
 
+## Free setup
+
+ezNotes can run at **$0** without an OpenCode subscription:
+
+1. Use a **Groq key on the free plan**.
+2. In **Settings → Listening**, turn **Live transcript and outline during class** off.
+   Only the final lecture audio is sent to Groq, so a normal lecture fits the free
+   tier much better.
+3. In **Settings → Writing**, choose one of:
+   - **Ollama (local, free)** — install Ollama, run `ollama pull qwen2.5:7b`, and
+     keep it running. Notes are generated entirely on your PC.
+   - **Groq (free tier)** — reuses your Groq key. Good for shorter lectures; long
+     transcripts can hit Groq’s free tokens-per-minute limit.
+
+OpenCode’s free models are restricted to use inside OpenCode, so they cannot be used
+by this app. Live transcription and live outlines require the cloud path; for a
+completely offline setup you would need local Whisper support.
+
+```powershell
+winget install Ollama.Ollama
+ollama pull qwen2.5:7b
+```
+
 ## API keys
 
 Keys are stored in the app's user-data folder, encrypted with Windows DPAPI via

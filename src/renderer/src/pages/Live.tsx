@@ -55,7 +55,13 @@ export default function Live(): React.JSX.Element {
   const isPaused = recording?.status === 'paused'
   const isProcessing = recording?.status === 'processing' || finalizing
   const hasGroq = (settings?.hasGroqKey ?? false) || (settings?.demoMode ?? false)
-  const hasLlm = (settings?.hasLlmKey ?? false) || (settings?.demoMode ?? false)
+  const llmProvider = settings?.settings.llm.provider
+  const hasLlm =
+    (settings?.hasLlmKey ?? false) ||
+    llmProvider === 'ollama' ||
+    (llmProvider === 'groq' && (settings?.hasGroqKey ?? false)) ||
+    (settings?.demoMode ?? false)
+  const liveTranscript = settings?.settings.stt.liveTranscript ?? true
   const needsFinalize =
     !stopped && !isProcessing && ['stopped', 'error'].includes(recording?.status ?? '')
 
@@ -242,7 +248,7 @@ export default function Live(): React.JSX.Element {
         </div>
       </header>
 
-      {!hasGroq && !isProcessing ? (
+      {liveTranscript && !hasGroq && !isProcessing ? (
         <div className="banner banner-warn">
           <AlertTriangle size={17} />
           <span>
@@ -321,11 +327,19 @@ export default function Live(): React.JSX.Element {
                 <span className="listening-orb">
                   <AudioLines size={26} />
                 </span>
-                <h3>{hasGroq ? 'The microphone is open.' : 'Recording audio locally.'}</h3>
+                <h3>
+                  {!liveTranscript
+                    ? 'Live transcript is off.'
+                    : hasGroq
+                      ? 'The microphone is open.'
+                      : 'Recording audio locally.'}
+                </h3>
                 <p>
-                  {hasGroq
-                    ? 'The first words will appear a few seconds after someone starts speaking.'
-                    : 'Add a Groq key to turn this audio into a live transcript. The recording is still being saved.'}
+                  {!liveTranscript
+                    ? 'The lecture is still being recorded. The final transcript and structured notes will be written after class.'
+                    : hasGroq
+                      ? 'The first words will appear a few seconds after someone starts speaking.'
+                      : 'Add a Groq key to turn this audio into a live transcript. The recording is still being saved.'}
                 </p>
               </div>
             )}
@@ -370,11 +384,13 @@ export default function Live(): React.JSX.Element {
             ) : (
               <div className="outline-empty">
                 <p>
-                  {hasLlm
-                    ? 'The outline will appear once there is enough academic content.'
-                    : 'Add an OpenCode key in Settings to get a live outline.'}
+                  {!liveTranscript
+                    ? 'Live outline is off. The transcript and notes are written after class.'
+                    : hasLlm
+                      ? 'The outline will appear once there is enough academic content.'
+                      : 'Choose a notes model in Settings to get a live outline.'}
                 </p>
-                {!hasLlm ? (
+                {!hasLlm || !liveTranscript ? (
                   <Link to="/settings" className="text-link">
                     <SettingsIcon size={14} /> Open settings
                   </Link>

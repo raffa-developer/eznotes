@@ -33,6 +33,16 @@ const PROVIDER_PRESETS: Record<
     baseURL: 'https://opencode.ai/inference/openai/v1',
     model: 'deepseek-v4.1-flash',
     label: 'OpenCode Console'
+  },
+  groq: {
+    baseURL: 'https://api.groq.com/openai/v1',
+    model: 'openai/gpt-oss-120b',
+    label: 'Groq (free tier)'
+  },
+  ollama: {
+    baseURL: 'http://localhost:11434/v1',
+    model: 'qwen2.5:7b',
+    label: 'Ollama (local)'
   }
 }
 
@@ -47,7 +57,9 @@ const LLM_MODELS = [
   'longcat-2.0',
   'mimo-v2.6-flash',
   'hy3',
-  'step-5-preview'
+  'step-5-preview',
+  'openai/gpt-oss-120b',
+  'qwen2.5:7b'
 ]
 
 const STT_MODELS = ['whisper-large-v3-turbo', 'whisper-large-v3']
@@ -67,6 +79,7 @@ export default function SettingsPage(): React.JSX.Element {
   const [llmKey, setLlmKey] = useState('')
   const [sttModel, setSttModel] = useState('whisper-large-v3-turbo')
   const [language, setLanguage] = useState('pt')
+  const [liveTranscript, setLiveTranscript] = useState(true)
   const [provider, setProvider] = useState<LlmProvider>('opencode-go')
   const [baseURL, setBaseURL] = useState(PROVIDER_PRESETS['opencode-go'].baseURL)
   const [model, setModel] = useState(PROVIDER_PRESETS['opencode-go'].model)
@@ -85,6 +98,7 @@ export default function SettingsPage(): React.JSX.Element {
     if (!settings) return
     setSttModel(settings.settings.stt.model)
     setLanguage(settings.settings.stt.language)
+    setLiveTranscript(settings.settings.stt.liveTranscript)
     setProvider(settings.settings.llm.provider)
     setBaseURL(settings.settings.llm.baseURL)
     setModel(settings.settings.llm.model)
@@ -118,7 +132,12 @@ export default function SettingsPage(): React.JSX.Element {
     setSaving(true)
     try {
       await window.ezNotes.settings.update({
-        stt: { provider: settings.settings.stt.provider, model: sttModel, language },
+        stt: {
+          provider: settings.settings.stt.provider,
+          model: sttModel,
+          language,
+          liveTranscript
+        },
         llm: { provider, baseURL, model },
         retentionDays: retention,
         microphoneId: micId
@@ -223,6 +242,9 @@ export default function SettingsPage(): React.JSX.Element {
 
   const hasGroq = settings.hasGroqKey
   const hasLlm = settings.hasLlmKey
+  const localLlm = provider === 'ollama'
+  const groqLlm = provider === 'groq'
+  const llmReady = hasLlm || localLlm || (groqLlm && hasGroq)
 
   return (
     <div className="page settings-page">
@@ -344,9 +366,26 @@ export default function SettingsPage(): React.JSX.Element {
             </Field>
           </div>
 
+          <label className="toggle-row">
+            <input
+              type="checkbox"
+              checked={liveTranscript}
+              onChange={(event) => setLiveTranscript(event.target.checked)}
+            />
+            <span>
+              <strong>Live transcript and outline during class</strong>
+              <small>
+                Uses Groq audio minutes while the lecture runs. Turn it off to stay
+                inside the Groq free tier; the final transcription and notes still run
+                after class.
+              </small>
+            </span>
+          </label>
+
           <p className="settings-note">
-            Audio is uploaded to Groq for transcription. Live text arrives in chunks,
-            a few seconds behind the speaker. The final pass after class is more accurate.
+            {liveTranscript
+              ? 'Audio is uploaded to Groq for live and final transcription. Live chunks are billed more heavily than the final pass.'
+              : 'Live transcription is off. Only the final lecture audio is sent to Groq, which is much cheaper and fits the free tier better.'}
           </p>
         </Card>
       </section>
@@ -358,10 +397,18 @@ export default function SettingsPage(): React.JSX.Element {
           </span>
           <div>
             <h2>Writing</h2>
-            <p>OpenCode runs the live outline and turns the transcript into structured notes.</p>
+            <p>Choose a cloud or local model to turn the transcript into notes.</p>
           </div>
-          <Badge tone={hasLlm || settings.demoMode ? 'accent' : 'warn'}>
-            {settings.demoMode ? 'Simulated' : hasLlm ? 'Connected' : 'Key needed'}
+          <Badge tone={llmReady || settings.demoMode ? 'accent' : 'warn'}>
+            {settings.demoMode
+              ? 'Simulated'
+              : localLlm
+                ? 'Local / free'
+                : groqLlm
+                  ? 'Groq free tier'
+                  : hasLlm
+                    ? 'Connected'
+                    : 'Key needed'}
           </Badge>
         </div>
 
@@ -374,6 +421,8 @@ export default function SettingsPage(): React.JSX.Element {
               >
                 <option value="opencode-go">OpenCode Go</option>
                 <option value="opencode-console">OpenCode Console</option>
+                <option value="groq">Groq (free tier)</option>
+                <option value="ollama">Ollama (local, free)</option>
                 <option value="custom">Custom OpenAI-compatible</option>
               </select>
             </Field>
@@ -406,55 +455,95 @@ export default function SettingsPage(): React.JSX.Element {
             />
           </Field>
 
-          <Field
-            label="OpenCode API key"
-            hint={
-              provider === 'opencode-go'
-                ? 'Uses your Go subscription. Go is intended for coding-agent traffic, so the Console API is safer for a general app.'
-                : 'Create a service-account key in the OpenCode Console.'
-            }
-          >
-            <div className="secret-row">
-              <div className="secret-input">
-                <KeyRound size={16} />
-                <input
-                  type="password"
-                  value={llmKey}
-                  onChange={(event) => setLlmKey(event.target.value)}
-                  placeholder={hasLlm ? '•••••••••••••••• saved' : 'sk_…'}
-                  autoComplete="off"
-                />
+          {provider === 'ollama' ? (
+            <div className="provider-note">
+              <strong>No API key needed.</strong> Install Ollama on this PC and run{' '}
+              <code>ollama pull qwen2.5:7b</code>. Keep Ollama running while notes are
+              written. Everything stays local.
+              <div className="free-provider-actions">
+                <Button
+                  variant="outline"
+                  onClick={() => void test('llm')}
+                  disabled={testing === 'llm'}
+                >
+                  {testing === 'llm' ? <Loader2 size={15} className="spin" /> : null}
+                  Test local model
+                </Button>
               </div>
-              <Button variant="outline" onClick={() => void saveSecret('llmApiKey', llmKey)}>
-                Save key
-              </Button>
-              {hasLlm ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    onClick={() => void test('llm')}
-                    disabled={testing === 'llm'}
-                  >
-                    {testing === 'llm' ? <Loader2 size={15} className="spin" /> : null}
-                    Test
-                  </Button>
-                  <button
-                    className="icon-button danger"
-                    onClick={() => void clearKey('llmApiKey')}
-                    aria-label="Remove OpenCode key"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </>
-              ) : null}
             </div>
-          </Field>
+          ) : provider === 'groq' ? (
+            <div className="provider-note">
+              <strong>Uses your Groq key.</strong> No separate notes key is needed.
+              The free tier has daily token limits; shorter lectures work best. For
+              long lectures, Ollama or a paid provider is more reliable.
+              <div className="free-provider-actions">
+                <Button
+                  variant="outline"
+                  onClick={() => void test('llm')}
+                  disabled={testing === 'llm' || !hasGroq}
+                >
+                  {testing === 'llm' ? <Loader2 size={15} className="spin" /> : null}
+                  Test Groq model
+                </Button>
+                {!hasGroq ? (
+                  <small>Add a Groq key under Listening first.</small>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <Field
+              label="Notes model key"
+              hint={
+                provider === 'opencode-go'
+                  ? 'Uses your Go subscription. Go is intended for coding-agent traffic, so the Console API is safer for a general app.'
+                  : 'Create a service-account key in the OpenCode Console.'
+              }
+            >
+              <div className="secret-row">
+                <div className="secret-input">
+                  <KeyRound size={16} />
+                  <input
+                    type="password"
+                    value={llmKey}
+                    onChange={(event) => setLlmKey(event.target.value)}
+                    placeholder={hasLlm ? '•••••••••••••••• saved' : 'sk_…'}
+                    autoComplete="off"
+                  />
+                </div>
+                <Button variant="outline" onClick={() => void saveSecret('llmApiKey', llmKey)}>
+                  Save key
+                </Button>
+                {hasLlm ? (
+                  <>
+                    <Button
+                      variant="ghost"
+                      onClick={() => void test('llm')}
+                      disabled={testing === 'llm'}
+                    >
+                      {testing === 'llm' ? <Loader2 size={15} className="spin" /> : null}
+                      Test
+                    </Button>
+                    <button
+                      className="icon-button danger"
+                      onClick={() => void clearKey('llmApiKey')}
+                      aria-label="Remove notes model key"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </>
+                ) : null}
+              </div>
+            </Field>
+          )}
 
           {testResult.llm ? <TestBanner result={testResult.llm} /> : null}
 
           <p className="settings-note">
-            The transcript is sent to OpenCode to write the note. It is not used to
-            train models on the Go endpoint; see the Console for retention details.
+            {provider === 'ollama'
+              ? 'The transcript never leaves this PC when using Ollama. A 7B model is a good fit for a 6 GB GPU.'
+              : provider === 'groq'
+                ? 'The transcript is sent to Groq to write the note. Groq free-tier token limits apply.'
+                : 'The transcript is sent to OpenCode to write the note. It is not used to train models on the Go endpoint; see the Console for retention details.'}
           </p>
         </Card>
       </section>

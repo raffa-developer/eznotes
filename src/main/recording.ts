@@ -129,21 +129,27 @@ export class RecordingManager {
     this.processing = null
     this.emitState()
 
-    if (!getSecret('groqApiKey')) {
-      if (!demoMode) {
-        this.notice(
-          'Add a Groq API key in Settings to see the live transcript.',
-          'warn'
-        )
-      }
+    const liveEnabled = settings.stt.liveTranscript
+    if (!liveEnabled) {
+      this.notice(
+        'Live transcript is off. The lecture is still being recorded and will be transcribed after class.',
+        'info'
+      )
+    } else if (!getSecret('groqApiKey') && !demoMode) {
+      this.notice(
+        'Add a Groq API key in Settings to see the live transcript.',
+        'warn'
+      )
     }
 
-    session.liveTimer = setInterval(() => {
-      void this.tickLive()
-    }, LIVE_INTERVAL_MS)
-    session.outlineTimer = setInterval(() => {
-      void this.tickOutline()
-    }, OUTLINE_INTERVAL_MS)
+    if (liveEnabled) {
+      session.liveTimer = setInterval(() => {
+        void this.tickLive()
+      }, LIVE_INTERVAL_MS)
+      session.outlineTimer = setInterval(() => {
+        void this.tickOutline()
+      }, OUTLINE_INTERVAL_MS)
+    }
 
     return this.snapshot()
   }
@@ -300,8 +306,11 @@ export class RecordingManager {
       )
 
       let markdown: string
-      const llmKey = getSecret('llmApiKey')
-      if (!llmKey && !demoMode) {
+      const directKey = getSecret('llmApiKey')
+      const llmKey =
+        settings.llm.provider === 'groq' ? groqKey ?? '' : directKey ?? ''
+      const keyless = settings.llm.provider === 'ollama'
+      if (!llmKey && !keyless && !demoMode) {
         warnings.push(
           'The notes model key is missing, so a transcript-only note was saved.'
         )
@@ -323,7 +332,7 @@ export class RecordingManager {
               segments
             },
             {
-              apiKey: llmKey ?? 'demo',
+              apiKey: llmKey || (keyless ? '' : 'demo'),
               baseURL: settings.llm.baseURL,
               model: settings.llm.model,
               sessionId: session.id,
@@ -464,6 +473,7 @@ export class RecordingManager {
     if (!session || session.status !== 'recording' || session.liveBusy) return
 
     const settings = loadSettings()
+    if (!settings.stt.liveTranscript) return
     const apiKey = getSecret('groqApiKey')
     if (!apiKey && !demoMode) return
 
@@ -522,13 +532,19 @@ export class RecordingManager {
     if (session.liveText.trim().length < 350) return
 
     const settings = loadSettings()
-    const apiKey = getSecret('llmApiKey')
-    if (!apiKey && !demoMode) return
+    if (!settings.stt.liveTranscript) return
+    const groqKey = getSecret('groqApiKey')
+    const apiKey =
+      settings.llm.provider === 'groq'
+        ? groqKey ?? ''
+        : getSecret('llmApiKey') ?? ''
+    const keyless = settings.llm.provider === 'ollama'
+    if (!apiKey && !keyless && !demoMode) return
 
     session.outlineBusy = true
     try {
       const bullets = await generateOutline(session.outline, session.liveText, {
-        apiKey: apiKey ?? 'demo',
+        apiKey: apiKey || (keyless ? '' : 'demo'),
         baseURL: settings.llm.baseURL,
         model: settings.llm.model,
         sessionId: session.id

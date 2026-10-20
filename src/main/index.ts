@@ -257,10 +257,22 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
   })
   ipcMain.handle('settings:testLlm', async (): Promise<TestResult> => {
     const settings = loadSettings()
-    const key = getSecret('llmApiKey')
-    if (!key) return { ok: false, message: 'Add the OpenCode key first.' }
+    const directKey = getSecret('llmApiKey')
+    const groqKey = getSecret('groqApiKey')
+    const key =
+      settings.llm.provider === 'groq' ? groqKey ?? '' : directKey ?? ''
+    const keyless = settings.llm.provider === 'ollama'
+    if (!key && !keyless) {
+      return {
+        ok: false,
+        message:
+          settings.llm.provider === 'groq'
+            ? 'Add a Groq key under Listening first.'
+            : 'Add a notes model key first.'
+      }
+    }
     return testLlm({
-      apiKey: key,
+      apiKey: key || '',
       baseURL: settings.llm.baseURL,
       model: settings.llm.model,
       sessionId: `test_${Date.now()}`
@@ -396,8 +408,14 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
     const notesDir = settings.notesDir
     const note = getNote(notesDir, id)
     if (!note) throw new Error('Note not found.')
-    const key = getSecret('llmApiKey')
-    if (!key && !demoMode) throw new Error('Add the OpenCode key in Settings first.')
+    const directKey = getSecret('llmApiKey')
+    const groqKey = getSecret('groqApiKey')
+    const key =
+      settings.llm.provider === 'groq' ? groqKey ?? '' : directKey ?? ''
+    const keyless = settings.llm.provider === 'ollama'
+    if (!key && !keyless && !demoMode) {
+      throw new Error('Add the notes model key in Settings first.')
+    }
     if (!note.transcript.length) throw new Error('This note has no transcript to regenerate from.')
 
     const schedule = loadSchedule()
@@ -417,7 +435,7 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
         segments: note.transcript
       },
       {
-        apiKey: key ?? 'demo',
+        apiKey: key || (keyless ? '' : 'demo'),
         baseURL: settings.llm.baseURL,
         model: settings.llm.model,
         sessionId: `regen_${note.id}`,

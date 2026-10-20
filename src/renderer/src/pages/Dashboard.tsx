@@ -54,8 +54,14 @@ export default function Dashboard(): React.JSX.Element {
     [notes]
   )
   const recent = notes.slice(0, 3)
+  const llmProvider = settings?.settings.llm.provider
+  const freeLlm =
+    llmProvider === 'ollama' ||
+    (llmProvider === 'groq' && Boolean(settings?.hasGroqKey))
   const needsGroq = settings ? !settings.hasGroqKey && !settings.demoMode : false
-  const needsLlm = settings ? !settings.hasLlmKey && !settings.demoMode : false
+  const needsLlm = settings
+    ? !settings.hasLlmKey && !settings.demoMode && !freeLlm
+    : false
   const needsCourses = schedule.courses.length === 0
   const setupComplete = !needsGroq && !needsLlm && !needsCourses
 

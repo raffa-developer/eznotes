@@ -12,7 +12,8 @@ const DEFAULT_SETTINGS: Settings = {
   stt: {
     provider: 'groq',
     model: 'whisper-large-v3-turbo',
-    language: 'pt'
+    language: 'pt',
+    liveTranscript: true
   },
   llm: {
     provider: 'opencode-go',
@@ -160,6 +161,7 @@ export function loadSettings(): Settings {
   if (!settings.notesDir) settings.notesDir = defaults.notesDir
   settings.obsidianVault =
     typeof settings.obsidianVault === 'string' ? settings.obsidianVault : ''
+  settings.stt.liveTranscript = settings.stt.liveTranscript !== false
   const notesMoved = migrateNotesDirectory(settings)
   settings.retentionDays = clamp(Number(settings.retentionDays) || 30, 1, 365)
   settings.notifyBeforeMinutes = clamp(
