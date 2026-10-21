@@ -291,4 +291,4 @@ app, see the `uiLanguage` setting and P1-6 in the roadmap.
 
 ## License
 
-[MIT](LICENSE) © 2026 Rafael
+[MIT](LICENSE) © 2026 Rafael Gonçalves
