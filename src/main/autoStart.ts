@@ -28,6 +28,14 @@ export function dueClass(
   return null
 }
 
+/** The class that is in progress right now, if any. */
+export function currentClass(
+  schedule: Schedule,
+  now: Date
+): UpcomingClass | null {
+  return upcomingClasses(schedule, now, 12).find((item) => item.isNow) ?? null
+}
+
 /** The next class that starts within `minutes` from now, if any. */
 export function dueSoonClass(
   schedule: Schedule,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ClassSlot, Schedule } from '../shared/types'
-import { dueClass, dueSoonClass } from './autoStart'
+import { dueClass, dueSoonClass, currentClass } from './autoStart'
 
 const course = {
   id: 'c1',
@@ -77,5 +77,17 @@ describe('dueSoonClass', () => {
   it('can be disabled', () => {
     const now = new Date(2026, 9, 21, 8, 56, 0)
     expect(dueSoonClass(schedule, now, 0)).toBeNull()
+  })
+})
+
+describe('currentClass', () => {
+  it('returns the class in progress', () => {
+    const now = new Date(2026, 9, 21, 9, 30, 0)
+    expect(currentClass(schedule, now)?.slot.id).toBe('s1')
+  })
+
+  it('returns null outside class hours', () => {
+    expect(currentClass(schedule, new Date(2026, 9, 21, 8, 30, 0))).toBeNull()
+    expect(currentClass(schedule, new Date(2026, 9, 21, 10, 30, 0))).toBeNull()
   })
 })

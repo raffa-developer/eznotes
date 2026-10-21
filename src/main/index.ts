@@ -3,19 +3,22 @@ import {
   BrowserWindow,
   clipboard,
   dialog,
+  globalShortcut,
   ipcMain,
   Menu,
+  nativeImage,
   Notification,
   protocol,
   screen,
   session,
-  shell
+  shell,
+  Tray
 } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import { Readable } from 'node:stream'
 import { pathToFileURL } from 'node:url'
-import type { OpenDialogOptions } from 'electron'
+import type { MenuItemConstructorOptions, OpenDialogOptions } from 'electron'
 import type {
   AppInfo,
   FinalizeRecordingInput,
@@ -51,13 +54,14 @@ import { testGroqKey } from './stt'
 import { downloadDiarizationModels } from './diarization'
 import { demoMode } from './mock'
 import { migrateUserData } from './migrate'
-import { dueClass, dueSoonClass } from './autoStart'
+import { dueClass, dueSoonClass, currentClass } from './autoStart'
 import { log } from './log'
 
 migrateUserData()
 
 let mainWindow: BrowserWindow | null = null
 let islandWindow: BrowserWindow | null = null
+let tray: Tray | null = null
 let quitting = false
 const ISLAND_WIDTH = 360
 const ISLAND_COLLAPSED = { width: ISLAND_WIDTH, height: 54 }
@@ -66,6 +70,7 @@ const ISLAND_EXPANDED = { width: ISLAND_WIDTH, height: 246 }
 const recording = new RecordingManager((event) => {
   mainWindow?.webContents.send('recording:event', event)
   islandWindow?.webContents.send('recording:event', event)
+  if (event.type === 'state') updateTrayMenu()
   if (
     event.type === 'state' &&
     event.snapshot &&
@@ -359,9 +364,11 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
   })
 
   ipcMain.handle('settings:get', () => settingsStatus())
-  ipcMain.handle('settings:update', (_event, patch: Partial<Settings>) =>
-    settingsStatusFor(updateSettings(patch))
-  )
+  ipcMain.handle('settings:update', (_event, patch: Partial<Settings>) => {
+    const next = updateSettings(patch)
+    syncGlobalHotkey()
+    return settingsStatusFor(next)
+  })
   ipcMain.handle('settings:setSecret', (_event, key: SecretKey, value: string) => {
     setSecret(key, value)
     return settingsStatus()
@@ -694,6 +701,168 @@ function registerAudioProtocol(): void {
 const autoStartedKeys = new Set<string>()
 const autoNotifiedKeys = new Set<string>()
 
+function createTray(): void {
+  if (tray) return
+
+  const iconPath = path.join(__dirname, '../../resources/icon.png')
+  const image = nativeImage.createFromPath(iconPath)
+  tray = new Tray(
+    image.isEmpty()
+      ? nativeImage.createEmpty()
+      : image.resize({ width: 16, height: 16 })
+  )
+  tray.setToolTip('ezNotes')
+  tray.on('click', () => restoreMainWindow())
+  updateTrayMenu()
+  log('tray', 'ready')
+}
+
+function updateTrayMenu(): void {
+  if (!tray) return
+
+  const state = recording.state()
+  const template: MenuItemConstructorOptions[] = [
+    { label: 'Open ezNotes', click: () => restoreMainWindow() },
+    { type: 'separator' }
+  ]
+
+  if (!state) {
+    template.push({
+      label: 'Start quick recording',
+      click: () => void startQuickRecording()
+    })
+  } else if (state.status === 'recording') {
+    template.push({
+      label: 'Pause recording',
+      click: () => void recording.pause()
+    })
+    template.push({
+      label: 'Stop and write notes',
+      click: () => void stopRecordingFromTray()
+    })
+  } else if (state.status === 'paused') {
+    template.push({
+      label: 'Resume recording',
+      click: () => void recording.resume()
+    })
+    template.push({
+      label: 'Stop and write notes',
+      click: () => void stopRecordingFromTray()
+    })
+  } else if (state.status === 'processing') {
+    template.push({ label: 'Writing notes…', enabled: false })
+  } else {
+    template.push({
+      label: 'Open live lecture',
+      click: () => openLive()
+    })
+  }
+
+  template.push(
+    { type: 'separator' },
+    { label: 'Quit ezNotes', click: () => app.quit() }
+  )
+
+  tray.setContextMenu(Menu.buildFromTemplate(template))
+  tray.setToolTip(
+    state ? `ezNotes — ${state.courseName} (${state.status})` : 'ezNotes — ready'
+  )
+}
+
+async function startQuickRecording(): Promise<void> {
+  if (recording.state()) {
+    openLive()
+    return
+  }
+
+  const current = currentClass(loadSchedule(), new Date())
+  try {
+    await recording.start({
+      courseId: current?.course.id ?? null,
+      courseName: current?.course.name ?? 'Geral',
+      title: current ? undefined : 'Quick recording',
+      glossary: current?.course.glossary ?? []
+    })
+    log('tray', 'quick recording started', {
+      course: current?.course.name ?? 'Geral'
+    })
+  } catch (error) {
+    notifyError(
+      `Could not start the quick recording: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    )
+  }
+}
+
+async function stopRecordingFromTray(): Promise<void> {
+  try {
+    await recording.stop()
+    openLive()
+  } catch (error) {
+    notifyError(
+      `Could not stop the recording: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    )
+  }
+}
+
+function openLive(): void {
+  restoreMainWindow()
+  mainWindow?.webContents.send('app:openLive')
+}
+
+function toggleRecordingFromHotkey(): void {
+  const state = recording.state()
+  if (!state) {
+    void startQuickRecording()
+    return
+  }
+  if (state.status === 'recording' || state.status === 'paused') {
+    void stopRecordingFromTray()
+    return
+  }
+  if (state.status === 'stopped' || state.status === 'error') {
+    openLive()
+  }
+}
+
+function notifyError(message: string): void {
+  log('tray', 'action failed', { message })
+  mainWindow?.webContents.send('recording:event', {
+    type: 'notice',
+    message,
+    level: 'error'
+  })
+}
+
+function syncGlobalHotkey(): void {
+  globalShortcut.unregisterAll()
+  const settings = loadSettings()
+  if (!settings.globalHotkey) return
+
+  try {
+    const registered = globalShortcut.register(settings.globalHotkeyKey, () =>
+      toggleRecordingFromHotkey()
+    )
+    if (!registered) {
+      log('hotkey', 'could not register shortcut', {
+        key: settings.globalHotkeyKey
+      })
+      mainWindow?.webContents.send('recording:event', {
+        type: 'notice',
+        message: `The global hotkey ${settings.globalHotkeyKey} is already in use by another app.`,
+        level: 'warn'
+      })
+    }
+  } catch (error) {
+    log('hotkey', 'registration failed', {
+      message: error instanceof Error ? error.message : String(error)
+    })
+  }
+}
+
 function startAutoStartScheduler(): void {
   const appStartedAt = Date.now()
   const check = (): void => checkAutoStart(appStartedAt)
@@ -801,6 +970,8 @@ if (!gotLock) {
     registerIpc()
     registerAudioProtocol()
     createWindow()
+    createTray()
+    syncGlobalHotkey()
     startAutoStartScheduler()
 
     const removed = recording.cleanupExpiredRecordings()
@@ -816,6 +987,12 @@ if (!gotLock) {
 
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit()
+  })
+
+  app.on('will-quit', () => {
+    globalShortcut.unregisterAll()
+    tray?.destroy()
+    tray = null
   })
 
   app.on('before-quit', (event) => {

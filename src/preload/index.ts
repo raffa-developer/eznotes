@@ -24,6 +24,11 @@ const api: EzNotesApi = {
         callback(noteId)
       ipcRenderer.on('app:openNote', listener)
       return () => ipcRenderer.removeListener('app:openNote', listener)
+    },
+    onOpenLive: (callback: () => void) => {
+      const listener = (): void => callback()
+      ipcRenderer.on('app:openLive', listener)
+      return () => ipcRenderer.removeListener('app:openLive', listener)
     }
   },
   settings: {

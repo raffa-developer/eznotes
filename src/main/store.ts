@@ -8,6 +8,7 @@ import type {
 } from '../shared/types'
 import { demoMode } from './mock'
 import { diarizationStatus } from './diarization'
+import { DEFAULT_HOTKEY, HOTKEY_OPTIONS } from '../shared/hotkeys'
 
 const DEFAULT_SETTINGS: Settings = {
   stt: {
@@ -29,7 +30,9 @@ const DEFAULT_SETTINGS: Settings = {
   theme: 'dark',
   uiLanguage: 'en',
   notifyBeforeMinutes: 5,
-  autoStartRecording: false
+  autoStartRecording: false,
+  globalHotkey: false,
+  globalHotkeyKey: DEFAULT_HOTKEY
 }
 
 function userDataPath(...parts: string[]): string {
@@ -175,6 +178,8 @@ export function loadSettings(): Settings {
     120
   )
   settings.autoStartRecording = settings.autoStartRecording === true
+  settings.globalHotkey = settings.globalHotkey === true
+  settings.globalHotkeyKey = normalizeHotkey(settings.globalHotkeyKey)
 
   if (notesMoved) writeJson(settingsFile(), settings)
   ensureDir(settings.notesDir)
@@ -191,7 +196,8 @@ export function saveSettings(next: Settings): Settings {
         : 5,
       0,
       120
-    )
+    ),
+    globalHotkeyKey: normalizeHotkey(next.globalHotkeyKey)
   }
   writeJson(settingsFile(), normalized)
   ensureDir(normalized.notesDir)
@@ -284,4 +290,11 @@ export function cacheDir(): string {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
+}
+
+function normalizeHotkey(value: unknown): string {
+  return typeof value === 'string' &&
+    HOTKEY_OPTIONS.some((option) => option.value === value)
+    ? value
+    : DEFAULT_HOTKEY
 }

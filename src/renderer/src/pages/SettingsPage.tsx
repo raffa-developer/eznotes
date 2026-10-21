@@ -19,6 +19,7 @@ import {
   XCircle
 } from 'lucide-react'
 import type { LlmProvider, Theme } from '../../../shared/types'
+import { DEFAULT_HOTKEY, HOTKEY_OPTIONS } from '../../../shared/hotkeys'
 import { useApp } from '../state/AppContext'
 import { Badge, Button, Card, Field, Segmented } from '../components/ui'
 
@@ -86,6 +87,8 @@ export default function SettingsPage(): React.JSX.Element {
   const [downloadingModels, setDownloadingModels] = useState(false)
   const [autoStartRecording, setAutoStartRecording] = useState(false)
   const [notifyBefore, setNotifyBefore] = useState(5)
+  const [globalHotkey, setGlobalHotkey] = useState(false)
+  const [globalHotkeyKey, setGlobalHotkeyKey] = useState(DEFAULT_HOTKEY)
   const [provider, setProvider] = useState<LlmProvider>('opencode-go')
   const [baseURL, setBaseURL] = useState(PROVIDER_PRESETS['opencode-go'].baseURL)
   const [model, setModel] = useState(PROVIDER_PRESETS['opencode-go'].model)
@@ -108,6 +111,8 @@ export default function SettingsPage(): React.JSX.Element {
     setSpeakerLabels(settings.settings.stt.speakerLabels)
     setAutoStartRecording(settings.settings.autoStartRecording)
     setNotifyBefore(settings.settings.notifyBeforeMinutes)
+    setGlobalHotkey(settings.settings.globalHotkey)
+    setGlobalHotkeyKey(settings.settings.globalHotkeyKey)
     setProvider(settings.settings.llm.provider)
     setBaseURL(settings.settings.llm.baseURL)
     setModel(settings.settings.llm.model)
@@ -152,7 +157,9 @@ export default function SettingsPage(): React.JSX.Element {
         retentionDays: retention,
         microphoneId: micId,
         autoStartRecording,
-        notifyBeforeMinutes: notifyBefore
+        notifyBeforeMinutes: notifyBefore,
+        globalHotkey,
+        globalHotkeyKey
       })
       await refreshSettings()
       toast('Settings saved.', 'success')
@@ -507,6 +514,36 @@ export default function SettingsPage(): React.JSX.Element {
               <option value={15}>15 minutes before</option>
             </select>
           </Field>
+          <label className="toggle-row">
+            <input
+              type="checkbox"
+              checked={globalHotkey}
+              onChange={(event) => setGlobalHotkey(event.target.checked)}
+            />
+            <span>
+              <strong>Global recording hotkey</strong>
+              <small>
+                Start or stop a quick recording from any app. Off by default.
+              </small>
+            </span>
+          </label>
+          {globalHotkey ? (
+            <Field
+              label="Shortcut"
+              hint="Pick a combination that is free on your machine. If it is taken, ezNotes warns you after saving."
+            >
+              <select
+                value={globalHotkeyKey}
+                onChange={(event) => setGlobalHotkeyKey(event.target.value)}
+              >
+                {HOTKEY_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          ) : null}
           <p className="settings-note">
             Off by default. Auto-start only applies to classes that begin after
             ezNotes is running, and only once per class.

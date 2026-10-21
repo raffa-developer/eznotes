@@ -87,13 +87,15 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
     type (`src/main/index.ts:617`).
   - *Done when:* a kept lecture is <10 MB/hour and still plays in `NotePage`.
 
-- [ ] **Tray icon + global recording hotkey**
-  No `Tray` and no `globalShortcut` anywhere in `src/main/index.ts`. Once the
-  window is closed during a recording the user can only reach the app through
-  the island.
-  - Tray menu: record/pause/stop, open app, quit; reflect recording state.
-  - Global shortcut (e.g. `Ctrl+Alt+R`) with a conflict check.
-  - *Done when:* a lecture can be started without focusing the app.
+- [x] **Tray icon + configurable global hotkey**
+  - Tray menu: open, start quick recording, pause/resume, stop, quit; reflects
+    the current recording state.
+  - Hotkey is opt-in and selectable (default `Ctrl+Alt+Shift+R`, because
+    `Ctrl+Alt+R` is often taken). Registration conflicts produce a warning.
+  - A quick recording uses the class in progress, or “Geral” if none; pressing
+    the shortcut again stops and opens the retention dialog.
+  - *Verified:* the shortcut started “Hotkey Course”, a second press stopped it
+    and opened the retention dialog; the Settings select shows the stored key.
 
 - [ ] **More LLM providers (non-Chat-Completions shapes)**
   `chat()` hardcodes `POST {baseURL}/chat/completions` and `max_tokens`
@@ -132,7 +134,7 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
   `vitest` + `npm test` now cover `trimOverlap`/`dedupeSegments`,
   `splitFrontmatter`, `sanitizeFilename`, `upcomingClasses`, `detectCues`, log
   rotation, speaker assignment, auto-start scheduling, and title/summary
-  extraction — 48 tests across 7 files.
+  extraction — 50 tests across 7 files.
   - `electron` is aliased to `tests/electron-stub.ts` so main-process modules
     import cleanly under Node.
   - `.github/workflows/ci.yml` runs `npm ci`, `typecheck`, `test`, and `build`

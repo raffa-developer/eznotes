@@ -45,6 +45,8 @@ source for now.
   stop, and a shortcut to the finished note when the main window is minimized.
 - **Optional auto-start** — off by default; when enabled, ezNotes starts
   recording when a scheduled class begins.
+- **Tray and hotkey** — start, pause, or stop from the tray or an optional,
+  configurable global shortcut.
 - **Local-first keys** — API keys are encrypted with Windows DPAPI through
   Electron `safeStorage`.
 
@@ -233,6 +235,23 @@ begins**. It is **off by default**.
   two-minute grace window), and only once per class.
 - You can stop or discard the recording exactly like a manual one.
 
+## Tray and global hotkey
+
+ezNotes adds a tray icon while it runs:
+
+- **Open ezNotes**, start a quick recording, pause/resume, stop, or quit.
+- The menu reflects the current recording state.
+
+The optional global hotkey is **off by default**. Enable it in
+**Settings → Automation** and choose one of four combinations; the default is
+**Ctrl + Alt + Shift + R** (Ctrl+Alt+R is commonly taken).
+
+- Pressing it when idle starts a quick recording. If a scheduled class is in
+  progress, that course is used; otherwise the note is filed under “Geral”.
+- Pressing it during a recording stops it and opens the retention dialog.
+- If the shortcut is already used by another app, ezNotes warns you after
+  saving and leaves the hotkey inactive.
+
 ## Copy and export
 
 On a note page, use **Copy note** or the **Export** menu:
@@ -266,9 +285,9 @@ The library also has a quick copy button on every note.
 
 Unit tests cover transcript overlap trimming and deduplication, frontmatter
 parsing, filename sanitising, upcoming-class calculation, auto-start scheduling,
-cue detection, log rotation, speaker assignment, and title/summary extraction.
-The main-process modules are imported under Node with `electron` aliased to
-`tests/electron-stub.ts`.
+quick-recording class lookup, cue detection, log rotation, speaker assignment,
+and title/summary extraction. The main-process modules are imported under Node
+with `electron` aliased to `tests/electron-stub.ts`.
 
 `.github/workflows/ci.yml` runs `npm ci`, `typecheck`, `test`, and `build` on
 Node 24 for every push to `main` and every pull request.
@@ -316,13 +335,13 @@ it, the diarization worker, and the sherpa native modules into
 The detailed, tickable list lives in [`TODO.md`](TODO.md). Highlights:
 
 - Opus audio instead of WAV to save disk
-- Tray icon and a global recording hotkey
 - Native adapters for non-Chat-Completions providers
 - Portuguese (pt-PT) interface localization
 - More UI refinements and cross-monitor island behaviour
 
 Recently shipped: crash-safe recordings, recovery of interrupted lectures,
-transcript-only notes, optional local speaker labels, and opt-in auto-start.
+transcript-only notes, optional local speaker labels, opt-in auto-start, and the
+tray icon with a configurable global hotkey.
 
 ## Contributing
 

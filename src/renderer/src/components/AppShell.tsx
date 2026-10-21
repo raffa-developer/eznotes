@@ -42,6 +42,10 @@ export default function AppShell(): React.JSX.Element {
     })
   }, [navigate])
 
+  useEffect(() => {
+    return window.ezNotes.app.onOpenLive(() => navigate('/live'))
+  }, [navigate])
+
   return (
     <div className={`app-shell ${collapsed ? 'sidebar-collapsed' : ''}`}>
       <aside className="sidebar">

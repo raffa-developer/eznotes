@@ -30,6 +30,8 @@ export interface Settings {
   uiLanguage: UiLanguage
   notifyBeforeMinutes: number
   autoStartRecording: boolean
+  globalHotkey: boolean
+  globalHotkeyKey: string
 }
 
 export interface SettingsStatus {
@@ -233,6 +235,7 @@ export interface EzNotesApi {
     hideIsland: () => Promise<void>
     setIslandExpanded: (expanded: boolean, height?: number) => Promise<void>
     onOpenNote: (callback: (noteId: string) => void) => () => void
+    onOpenLive: (callback: () => void) => () => void
   }
   settings: {
     get: () => Promise<SettingsStatus>

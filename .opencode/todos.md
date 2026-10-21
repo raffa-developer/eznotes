@@ -37,9 +37,10 @@ tick the box here and in `TODO.md` when it lands.
 - [ ] **P1-3** Opus compression in `finalize()`; serve `.opus` from the
       `eznotes://audio/` protocol
       `src/main/recording.ts`, `src/main/index.ts`
-- [ ] **P1-4** Tray icon (record/pause/stop, state) and global hotkey with
-      conflict check
-      `src/main/index.ts`
+- [x] **P1-4** Tray icon (record/pause/stop, state) and configurable global
+      hotkey with conflict warning
+      `src/main/index.ts`, `src/shared/hotkeys.ts`, `src/renderer/src/pages/SettingsPage.tsx`
+      — hotkey off by default; default `Ctrl+Alt+Shift+R`; 50 tests.
 - [ ] **P1-5** LLM provider adapters for Anthropic/Gemini/OpenAI Responses;
       keep Chat Completions as one adapter
       `src/main/llm.ts`, `src/shared/types.ts`
@@ -61,7 +62,7 @@ tick the box here and in `TODO.md` when it lands.
 
 - [x] **H-1** Add `vitest` + `npm test`; cover `trimOverlap`, `dedupeSegments`,
       `splitFrontmatter`, `sanitizeFilename`, `upcomingClasses`, `detectCues`
-      — 48 tests in 7 files; `electron` is aliased to `tests/electron-stub.ts`.
+      — 50 tests in 7 files; `electron` is aliased to `tests/electron-stub.ts`.
 - [x] **H-2** Add CI: `typecheck` + `test` + `build`
       — `.github/workflows/ci.yml`, Node 24, Electron binary download skipped.
 - [x] **H-3** Replace hardcoded `User-Agent: ezNotes/0.5.2` with
