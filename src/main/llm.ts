@@ -59,7 +59,7 @@ export async function chat(
         ...(options.apiKey
           ? { Authorization: `Bearer ${options.apiKey}` }
           : {}),
-        'User-Agent': 'ezNotes/0.5.1',
+        'User-Agent': 'ezNotes/0.5.2',
         ...(options.sessionId ? { 'x-opencode-session': options.sessionId } : {})
       },
       body: JSON.stringify({
