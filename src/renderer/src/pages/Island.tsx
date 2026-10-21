@@ -23,7 +23,7 @@ type Phase = 'recording' | 'stopped' | 'processing' | 'done' | 'error'
 
 const COLLAPSED_HEIGHT = 54
 const PANEL_HEIGHTS: Record<Phase, number> = {
-  recording: 144,
+  recording: 120,
   stopped: 128,
   processing: 120,
   done: 128,

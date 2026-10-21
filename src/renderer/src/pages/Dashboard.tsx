@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   AlertTriangle,
@@ -17,6 +17,7 @@ import {
 import { useApp } from '../state/AppContext'
 import { useNow } from '../hooks/useNow'
 import StartRecordingDialog from '../components/StartRecordingDialog'
+import type { RecoverableRecording } from '../../../shared/types'
 import { Badge, Button, Card, EmptyState } from '../components/ui'
 import {
   countdown,
@@ -40,11 +41,27 @@ export default function Dashboard(): React.JSX.Element {
   } = useApp()
   const [startOpen, setStartOpen] = useState(false)
   const [copiedNote, setCopiedNote] = useState<string | null>(null)
+  const [recoverable, setRecoverable] = useState<RecoverableRecording[]>([])
   const now = useNow()
   const navigate = useNavigate()
   const activeRecording =
     recording &&
-    ['recording', 'paused', 'processing', 'error'].includes(recording.status)
+    ['recording', 'paused', 'processing', 'stopped', 'error'].includes(
+      recording.status
+    )
+
+  useEffect(() => {
+    let mounted = true
+    window.ezNotes.recording
+      .recoverable()
+      .then((items) => {
+        if (mounted) setRecoverable(items)
+      })
+      .catch(() => undefined)
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   const todayClasses = upcoming.filter((item) =>
     isSameDay(new Date(item.startsAt), now)
@@ -71,6 +88,16 @@ export default function Dashboard(): React.JSX.Element {
       setCopiedNote(noteId)
       window.setTimeout(() => setCopiedNote(null), 1500)
       toast(result.message, 'success')
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'error')
+    }
+  }
+
+  async function recoverLecture(item: RecoverableRecording): Promise<void> {
+    try {
+      await window.ezNotes.recording.recover(item.id)
+      setRecoverable((current) => current.filter((entry) => entry.id !== item.id))
+      navigate('/live')
     } catch (error) {
       toast(error instanceof Error ? error.message : String(error), 'error')
     }
@@ -120,6 +147,44 @@ export default function Dashboard(): React.JSX.Element {
           )}
         </div>
       </header>
+
+      {recoverable.length ? (
+        <Card className="recovery-card">
+          <div className="panel-head">
+            <div>
+              <h2>
+                {recoverable.length === 1
+                  ? 'Interrupted lecture'
+                  : `${recoverable.length} interrupted lectures`}
+              </h2>
+              <p>Audio is on disk, but no note was written yet.</p>
+            </div>
+            <AlertTriangle size={20} />
+          </div>
+          <div className="recovery-list">
+            {recoverable.map((item) => (
+              <div className="recovery-row" key={item.id}>
+                <span className="recovery-main">
+                  <strong>{item.courseName}</strong>
+                  <small>
+                    {new Intl.DateTimeFormat('en-GB', {
+                      dateStyle: 'medium',
+                      timeStyle: 'short'
+                    }).format(new Date(item.startedAt))}
+                    {' · '}
+                    {formatDuration(item.durationSec)}
+                    {item.hasTranscript ? ' · transcript ready' : ''}
+                  </small>
+                </span>
+                <Button variant="soft" onClick={() => void recoverLecture(item)}>
+                  <Check size={15} />
+                  Recover
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : null}
 
       {settings?.demoMode ? (
         <div className="banner banner-warn" style={{ marginBottom: 22 }}>

@@ -8,6 +8,7 @@ import type {
   RecordingEvent,
   RecordingLiveState,
   RecordingSnapshot,
+  RecoverableRecording,
   StartRecordingInput,
   StoppedRecording,
   TranscriptSegment
@@ -15,6 +16,7 @@ import type {
 import {
   getSecret,
   loadSettings,
+  readJson,
   recordingsDir,
   writeJson
 } from './store'
@@ -31,6 +33,7 @@ import {
 import { generateNotes, generateOutline, extractTitle } from './llm'
 import {
   getNote,
+  listNotes,
   noteTranscriptPath,
   saveNote,
   writeNoteTranscript
@@ -476,6 +479,108 @@ export class RecordingManager {
     }
   }
 
+  listRecoverable(notesDir: string): RecoverableRecording[] {
+    const root = recordingsDir()
+    const linked = new Set(
+      listNotes(notesDir)
+        .map((note) => note.recordingId)
+        .filter((id): id is string => Boolean(id))
+    )
+    const activeId = this.session?.id ?? null
+    const found: RecoverableRecording[] = []
+
+    for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+      if (!entry.isDirectory() || !entry.name.startsWith('rec_')) continue
+      if (entry.name === activeId || linked.has(entry.name)) continue
+
+      const dir = path.join(root, entry.name)
+      const audioPath = path.join(dir, 'audio.wav')
+      try {
+        if (!fs.existsSync(audioPath)) continue
+        const dataBytes = wavDataBytes(fs.statSync(audioPath).size)
+        if (dataBytes < 2) continue
+
+        const manifest = readJson<Partial<RecordingManifest>>(
+          path.join(dir, MANIFEST_FILE),
+          {}
+        )
+        found.push({
+          id: entry.name,
+          title: manifest.title?.trim() || 'Apontamentos',
+          courseName: manifest.courseName || 'Geral',
+          courseId: manifest.courseId ?? null,
+          startedAt: validIsoDate(manifest.startedAt) ?? startedAtFromId(entry.name),
+          durationSec: Math.round(dataBytes / 2 / SAMPLE_RATE),
+          hasTranscript: fs.existsSync(path.join(dir, 'transcript.json'))
+        })
+      } catch {
+        // Skip folders that disappear or cannot be read.
+      }
+    }
+
+    return found.sort(
+      (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
+    )
+  }
+
+  recover(id: string): RecordingSnapshot {
+    if (this.session) {
+      throw new Error('Finish or discard the current recording first.')
+    }
+    if (!/^rec_[A-Za-z0-9_-]+$/.test(id)) {
+      throw new Error('Invalid recording id.')
+    }
+
+    const dir = path.join(recordingsDir(), id)
+    const audioPath = path.join(dir, 'audio.wav')
+    if (!fs.existsSync(audioPath)) {
+      throw new Error('The recording audio is missing.')
+    }
+
+    const manifest = readJson<Partial<RecordingManifest>>(
+      path.join(dir, MANIFEST_FILE),
+      {}
+    )
+    const dataBytes = repairWavHeader(audioPath)
+    if (dataBytes < 2) throw new Error('The recording is empty.')
+
+    const session: Session = {
+      id,
+      startedAt: new Date(validIsoDate(manifest.startedAt) ?? startedAtFromId(id)),
+      status: 'stopped',
+      title: manifest.title?.trim() || manifest.courseName || 'Apontamentos',
+      courseId: manifest.courseId ?? null,
+      courseName: manifest.courseName || 'Geral',
+      glossary: Array.isArray(manifest.glossary) ? manifest.glossary : [],
+      dir,
+      audioPath,
+      fd: -1,
+      dataBytes,
+      totalSamples: Math.floor(dataBytes / 2),
+      rolling: Buffer.alloc(0),
+      pausedAt: null,
+      pausedTotalMs: 0,
+      headerTimer: null,
+      liveTimer: null,
+      outlineTimer: null,
+      liveBusy: false,
+      outlineBusy: false,
+      liveSegments: [],
+      liveRawTail: '',
+      liveText: '',
+      outline: [],
+      lastLevelSent: 0,
+      lastNoticeAt: 0
+    }
+
+    this.session = session
+    this.processing = null
+    this.writeManifest(session)
+    this.emitState()
+    log('recording', 'recovered interrupted recording', { id, dataBytes })
+    return this.snapshot()
+  }
+
   cleanupExpiredRecordings(): string[] {
     const settings = loadSettings()
     const cutoff = Date.now() - settings.retentionDays * 24 * 60 * 60 * 1000
@@ -741,6 +846,40 @@ function touch(dir: string): void {
   } catch {
     // Best effort.
   }
+}
+
+function wavDataBytes(fileSize: number): number {
+  return Math.max(0, Math.floor((fileSize - 44) / 2) * 2)
+}
+
+function repairWavHeader(audioPath: string): number {
+  const dataBytes = wavDataBytes(fs.statSync(audioPath).size)
+  if (dataBytes < 2) return dataBytes
+
+  const fd = fs.openSync(audioPath, 'r+')
+  try {
+    fs.writeSync(fd, wavHeader(dataBytes), 0, 44, 0)
+    fs.fsyncSync(fd)
+  } finally {
+    fs.closeSync(fd)
+  }
+  return dataBytes
+}
+
+function startedAtFromId(id: string): string {
+  const match = /^rec_(\d+)_/.exec(id)
+  const milliseconds = match ? Number(match[1]) : 0
+  return Number.isFinite(milliseconds) && milliseconds > 0
+    ? new Date(milliseconds).toISOString()
+    : new Date().toISOString()
+}
+
+function validIsoDate(value: string | undefined): string | null {
+  if (!value) return null
+  const milliseconds = Date.parse(value)
+  return Number.isFinite(milliseconds)
+    ? new Date(milliseconds).toISOString()
+    : null
 }
 
 function round(value: number): number {

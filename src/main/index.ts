@@ -172,7 +172,7 @@ function createIslandWindow(): BrowserWindow {
     show: false,
     frame: false,
     transparent: true,
-    resizable: false,
+    resizable: true,
     maximizable: false,
     minimizable: false,
     fullscreenable: false,
@@ -240,6 +240,8 @@ function resizeIsland(expanded: boolean, height?: number): void {
     ISLAND_COLLAPSED.height,
     Math.min(ISLAND_EXPANDED.height, requestedHeight)
   )
+  islandWindow.setMinimumSize(ISLAND_WIDTH, ISLAND_COLLAPSED.height)
+  islandWindow.setMaximumSize(ISLAND_WIDTH, ISLAND_EXPANDED.height)
   islandWindow.setSize(width, safeHeight)
   positionIsland()
 }
@@ -602,6 +604,12 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
   )
   ipcMain.handle('recording:state', () => recording.state())
   ipcMain.handle('recording:live', () => recording.liveState())
+  ipcMain.handle('recording:recoverable', () =>
+    recording.listRecoverable(loadSettings().notesDir)
+  )
+  ipcMain.handle('recording:recover', (_event, id: string) =>
+    recording.recover(id)
+  )
   ipcMain.on('recording:audio', (_event, chunk: ArrayBuffer) => {
     recording.appendAudio(chunk)
   })

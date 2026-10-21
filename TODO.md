@@ -24,14 +24,18 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
   - *Done when:* killing the process during a recording still yields a playable
     WAV after restart.
 
-- [ ] **Recover orphaned recordings on startup**
-  Today `app.whenReady()` only runs retention cleanup
-  (`src/main/index.ts:706`). A crashed session is invisible to the user and the
-  audio is eventually deleted after `retentionDays`.
-  - Scan `%APPDATA%\ezNotes\recordings\rec_*` for audio with no note.
-  - Offer "Recover lecture" on the dashboard → jump straight to `finalize()`
-    with the saved course/title, skipping transcription cache if absent.
-  - *Done when:* a killed session shows up as recoverable and can produce a note.
+- [x] **Recover orphaned recordings on startup**
+  A crashed session used to be invisible: `app.whenReady()` only ran retention
+  cleanup, so the audio was eventually deleted after `retentionDays`.
+  - `listRecoverable()` scans `%APPDATA%\ezNotes\recordings\rec_*`, skips folders
+    already linked to a note, and reads `session.json` when present.
+  - `recover()` adopts the session, repairs the WAV header from the file size,
+    and returns a `stopped` snapshot. The dashboard lists recoverable lectures;
+    Live opens the normal retention dialog.
+  - Old recordings without a manifest still recover using the timestamp in the
+    folder name and "Geral" as the course.
+  - *Verified:* synthetic crashed WAV (header length 0, stale manifest) appeared
+    on the dashboard, recovered at the correct duration, and discarded cleanly.
 
 - [ ] **Guard against a half-written note**
   `finalize()` writes the transcript before calling the model, and only saves

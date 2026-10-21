@@ -13,9 +13,13 @@ tick the box here and in `TODO.md` when it lands.
       `src/main/recording.ts` (`start`, `appendAudio`, `stop`)
       — header + `fsync` + manifest on a 30 s timer, on pause/resume, and on stop;
       manifest removed once the note is saved with audio kept.
-- [ ] **P0-2** Recover orphaned `rec_*` recordings on startup and offer
+- [x] **P0-2** Recover orphaned `rec_*` recordings on startup and offer
       "Recover lecture" on the dashboard
-      `src/main/index.ts` (`app.whenReady`), `src/renderer/src/pages/Dashboard.tsx`
+      `src/main/index.ts` (`recording:recoverable`, `recording:recover`),
+      `src/renderer/src/pages/Dashboard.tsx`
+      — scans the recordings folder, skips ones already linked to a note, repairs
+      the WAV header from the file size, and hands the session to the normal
+      retention dialog in Live.
 - [ ] **P0-3** Allow saving a transcript-only note from the finalize error state
       `src/main/recording.ts` (`finalize` catch block)
 

@@ -71,6 +71,16 @@ export default function Live(): React.JSX.Element {
   }, [recording?.elapsedSec])
 
   useEffect(() => {
+    if (!recording || recording.status !== 'stopped' || stopped) return
+    setStopped({
+      id: recording.id,
+      startedAt: recording.startedAt,
+      durationSec: recording.elapsedSec,
+      audioPath: ''
+    })
+  }, [recording, stopped])
+
+  useEffect(() => {
     if (!isRecording) return
     const timer = window.setInterval(() => setElapsed((value) => value + 1), 1000)
     return () => window.clearInterval(timer)

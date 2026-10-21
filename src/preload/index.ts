@@ -64,6 +64,8 @@ const api: EzNotesApi = {
     discard: (id: string) => ipcRenderer.invoke('recording:discard', id),
     state: () => ipcRenderer.invoke('recording:state'),
     live: () => ipcRenderer.invoke('recording:live'),
+    recoverable: () => ipcRenderer.invoke('recording:recoverable'),
+    recover: (id: string) => ipcRenderer.invoke('recording:recover', id),
     sendAudio: (chunk: ArrayBuffer) => ipcRenderer.send('recording:audio', chunk),
     onEvent: (callback: (event: RecordingEvent) => void) => {
       const listener = (_event: Electron.IpcRendererEvent, payload: RecordingEvent) =>

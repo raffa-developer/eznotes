@@ -49,6 +49,13 @@ await new Promise((resolve, reject) => {
 
 await send('Runtime.enable')
 await send('Log.enable')
+if (process.env.CDP_MOUSE_X && process.env.CDP_MOUSE_Y) {
+  await send('Input.dispatchMouseEvent', {
+    type: 'mouseMoved',
+    x: Number(process.env.CDP_MOUSE_X),
+    y: Number(process.env.CDP_MOUSE_Y)
+  })
+}
 const result = await send('Runtime.evaluate', {
   expression,
   returnByValue: true,

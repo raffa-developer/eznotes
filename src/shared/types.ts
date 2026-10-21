@@ -148,6 +148,16 @@ export interface RecordingLiveState {
   processing: { step: string; progress: number } | null
 }
 
+export interface RecoverableRecording {
+  id: string
+  title: string
+  courseName: string
+  courseId: string | null
+  startedAt: string
+  durationSec: number
+  hasTranscript: boolean
+}
+
 export type RecordingEvent =
   | { type: 'state'; snapshot: RecordingSnapshot | null }
   | { type: 'transcript'; segment: LiveTranscriptSegment }
@@ -248,6 +258,8 @@ export interface EzNotesApi {
     discard: (id: string) => Promise<void>
     state: () => Promise<RecordingSnapshot | null>
     live: () => Promise<RecordingLiveState>
+    recoverable: () => Promise<RecoverableRecording[]>
+    recover: (id: string) => Promise<RecordingSnapshot>
     sendAudio: (chunk: ArrayBuffer) => void
     onEvent: (callback: (event: RecordingEvent) => void) => () => void
   }
