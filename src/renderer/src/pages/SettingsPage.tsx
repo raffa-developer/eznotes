@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   BookOpen,
   CheckCircle2,
+  Clock,
   Download,
   ExternalLink,
   FlaskConical,
@@ -83,6 +84,8 @@ export default function SettingsPage(): React.JSX.Element {
   const [liveTranscript, setLiveTranscript] = useState(true)
   const [speakerLabels, setSpeakerLabels] = useState(false)
   const [downloadingModels, setDownloadingModels] = useState(false)
+  const [autoStartRecording, setAutoStartRecording] = useState(false)
+  const [notifyBefore, setNotifyBefore] = useState(5)
   const [provider, setProvider] = useState<LlmProvider>('opencode-go')
   const [baseURL, setBaseURL] = useState(PROVIDER_PRESETS['opencode-go'].baseURL)
   const [model, setModel] = useState(PROVIDER_PRESETS['opencode-go'].model)
@@ -103,6 +106,8 @@ export default function SettingsPage(): React.JSX.Element {
     setLanguage(settings.settings.stt.language)
     setLiveTranscript(settings.settings.stt.liveTranscript)
     setSpeakerLabels(settings.settings.stt.speakerLabels)
+    setAutoStartRecording(settings.settings.autoStartRecording)
+    setNotifyBefore(settings.settings.notifyBeforeMinutes)
     setProvider(settings.settings.llm.provider)
     setBaseURL(settings.settings.llm.baseURL)
     setModel(settings.settings.llm.model)
@@ -145,7 +150,9 @@ export default function SettingsPage(): React.JSX.Element {
         },
         llm: { provider, baseURL, model },
         retentionDays: retention,
-        microphoneId: micId
+        microphoneId: micId,
+        autoStartRecording,
+        notifyBeforeMinutes: notifyBefore
       })
       await refreshSettings()
       toast('Settings saved.', 'success')
@@ -452,6 +459,57 @@ export default function SettingsPage(): React.JSX.Element {
             {liveTranscript
               ? 'Audio is uploaded to Groq for live and final transcription. Live chunks are billed more heavily than the final pass.'
               : 'Live transcription is off. Only the final lecture audio is sent to Groq, which is much cheaper and fits the free tier better.'}
+          </p>
+        </Card>
+      </section>
+
+      <section className="settings-section">
+        <div className="settings-section-head">
+          <span className="settings-icon">
+            <Clock size={19} />
+          </span>
+          <div>
+            <h2>Automation</h2>
+            <p>Let ezNotes start on its own when a scheduled class begins.</p>
+          </div>
+          <Badge tone={autoStartRecording ? 'accent' : 'neutral'}>
+            {autoStartRecording ? 'On' : 'Off'}
+          </Badge>
+        </div>
+
+        <Card className="settings-card">
+          <label className="toggle-row">
+            <input
+              type="checkbox"
+              checked={autoStartRecording}
+              onChange={(event) => setAutoStartRecording(event.target.checked)}
+            />
+            <span>
+              <strong>Start recording automatically when a class begins</strong>
+              <small>
+                ezNotes must be running. It uses your weekly schedule and shows a
+                notification before the lecture starts. You can stop or discard the
+                recording as usual.
+              </small>
+            </span>
+          </label>
+          <Field
+            label="Heads-up notification"
+            hint="Only used while auto-start is on. Choose Off to start silently."
+          >
+            <select
+              value={notifyBefore}
+              onChange={(event) => setNotifyBefore(Number(event.target.value))}
+            >
+              <option value={0}>Off</option>
+              <option value={5}>5 minutes before</option>
+              <option value={10}>10 minutes before</option>
+              <option value={15}>15 minutes before</option>
+            </select>
+          </Field>
+          <p className="settings-note">
+            Off by default. Auto-start only applies to classes that begin after
+            ezNotes is running, and only once per class.
           </p>
         </Card>
       </section>

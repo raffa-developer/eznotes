@@ -67,13 +67,16 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
   - *Verified:* a seeded 57-second lecture diarized and produced a note in
     3.3 s; the packaged worker also runs from `resources/`.
 
-- [ ] **Automatic recording at class time**
-  `upcomingClasses()` already computes `isNow` (`src/main/schedule.ts:113`) and
-  `notifyBeforeMinutes` is stored but never read.
-  - Notify N minutes before a slot (Electron `Notification` or tray).
-  - Optional opt-in auto-start with countdown + cancel.
-  - *Done when:* closing the laptop lid is the only thing the user has to
-    remember.
+- [x] **Automatic recording at class time (opt-in)**
+  Off by default: **Settings → Automation → Start recording automatically when
+  a class begins**.
+  - `dueClass()` starts a class within a two-minute grace window, only once per
+    occurrence, and only if it began after the app launched.
+  - `dueSoonClass()` sends a Windows notification using the now-configurable
+    `notifyBeforeMinutes` (Off / 5 / 10 / 15 minutes).
+  - The scheduler checks every 20 seconds; stop or discard works as usual.
+  - *Verified:* a class scheduled one minute after launch started recording
+    automatically at 16:09:17 with the toggle on.
 
 - [ ] **Compress audio (Opus) instead of WAV**
   WAV at 16 kHz mono is ~115 MB/hour (`src/main/wav.ts`). Electron has no
@@ -128,8 +131,8 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
 - [x] **Tests and CI**
   `vitest` + `npm test` now cover `trimOverlap`/`dedupeSegments`,
   `splitFrontmatter`, `sanitizeFilename`, `upcomingClasses`, `detectCues`, log
-  rotation, speaker assignment, and title/summary extraction — 39 tests across
-  6 files.
+  rotation, speaker assignment, auto-start scheduling, and title/summary
+  extraction — 48 tests across 7 files.
   - `electron` is aliased to `tests/electron-stub.ts` so main-process modules
     import cleanly under Node.
   - `.github/workflows/ci.yml` runs `npm ci`, `typecheck`, `test`, and `build`

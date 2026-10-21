@@ -28,7 +28,8 @@ const DEFAULT_SETTINGS: Settings = {
   retentionDays: 30,
   theme: 'dark',
   uiLanguage: 'en',
-  notifyBeforeMinutes: 5
+  notifyBeforeMinutes: 5,
+  autoStartRecording: false
 }
 
 function userDataPath(...parts: string[]): string {
@@ -167,11 +168,13 @@ export function loadSettings(): Settings {
   settings.stt.speakerLabels = settings.stt.speakerLabels === true
   const notesMoved = migrateNotesDirectory(settings)
   settings.retentionDays = clamp(Number(settings.retentionDays) || 30, 1, 365)
+  const notifyBefore = Number(settings.notifyBeforeMinutes)
   settings.notifyBeforeMinutes = clamp(
-    Number(settings.notifyBeforeMinutes) || 5,
+    Number.isFinite(notifyBefore) ? notifyBefore : 5,
     0,
     120
   )
+  settings.autoStartRecording = settings.autoStartRecording === true
 
   if (notesMoved) writeJson(settingsFile(), settings)
   ensureDir(settings.notesDir)
@@ -182,7 +185,13 @@ export function saveSettings(next: Settings): Settings {
   const normalized: Settings = {
     ...next,
     retentionDays: clamp(Number(next.retentionDays) || 30, 1, 365),
-    notifyBeforeMinutes: clamp(Number(next.notifyBeforeMinutes) || 5, 0, 120)
+    notifyBeforeMinutes: clamp(
+      Number.isFinite(Number(next.notifyBeforeMinutes))
+        ? Number(next.notifyBeforeMinutes)
+        : 5,
+      0,
+      120
+    )
   }
   writeJson(settingsFile(), normalized)
   ensureDir(normalized.notesDir)

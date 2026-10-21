@@ -5,6 +5,7 @@ import {
   dialog,
   ipcMain,
   Menu,
+  Notification,
   protocol,
   screen,
   session,
@@ -50,6 +51,8 @@ import { testGroqKey } from './stt'
 import { downloadDiarizationModels } from './diarization'
 import { demoMode } from './mock'
 import { migrateUserData } from './migrate'
+import { dueClass, dueSoonClass } from './autoStart'
+import { log } from './log'
 
 migrateUserData()
 
@@ -688,6 +691,90 @@ function registerAudioProtocol(): void {
   })
 }
 
+const autoStartedKeys = new Set<string>()
+const autoNotifiedKeys = new Set<string>()
+
+function startAutoStartScheduler(): void {
+  const appStartedAt = Date.now()
+  const check = (): void => checkAutoStart(appStartedAt)
+  check()
+  setInterval(check, 20_000)
+}
+
+function checkAutoStart(appStartedAt: number): void {
+  const settings = loadSettings()
+  if (!settings.autoStartRecording) return
+  if (recording.state()) return
+
+  const now = new Date()
+  const schedule = loadSchedule()
+
+  if (settings.notifyBeforeMinutes > 0) {
+    const soon = dueSoonClass(schedule, now, settings.notifyBeforeMinutes)
+    if (soon) {
+      const key = classKey(soon)
+      if (!autoNotifiedKeys.has(key)) {
+        autoNotifiedKeys.add(key)
+        notify(
+          'Class starting soon',
+          `${soon.course.name} starts soon. ezNotes will start recording automatically.`
+        )
+      }
+    }
+  }
+
+  // Only start for classes that began after the app launched (with a small
+  // tolerance), so reopening ezNotes mid-class does not start a late recording.
+  const due = dueClass(schedule, now, appStartedAt - 30_000)
+  if (!due) return
+
+  const key = classKey(due)
+  if (autoStartedKeys.has(key)) return
+  autoStartedKeys.add(key)
+
+  log('autoStart', 'starting recording', {
+    courseId: due.course.id,
+    slotId: due.slot.id
+  })
+  void recording
+    .start({
+      courseId: due.course.id,
+      courseName: due.course.name,
+      glossary: due.course.glossary
+    })
+    .then(() => {
+      log('autoStart', 'recording started', { courseId: due.course.id })
+      notify(
+        'ezNotes is recording',
+        `Started automatically for ${due.course.name}.`
+      )
+    })
+    .catch((error) => {
+      const message = error instanceof Error ? error.message : String(error)
+      log('autoStart', 'could not start recording', { message })
+      mainWindow?.webContents.send('recording:event', {
+        type: 'notice',
+        message: `Could not start recording automatically: ${message}`,
+        level: 'error'
+      })
+    })
+}
+
+function classKey(item: { slot: { id: string }; startsAt: string }): string {
+  return `${item.slot.id}:${item.startsAt}`
+}
+
+const activeNotifications = new Set<Notification>()
+
+function notify(title: string, body: string): void {
+  if (!Notification.isSupported()) return
+  const notification = new Notification({ title, body })
+  activeNotifications.add(notification)
+  notification.on('close', () => activeNotifications.delete(notification))
+  notification.on('click', () => restoreMainWindow())
+  notification.show()
+}
+
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()
@@ -714,6 +801,7 @@ if (!gotLock) {
     registerIpc()
     registerAudioProtocol()
     createWindow()
+    startAutoStartScheduler()
 
     const removed = recording.cleanupExpiredRecordings()
     if (removed.length) {

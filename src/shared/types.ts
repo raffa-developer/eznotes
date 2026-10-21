@@ -29,6 +29,7 @@ export interface Settings {
   theme: Theme
   uiLanguage: UiLanguage
   notifyBeforeMinutes: number
+  autoStartRecording: boolean
 }
 
 export interface SettingsStatus {

@@ -43,6 +43,8 @@ source for now.
 - **Export anywhere** — clipboard, Markdown, A4 PDF, an Obsidian vault, or Notion.
 - **Recording island** — an always-on-top pill with timer, input level, pause,
   stop, and a shortcut to the finished note when the main window is minimized.
+- **Optional auto-start** — off by default; when enabled, ezNotes starts
+  recording when a scheduled class begins.
 - **Local-first keys** — API keys are encrypted with Windows DPAPI through
   Electron `safeStorage`.
 
@@ -219,6 +221,18 @@ and input level and offers pause/resume, stop, expand, and open-app controls.
 After stopping, you can keep or delete the audio directly from the island; when
 the note is ready, it can open it.
 
+## Automatic recording (optional)
+
+Turn on **Settings → Automation → Start recording automatically when a class
+begins**. It is **off by default**.
+
+- ezNotes must be running; it checks your weekly schedule every 20 seconds.
+- A heads-up notification appears before class. Choose Off, 5, 10, or 15
+  minutes in the same section.
+- Recording starts only for classes that begin after ezNotes launched (with a
+  two-minute grace window), and only once per class.
+- You can stop or discard the recording exactly like a manual one.
+
 ## Copy and export
 
 On a note page, use **Copy note** or the **Export** menu:
@@ -251,9 +265,9 @@ The library also has a quick copy button on every note.
 ### Tests and CI
 
 Unit tests cover transcript overlap trimming and deduplication, frontmatter
-parsing, filename sanitising, upcoming-class calculation, cue detection, log
-rotation, speaker assignment, and title/summary extraction. The main-process
-modules are imported under Node with `electron` aliased to
+parsing, filename sanitising, upcoming-class calculation, auto-start scheduling,
+cue detection, log rotation, speaker assignment, and title/summary extraction.
+The main-process modules are imported under Node with `electron` aliased to
 `tests/electron-stub.ts`.
 
 `.github/workflows/ci.yml` runs `npm ci`, `typecheck`, `test`, and `build` on
@@ -301,7 +315,6 @@ it, the diarization worker, and the sherpa native modules into
 
 The detailed, tickable list lives in [`TODO.md`](TODO.md). Highlights:
 
-- Optional auto-start at class time
 - Opus audio instead of WAV to save disk
 - Tray icon and a global recording hotkey
 - Native adapters for non-Chat-Completions providers
@@ -309,7 +322,7 @@ The detailed, tickable list lives in [`TODO.md`](TODO.md). Highlights:
 - More UI refinements and cross-monitor island behaviour
 
 Recently shipped: crash-safe recordings, recovery of interrupted lectures,
-transcript-only notes, and optional local speaker labels.
+transcript-only notes, optional local speaker labels, and opt-in auto-start.
 
 ## Contributing
 

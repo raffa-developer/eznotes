@@ -30,9 +30,10 @@ tick the box here and in `TODO.md` when it lands.
       `TranscriptSegment`, diarize before note generation, render in NotePage
       `src/main/diarization.ts`, `src/main/diarizer/`, `src/renderer/src/pages/NotePage.tsx`
       — local sherpa-onnx via a bundled Node runtime; models download on demand.
-- [ ] **P1-2** Class-time notifications + optional auto-start, using
-      `notifyBeforeMinutes` and `UpcomingClass.isNow`
-      `src/main/schedule.ts`, `src/main/index.ts`
+- [x] **P1-2** Class-time notifications + opt-in auto-start, using
+      `notifyBeforeMinutes` and `autoStartRecording` (off by default)
+      `src/main/autoStart.ts`, `src/main/index.ts`, `src/renderer/src/pages/SettingsPage.tsx`
+      — 20 s scheduler, two-minute grace, launch guard, once per class.
 - [ ] **P1-3** Opus compression in `finalize()`; serve `.opus` from the
       `eznotes://audio/` protocol
       `src/main/recording.ts`, `src/main/index.ts`
@@ -60,7 +61,7 @@ tick the box here and in `TODO.md` when it lands.
 
 - [x] **H-1** Add `vitest` + `npm test`; cover `trimOverlap`, `dedupeSegments`,
       `splitFrontmatter`, `sanitizeFilename`, `upcomingClasses`, `detectCues`
-      — 39 tests in 6 files; `electron` is aliased to `tests/electron-stub.ts`.
+      — 48 tests in 7 files; `electron` is aliased to `tests/electron-stub.ts`.
 - [x] **H-2** Add CI: `typecheck` + `test` + `build`
       — `.github/workflows/ci.yml`, Node 24, Electron binary download skipped.
 - [x] **H-3** Replace hardcoded `User-Agent: ezNotes/0.5.2` with
