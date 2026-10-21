@@ -856,8 +856,12 @@ textarea::placeholder {
 
 .secret-input > svg {
   position: static;
+  top: auto;
+  left: auto;
   flex: none;
   color: var(--dim);
+  transform: none;
+  pointer-events: none;
 }
 
 .secret-input input {

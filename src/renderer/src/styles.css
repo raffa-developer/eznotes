@@ -700,22 +700,8 @@ select {
 }
 
 .secret-input {
-  position: relative;
   flex: 1;
   min-width: 180px;
-}
-
-.secret-input svg {
-  position: absolute;
-  top: 50%;
-  left: 12px;
-  color: var(--dim);
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-
-.secret-input input {
-  padding-left: 36px;
 }
 
 .input-suffix {
