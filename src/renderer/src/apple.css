@@ -126,6 +126,40 @@ h3 {
   background: var(--bg);
 }
 
+.app-shell.sidebar-collapsed {
+  grid-template-columns: 76px minmax(0, 1fr);
+}
+
+.sidebar-collapsed .sidebar {
+  padding: 18px 10px 12px;
+}
+
+.sidebar-collapsed .brand {
+  padding: 4px 0 18px;
+}
+
+.sidebar-collapsed .sidebar-toggle {
+  width: 100%;
+  align-self: stretch;
+  justify-content: center;
+  margin: 0 0 12px;
+  padding: 8px 0;
+}
+
+.sidebar-collapsed .nav-link {
+  padding: 10px;
+}
+
+.sidebar-collapsed .next-mini,
+.sidebar-collapsed .sidebar-recording {
+  justify-content: center;
+  padding: 11px;
+}
+
+.sidebar-collapsed .next-mini-dot {
+  margin: 0;
+}
+
 [data-theme="light"] .app-shell,
 [data-theme="dark"] .app-shell {
   background: var(--bg);
