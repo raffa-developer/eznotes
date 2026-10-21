@@ -122,21 +122,20 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
 
 - [x] **Tests and CI**
   `vitest` + `npm test` now cover `trimOverlap`/`dedupeSegments`,
-  `splitFrontmatter`, `sanitizeFilename`, `upcomingClasses`, and `detectCues`,
-  plus title/summary extraction — 29 tests across 4 files.
+  `splitFrontmatter`, `sanitizeFilename`, `upcomingClasses`, `detectCues`, log
+  rotation, and title/summary extraction — 33 tests across 5 files.
   - `electron` is aliased to `tests/electron-stub.ts` so main-process modules
     import cleanly under Node.
   - `.github/workflows/ci.yml` runs `npm ci`, `typecheck`, `test`, and `build`
     on Node 24, with the Electron binary download skipped.
 
-- [ ] **Stop hardcoding the version in HTTP clients**
-  `'User-Agent': 'ezNotes/0.5.1'` appears in `src/main/stt.ts:64` and
-  `src/main/llm.ts:62` and will silently drift from `package.json`.
-  - Use `app.getVersion()` (or inject it once from `index.ts`).
+- [x] **Versioned User-Agent**
+  `stt.ts` and `llm.ts` hardcoded `ezNotes/0.5.x`. Both now use
+  `userAgent()` from `src/main/appVersion.ts`, which reads `app.getVersion()`.
 
-- [ ] **Log rotation**
-  `%APPDATA%\ezNotes\eznotes.log` grows without bound. Rotate at ~2 MB and keep
-  two files.
+- [x] **Log rotation**
+  `log()` rotates `eznotes.log` at 2 MB to `eznotes.log.1`, keeping two files.
+  The rotation helper has unit tests.
 
-- [ ] Link this file from the README's "Known limits / next steps" section so
-  there is one source of truth.
+- [x] **README link**
+  The README links `TODO.md` from the language note and the Roadmap section.

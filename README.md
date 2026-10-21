@@ -222,9 +222,9 @@ The library also has a quick copy button on every note.
 ### Tests and CI
 
 Unit tests cover transcript overlap trimming and deduplication, frontmatter
-parsing, filename sanitising, upcoming-class calculation, cue detection, and
-title/summary extraction. The main-process modules are imported under Node with
-`electron` aliased to `tests/electron-stub.ts`.
+parsing, filename sanitising, upcoming-class calculation, cue detection, log
+rotation, and title/summary extraction. The main-process modules are imported
+under Node with `electron` aliased to `tests/electron-stub.ts`.
 
 `.github/workflows/ci.yml` runs `npm ci`, `typecheck`, `test`, and `build` on
 Node 24 for every push to `main` and every pull request.

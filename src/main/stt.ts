@@ -3,6 +3,7 @@ import path from 'node:path'
 import type { TestResult, TranscriptSegment } from '../shared/types'
 import { pcmToWav, readPcmRange, readWavInfo, SAMPLE_RATE, wavHeader } from './wav'
 import { demoMode, mockFileTranscript, mockLiveTranscript } from './mock'
+import { userAgent } from './appVersion'
 
 const GROQ_BASE =
   process.env.EZNOTES_GROQ_BASE_URL ??
@@ -61,7 +62,7 @@ async function requestTranscription(
       method: 'POST',
       headers: {
         Authorization: `Bearer ${options.apiKey}`,
-        'User-Agent': 'ezNotes/0.5.2'
+        'User-Agent': userAgent()
       },
       body: form,
       signal: AbortSignal.timeout(300_000)
@@ -275,7 +276,7 @@ export async function testGroqKey(apiKey: string): Promise<TestResult> {
     const response = await fetch(`${GROQ_BASE}/models`, {
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        'User-Agent': 'ezNotes/0.5.2'
+        'User-Agent': userAgent()
       },
       signal: AbortSignal.timeout(30_000)
     })

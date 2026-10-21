@@ -2,6 +2,7 @@ import type { LlmMessage, TestResult, TranscriptSegment } from '../shared/types'
 import { formatTimestamp, transcriptToText } from './stt'
 import { demoMode, MOCK_OUTLINE, mockNote } from './mock'
 import { log } from './log'
+import { userAgent } from './appVersion'
 
 export interface LlmOptions {
   apiKey: string
@@ -59,7 +60,7 @@ export async function chat(
         ...(options.apiKey
           ? { Authorization: `Bearer ${options.apiKey}` }
           : {}),
-        'User-Agent': 'ezNotes/0.5.2',
+        'User-Agent': userAgent(),
         ...(options.sessionId ? { 'x-opencode-session': options.sessionId } : {})
       },
       body: JSON.stringify({

@@ -59,13 +59,13 @@ tick the box here and in `TODO.md` when it lands.
 
 - [x] **H-1** Add `vitest` + `npm test`; cover `trimOverlap`, `dedupeSegments`,
       `splitFrontmatter`, `sanitizeFilename`, `upcomingClasses`, `detectCues`
-      — 29 tests in 4 files; `electron` is aliased to `tests/electron-stub.ts`.
+      — 33 tests in 5 files; `electron` is aliased to `tests/electron-stub.ts`.
 - [x] **H-2** Add CI: `typecheck` + `test` + `build`
       — `.github/workflows/ci.yml`, Node 24, Electron binary download skipped.
-- [ ] **H-3** Replace hardcoded `User-Agent: ezNotes/0.5.1` with
+- [x] **H-3** Replace hardcoded `User-Agent: ezNotes/0.5.2` with
       `app.getVersion()`
-      `src/main/stt.ts`, `src/main/llm.ts`
-- [ ] **H-4** Rotate `eznotes.log` at ~2 MB, keep two files
-      `src/main/log.ts`
-- [ ] **H-5** Link `TODO.md` from the README's "Known limits" section
-      `README.md`
+      `src/main/appVersion.ts`, `src/main/stt.ts`, `src/main/llm.ts`
+- [x] **H-4** Rotate `eznotes.log` at ~2 MB, keep two files
+      `src/main/log.ts` (`rotateLogFile`) + tests
+- [x] **H-5** Link `TODO.md` from the README
+      `README.md` (Status and Roadmap sections)
