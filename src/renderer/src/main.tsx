@@ -12,7 +12,10 @@ import './apple.css'
 import './island.css'
 
 const islandMode = window.location.hash.startsWith('#/island')
-if (islandMode) document.body.classList.add('island-window')
+if (islandMode) {
+  document.documentElement.classList.add('island-window')
+  document.body.classList.add('island-window')
+}
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)
 

@@ -75,7 +75,8 @@ const recording = new RecordingManager((event) => {
   if (
     event.type === 'state' &&
     event.snapshot &&
-    mainWindow?.isMinimized() &&
+    mainWindow &&
+    !mainWindow.isFocused() &&
     ['recording', 'paused', 'processing', 'stopped', 'error'].includes(
       event.snapshot.status
     )
@@ -128,6 +129,14 @@ function createWindow(): void {
 
   mainWindow.on('minimize', () => {
     if (recording.state()) showIsland()
+  })
+
+  mainWindow.on('blur', () => {
+    if (recording.state()) showIsland()
+  })
+
+  mainWindow.on('focus', () => {
+    hideIsland()
   })
 
   mainWindow.on('restore', () => {

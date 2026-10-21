@@ -6,6 +6,18 @@ body,
   height: 100%;
 }
 
+html.island-window,
+html.island-window body,
+html.island-window #root,
+body.island-window,
+body.island-window #root {
+  background: transparent !important;
+}
+
+html.island-window {
+  overflow: hidden;
+}
+
 body.island-window {
   margin: 0;
   overflow: hidden;
