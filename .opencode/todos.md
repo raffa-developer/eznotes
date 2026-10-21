@@ -66,12 +66,16 @@ tick the box here and in `TODO.md` when it lands.
       `src/main/index.ts`, `src/renderer/src/island.css`
 - [x] **P2-4** React error boundary around the app and island
       `src/renderer/src/components/ErrorBoundary.tsx`
+- [x] **P2-5** Live-transcript quality: 12 s windows every 8 s, silence
+      trimming (`analyzeSpeech`), and Groq confidence filtering
+      `src/main/stt.ts`, `src/main/recording.ts`
 
 ## Engineering hygiene
 
 - [x] **H-1** Add `vitest` + `npm test`; cover `trimOverlap`, `dedupeSegments`,
-      `splitFrontmatter`, `sanitizeFilename`, `upcomingClasses`, `detectCues`
-      — 64 tests in 9 files; `electron` is aliased to `tests/electron-stub.ts`.
+      `analyzeSpeech`, `isLikelyHallucination`, `splitFrontmatter`,
+      `sanitizeFilename`, `upcomingClasses`, `detectCues`
+      — 76 tests in 9 files; `electron` is aliased to `tests/electron-stub.ts`.
 - [x] **H-2** Add CI: `typecheck` + `test` + `build`
       — `.github/workflows/ci.yml`, Node 24, Electron binary download skipped.
 - [x] **H-3** Replace hardcoded `User-Agent: ezNotes/0.5.2` with

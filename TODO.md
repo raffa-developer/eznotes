@@ -139,6 +139,10 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
   and re-position on display metrics changes (`positionIsland`).
 - [x] Remove the island's shadow entirely — no CSS `box-shadow` and
   `hasShadow: false` on the native window, leaving only the pill.
+- [x] Reduce live-transcript hallucinations: silence-trimmed 12 s windows every
+  8 s, speech gating before each Groq call, and confidence filtering
+  (`avg_logprob`, `no_speech_prob`, `compression_ratio`) plus known Whisper
+  outro phrases. Default STT model is now `whisper-large-v3`.
 - [x] Add a React error boundary for the main window and the island.
 
 ---

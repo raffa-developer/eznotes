@@ -22,6 +22,7 @@ import {
 } from './store'
 import { loadSchedule, ensureNotesDir } from './schedule'
 import {
+  analyzeSpeech,
   formatTimestamp,
   readCachedTranscript,
   transcribeAudioFile,
@@ -48,8 +49,11 @@ import {
 } from './diarization'
 
 const SAMPLE_RATE = 16000
-const LIVE_INTERVAL_MS = 5_000
-const LIVE_CHUNK_SECONDS = 7.5
+const LIVE_INTERVAL_MS = 8_000
+const LIVE_CHUNK_SECONDS = 12
+const LIVE_MIN_VOICED_MS = 1_200
+const LIVE_MIN_RECENT_VOICED_MS = 800
+const LIVE_MIN_VOICED_RATIO = 0.12
 const ROLLING_SECONDS = 30
 const CHECKPOINT_INTERVAL_MS = 30_000
 const MANIFEST_FILE = 'session.json'
@@ -706,18 +710,31 @@ export class RecordingManager {
 
     const chunkBytes = Math.floor(LIVE_CHUNK_SECONDS * SAMPLE_RATE * 2)
     if (session.rolling.length < SAMPLE_RATE * 2 * 2) return
-    const pcm = session.rolling.subarray(
+    const rawChunk = session.rolling.subarray(
       Math.max(0, session.rolling.length - chunkBytes)
     )
-    if (rmsOf(pcm) < 0.0015) return
+    const speech = analyzeSpeech(rawChunk, SAMPLE_RATE, LIVE_INTERVAL_MS)
+    if (
+      !speech ||
+      speech.voicedMs < LIVE_MIN_VOICED_MS ||
+      speech.recentVoicedMs < LIVE_MIN_RECENT_VOICED_MS ||
+      speech.voicedMs / Math.max(1, speech.durationMs) < LIVE_MIN_VOICED_RATIO
+    ) {
+      return
+    }
 
     session.liveBusy = true
-    const chunkSamples = Math.floor(pcm.length / 2)
-    const start = Math.max(0, (session.totalSamples - chunkSamples) / SAMPLE_RATE)
+    const rawSamples = Math.floor(rawChunk.length / 2)
+    const chunkStart = Math.max(
+      0,
+      (session.totalSamples - rawSamples) / SAMPLE_RATE
+    )
+    const start = chunkStart + speech.startByte / 2 / SAMPLE_RATE
+    const end = chunkStart + speech.endByte / 2 / SAMPLE_RATE
 
     try {
       const segments = await transcribePcm(
-        pcm,
+        speech.pcm,
         {
           apiKey: apiKey ?? 'demo',
           model: settings.stt.model,
@@ -737,7 +754,7 @@ export class RecordingManager {
         id: `live_${Date.now()}`,
         text,
         start: round(start),
-        end: round(start + LIVE_CHUNK_SECONDS),
+        end: round(end),
         final: true
       }
       session.liveSegments.push(segment)
@@ -938,20 +955,6 @@ ${transcript}
 function formatNoteDuration(durationSec: number): string {
   if (durationSec < 60) return 'menos de 1 minuto'
   return `${Math.round(durationSec / 60)} minutos`
-}
-
-function rmsOf(pcm: Buffer): number {
-  const samples = Math.floor(pcm.length / 2)
-  if (!samples) return 0
-  let sum = 0
-  const step = Math.max(1, Math.floor(samples / 4000))
-  let count = 0
-  for (let i = 0; i < samples; i += step) {
-    const value = pcm.readInt16LE(i * 2) / 32768
-    sum += value * value
-    count += 1
-  }
-  return Math.sqrt(sum / Math.max(1, count))
 }
 
 async function keepBestAudio(dir: string): Promise<void> {

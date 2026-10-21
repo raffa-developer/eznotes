@@ -81,7 +81,7 @@ const LLM_MODELS = [
   'gpt-5.1'
 ]
 
-const STT_MODELS = ['whisper-large-v3-turbo', 'whisper-large-v3']
+const STT_MODELS = ['whisper-large-v3', 'whisper-large-v3-turbo']
 
 const LANGUAGES = [
   { value: 'pt', label: 'Portuguese' },
@@ -96,7 +96,7 @@ export default function SettingsPage(): React.JSX.Element {
   const { settings, refreshSettings, toast } = useApp()
   const [groqKey, setGroqKey] = useState('')
   const [llmKey, setLlmKey] = useState('')
-  const [sttModel, setSttModel] = useState('whisper-large-v3-turbo')
+  const [sttModel, setSttModel] = useState('whisper-large-v3')
   const [language, setLanguage] = useState('pt')
   const [liveTranscript, setLiveTranscript] = useState(true)
   const [liveOutlineSeconds, setLiveOutlineSeconds] = useState(90)
@@ -422,7 +422,12 @@ export default function SettingsPage(): React.JSX.Element {
           ) : null}
 
           <div className="form-row">
-            <Field label={t('Whisper model')}>
+            <Field
+              label={t('Whisper model')}
+              hint={t(
+                'Large v3 is the most accurate for Portuguese. Turbo is faster and cheaper.'
+              )}
+            >
               <select value={sttModel} onChange={(event) => setSttModel(event.target.value)}>
                 {STT_MODELS.map((item) => (
                   <option key={item} value={item}>

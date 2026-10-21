@@ -10,10 +10,12 @@ import { demoMode } from './mock'
 import { diarizationStatus } from './diarization'
 import { DEFAULT_HOTKEY, HOTKEY_OPTIONS } from '../shared/hotkeys'
 
+const STT_MODELS = new Set(['whisper-large-v3', 'whisper-large-v3-turbo'])
+
 const DEFAULT_SETTINGS: Settings = {
   stt: {
     provider: 'groq',
-    model: 'whisper-large-v3-turbo',
+    model: 'whisper-large-v3',
     language: 'pt',
     liveTranscript: true,
     liveOutlineSeconds: 90,
@@ -166,6 +168,7 @@ export function loadSettings(): Settings {
   }
 
   if (!settings.notesDir) settings.notesDir = defaults.notesDir
+  if (!STT_MODELS.has(settings.stt.model)) settings.stt.model = defaults.stt.model
   settings.obsidianVault =
     typeof settings.obsidianVault === 'string' ? settings.obsidianVault : ''
   settings.stt.liveTranscript = settings.stt.liveTranscript !== false
@@ -195,6 +198,12 @@ export function loadSettings(): Settings {
 export function saveSettings(next: Settings): Settings {
   const normalized: Settings = {
     ...next,
+    stt: {
+      ...next.stt,
+      model: STT_MODELS.has(next.stt.model)
+        ? next.stt.model
+        : DEFAULT_SETTINGS.stt.model
+    },
     retentionDays: clamp(Number(next.retentionDays) || 30, 1, 365),
     notifyBeforeMinutes: clamp(
       Number.isFinite(Number(next.notifyBeforeMinutes))

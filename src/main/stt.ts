@@ -23,6 +23,9 @@ interface GroqSegment {
   start: number
   end: number
   text: string
+  avg_logprob?: number
+  no_speech_prob?: number
+  compression_ratio?: number
 }
 
 interface GroqResponse {
@@ -31,10 +34,157 @@ interface GroqResponse {
   duration?: number
 }
 
+export interface TranscriptionQuality {
+  text: string
+  avg_logprob?: number
+  no_speech_prob?: number
+  compression_ratio?: number
+}
+
+export interface SpeechWindow {
+  pcm: Buffer
+  startByte: number
+  endByte: number
+  durationMs: number
+  voicedMs: number
+  recentVoicedMs: number
+}
+
+const FRAME_MS = 20
+const VOICE_PADDING_MS = 160
+
 function promptFor(glossary: string[] | undefined): string | undefined {
-  const base = 'Transcrição em português europeu (pt-PT).'
+  const base = 'Aula universitária em português europeu (pt-PT).'
   if (!glossary?.length) return base
-  return `${base} Vocabulário da aula: ${glossary.slice(0, 30).join(', ')}.`
+  return `${base} Vocabulário da aula: ${glossary.slice(0, 20).join(', ')}.`
+}
+
+/**
+ * Whisper hallucinates confidently on silence, so trim the quiet edges and
+ * report how much of the window actually contains speech. The caller decides
+ * whether there is enough material to transcribe.
+ */
+export function analyzeSpeech(
+  pcm: Buffer,
+  sampleRate = SAMPLE_RATE,
+  recentMs = 0
+): SpeechWindow | null {
+  const frameSamples = Math.max(1, Math.round((sampleRate * FRAME_MS) / 1000))
+  const frameBytes = frameSamples * 2
+  const frameCount = Math.floor(pcm.length / frameBytes)
+  if (!frameCount) return null
+
+  const frameRms = new Float64Array(frameCount)
+  for (let frame = 0; frame < frameCount; frame++) {
+    let sum = 0
+    const offset = frame * frameBytes
+    for (let sample = 0; sample < frameSamples; sample++) {
+      const value = pcm.readInt16LE(offset + sample * 2) / 32768
+      sum += value * value
+    }
+    frameRms[frame] = Math.sqrt(sum / frameSamples)
+  }
+
+  const sorted = Float64Array.from(frameRms).sort()
+  const noiseFloor = sorted[Math.floor((frameCount - 1) * 0.2)] ?? 0
+  const loud = sorted[Math.floor((frameCount - 1) * 0.9)] ?? 0
+  if (loud > 0 && noiseFloor / loud > 0.8) return null
+  const threshold = Math.max(0.004, Math.min(0.02, noiseFloor * 1.6))
+
+  let first = -1
+  let last = -1
+  let voicedFrames = 0
+  const voiced = new Uint8Array(frameCount)
+  for (let frame = 0; frame < frameCount; frame++) {
+    if (frameRms[frame] < threshold) continue
+    voiced[frame] = 1
+    if (first < 0) first = frame
+    last = frame
+    voicedFrames += 1
+  }
+  if (first < 0 || last < first) return null
+
+  const paddingFrames = Math.ceil(VOICE_PADDING_MS / FRAME_MS)
+  const startFrame = Math.max(0, first - paddingFrames)
+  const endFrame = Math.min(frameCount, last + 1 + paddingFrames)
+  const startByte = startFrame * frameBytes
+  const endByte = Math.min(pcm.length, endFrame * frameBytes)
+
+  let recentVoicedMs = voicedFrames * FRAME_MS
+  if (recentMs > 0) {
+    const recentFrames = Math.min(frameCount, Math.ceil(recentMs / FRAME_MS))
+    let recentVoiced = 0
+    for (let frame = frameCount - recentFrames; frame < frameCount; frame++) {
+      if (voiced[frame]) recentVoiced += 1
+    }
+    recentVoicedMs = recentVoiced * FRAME_MS
+  }
+
+  return {
+    pcm: pcm.subarray(startByte, endByte),
+    startByte,
+    endByte,
+    durationMs: frameCount * FRAME_MS,
+    voicedMs: voicedFrames * FRAME_MS,
+    recentVoicedMs
+  }
+}
+
+const STRONG_HALLUCINATIONS = [
+  /^obrigad[oa] por assistir\b/,
+  /^legendas? (pela|da) comunidade\b/,
+  /^(por favor )?(se )?inscreva se no canal\b/,
+  /^(aula universitaria|transcricao) em portugues\b/,
+  /^(subtitles|subs) by\b/,
+  /^thanks for watching\b/
+]
+
+const WEAK_HALLUCINATIONS = [
+  /^ate (a )?proxima\b/,
+  /^(tchau|adeus|xau)\b/,
+  /^(musica|aplausos|risadas|silencio)\b/
+]
+
+/**
+ * Groq returns per-segment confidence metadata with verbose_json. Use it to
+ * discard segments Whisper itself considers silent, repeated, or unreliable.
+ */
+export function isLikelyHallucination(segment: TranscriptionQuality): boolean {
+  const noSpeech = finiteNumber(segment.no_speech_prob)
+  const logprob = finiteNumber(segment.avg_logprob)
+  const compression = finiteNumber(segment.compression_ratio)
+
+  if (compression !== undefined && compression > 2.4) return true
+  if (noSpeech !== undefined && noSpeech > 0.8) return true
+  if (logprob !== undefined && logprob < -1.1) return true
+  if (
+    noSpeech !== undefined &&
+    logprob !== undefined &&
+    noSpeech > 0.5 &&
+    logprob < -0.6
+  ) {
+    return true
+  }
+
+  const words = normalizeWords(segment.text)
+  if (!words.length) return true
+  const text = words.join(' ')
+
+  if (STRONG_HALLUCINATIONS.some((pattern) => pattern.test(text))) return true
+
+  const uncertain =
+    (noSpeech !== undefined && noSpeech > 0.35) ||
+    (logprob !== undefined && logprob < -0.5) ||
+    (compression !== undefined && compression > 2)
+  return (
+    uncertain &&
+    words.length <= 12 &&
+    WEAK_HALLUCINATIONS.some((pattern) => pattern.test(text))
+  )
+}
+
+function finiteNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
 }
 
 function mimeFor(fileName: string): string {
@@ -92,6 +242,46 @@ async function requestTranscription(
   return (await response.json()) as GroqResponse
 }
 
+function segmentsFromResult(
+  result: GroqResponse,
+  idPrefix: string,
+  offsetSec = 0
+): TranscriptSegment[] {
+  const rawSegments = Array.isArray(result.segments) ? result.segments : []
+  const segments: TranscriptSegment[] = []
+
+  if (rawSegments.length) {
+    for (const [index, segment] of rawSegments.entries()) {
+      const text = cleanText(segment.text)
+      if (!text || isLikelyHallucination({ ...segment, text })) continue
+      segments.push({
+        id: `${idPrefix}_${index}`,
+        start: round(offsetSec + (Number(segment.start) || 0)),
+        end: round(offsetSec + (Number(segment.end) || 0)),
+        text
+      })
+    }
+    // If the API returned segments, do not fall back to the raw full text:
+    // filtered segments mean the audio was silence or too unreliable.
+    return segments
+  }
+
+  if (result.text?.trim()) {
+    const text = cleanText(result.text)
+    const end = Number(result.duration) || 0
+    if (text && !isLikelyHallucination({ text })) {
+      segments.push({
+        id: `${idPrefix}_0`,
+        start: round(offsetSec),
+        end: round(offsetSec + end),
+        text
+      })
+    }
+  }
+
+  return segments
+}
+
 export async function transcribePcm(
   pcm: Buffer,
   options: SttOptions,
@@ -111,34 +301,7 @@ export async function transcribePcm(
 
   const wav = pcmToWav(pcm, SAMPLE_RATE)
   const result = await requestTranscription(wav, fileName, options)
-  const segments: TranscriptSegment[] = []
-
-  if (Array.isArray(result.segments) && result.segments.length) {
-    for (const [index, segment] of result.segments.entries()) {
-      const text = cleanText(segment.text)
-      if (!text) continue
-      segments.push({
-        id: `seg_${Date.now()}_${index}`,
-        start: Number(segment.start) || 0,
-        end: Number(segment.end) || 0,
-        text
-      })
-    }
-  }
-
-  if (!segments.length && result.text?.trim()) {
-    const text = cleanText(result.text)
-    if (text) {
-      segments.push({
-        id: `seg_${Date.now()}_0`,
-        start: 0,
-        end: Number(result.duration) || 0,
-        text
-      })
-    }
-  }
-
-  return segments
+  return segmentsFromResult(result, `seg_${Date.now()}`)
 }
 
 export interface FileTranscriptionResult {
@@ -185,8 +348,22 @@ export async function transcribeAudioFile(
     }
 
     const pcm = readPcmRange(audioPath, info, offset, targetLength)
-    const chunkWav = Buffer.concat([wavHeader(pcm.length, info.sampleRate), pcm])
-    const relativeStart = offset / bytesPerSecond
+    let chunkPcm = pcm
+    let chunkOffset = 0
+
+    if (info.bitsPerSample === 16 && info.channels === 1) {
+      const speech = analyzeSpeech(pcm, info.sampleRate)
+      if (!speech) {
+        offset += targetLength
+        index += 1
+        continue
+      }
+      chunkPcm = speech.pcm
+      chunkOffset = speech.startByte
+    }
+
+    const chunkWav = Buffer.concat([wavHeader(chunkPcm.length, info.sampleRate), chunkPcm])
+    const relativeStart = (offset + chunkOffset) / bytesPerSecond
 
     onProgress?.(
       Math.min(0.95, (offset / Math.max(1, total)) * 0.9 + 0.05),
@@ -199,28 +376,7 @@ export async function transcribeAudioFile(
       options
     )
 
-    if (Array.isArray(result.segments) && result.segments.length) {
-      for (const [segmentIndex, segment] of result.segments.entries()) {
-        const text = cleanText(segment.text)
-        if (!text) continue
-        segments.push({
-          id: `seg_${index}_${segmentIndex}`,
-          start: round(relativeStart + (Number(segment.start) || 0)),
-          end: round(relativeStart + (Number(segment.end) || 0)),
-          text
-        })
-      }
-    } else if (result.text?.trim()) {
-      const text = cleanText(result.text)
-      if (text) {
-        segments.push({
-          id: `seg_${index}_0`,
-          start: round(relativeStart),
-          end: round(relativeStart + Number(result.duration || 0)),
-          text
-        })
-      }
-    }
+    segments.push(...segmentsFromResult(result, `seg_${index}`, relativeStart))
 
     offset += targetLength
     index += 1
@@ -324,7 +480,7 @@ export function trimOverlap(previous: string, next: string): string {
   const nextWords = next.trim().split(/\s+/).filter(Boolean)
   if (!prevWords.length || !nextWords.length) return next.trim()
 
-  const max = Math.min(14, prevWords.length, nextWords.length)
+  const max = Math.min(20, prevWords.length, nextWords.length)
   for (let size = max; size >= 3; size--) {
     const prevTail = prevWords.slice(-size).join(' ')
     const nextHead = normalizeWords(nextWords.slice(0, size).join(' ')).join(' ')

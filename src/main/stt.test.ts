@@ -1,5 +1,187 @@
-import { describe, expect, it } from 'vitest'
-import { dedupeSegments, transcriptToText, trimOverlap } from './stt'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import {
+  analyzeSpeech,
+  dedupeSegments,
+  isLikelyHallucination,
+  transcriptToText,
+  transcribePcm,
+  trimOverlap
+} from './stt'
+
+const SAMPLE_RATE = 16000
+
+function pcmOf(
+  seconds: number,
+  fn: (sample: number) => number,
+  sampleRate = SAMPLE_RATE
+): Buffer {
+  const count = Math.round(seconds * sampleRate)
+  const buffer = Buffer.alloc(count * 2)
+  for (let sample = 0; sample < count; sample++) {
+    const value = Math.max(-1, Math.min(1, fn(sample)))
+    buffer.writeInt16LE(Math.round(value * 32767), sample * 2)
+  }
+  return buffer
+}
+
+function silence(seconds: number): Buffer {
+  return pcmOf(seconds, () => 0)
+}
+
+function tone(seconds: number, amplitude = 0.1, frequency = 220): Buffer {
+  return pcmOf(
+    seconds,
+    (sample) => amplitude * Math.sin((2 * Math.PI * frequency * sample) / SAMPLE_RATE)
+  )
+}
+
+describe('analyzeSpeech', () => {
+  it('returns null for pure silence', () => {
+    expect(analyzeSpeech(silence(2), SAMPLE_RATE)).toBeNull()
+  })
+
+  it('trims silence around speech and reports voiced time', () => {
+    const data = Buffer.concat([silence(0.5), tone(2), silence(0.5)])
+    const speech = analyzeSpeech(data, SAMPLE_RATE, 1_200)
+
+    expect(speech).not.toBeNull()
+    expect(speech!.startByte).toBeGreaterThan(0)
+    expect(speech!.endByte).toBeLessThan(data.length)
+    expect(speech!.voicedMs).toBeGreaterThanOrEqual(1_900)
+    expect(speech!.recentVoicedMs).toBeGreaterThan(300)
+  })
+
+  it('rejects steady low-level noise', () => {
+    const noise = pcmOf(3, (sample) => (sample % 2 ? 0.004 : -0.004))
+    expect(analyzeSpeech(noise, SAMPLE_RATE)).toBeNull()
+  })
+
+  it('rejects a continuous non-speech tone', () => {
+    expect(analyzeSpeech(tone(3), SAMPLE_RATE)).toBeNull()
+  })
+
+  it('keeps a short utterance inside a long quiet window', () => {
+    const data = Buffer.concat([silence(20), tone(0.8), silence(20)])
+    const speech = analyzeSpeech(data, SAMPLE_RATE)
+
+    expect(speech).not.toBeNull()
+    expect(speech!.voicedMs).toBeGreaterThanOrEqual(700)
+  })
+})
+
+describe('isLikelyHallucination', () => {
+  it('keeps normal lecture speech', () => {
+    expect(
+      isLikelyHallucination({
+        text: 'A derivada mede a taxa de variação instantânea.',
+        avg_logprob: -0.25,
+        no_speech_prob: 0.04,
+        compression_ratio: 1.4
+      })
+    ).toBe(false)
+  })
+
+  it('drops segments with a high no-speech probability', () => {
+    expect(
+      isLikelyHallucination({
+        text: 'Bom dia a todos.',
+        no_speech_prob: 0.92,
+        avg_logprob: -0.2
+      })
+    ).toBe(true)
+  })
+
+  it('drops very low confidence text', () => {
+    expect(
+      isLikelyHallucination({
+        text: 'palavra inventada aqui',
+        avg_logprob: -1.4,
+        no_speech_prob: 0.2
+      })
+    ).toBe(true)
+  })
+
+  it('drops repeated output', () => {
+    expect(
+      isLikelyHallucination({ text: 'muito muito muito', compression_ratio: 2.8 })
+    ).toBe(true)
+  })
+
+  it('drops known Whisper outros even with good metadata', () => {
+    expect(
+      isLikelyHallucination({
+        text: 'Obrigado por assistir.',
+        avg_logprob: -0.1,
+        no_speech_prob: 0.01,
+        compression_ratio: 1.2
+      })
+    ).toBe(true)
+  })
+
+  it('keeps a real obrigado without bad metadata', () => {
+    expect(isLikelyHallucination({ text: 'Obrigado.' })).toBe(false)
+  })
+})
+
+describe('transcribePcm quality filtering', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('drops silent and low-confidence segments but keeps real speech', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              text: 'A derivada mede a taxa de variação. Obrigado por assistir. Texto inventado.',
+              segments: [
+                {
+                  id: 0,
+                  start: 0,
+                  end: 4,
+                  text: 'A derivada mede a taxa de variação.',
+                  avg_logprob: -0.2,
+                  no_speech_prob: 0.05,
+                  compression_ratio: 1.4
+                },
+                {
+                  id: 1,
+                  start: 4,
+                  end: 8,
+                  text: 'Obrigado por assistir.',
+                  avg_logprob: -0.1,
+                  no_speech_prob: 0.02,
+                  compression_ratio: 1.2
+                },
+                {
+                  id: 2,
+                  start: 8,
+                  end: 12,
+                  text: 'Texto inventado.',
+                  avg_logprob: -1.5,
+                  no_speech_prob: 0.3,
+                  compression_ratio: 1.5
+                }
+              ]
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } }
+          )
+      )
+    )
+
+    const segments = await transcribePcm(Buffer.alloc(SAMPLE_RATE * 2), {
+      apiKey: 'test',
+      model: 'whisper-large-v3',
+      language: 'pt'
+    })
+
+    expect(segments.map((segment) => segment.text)).toEqual([
+      'A derivada mede a taxa de variação.'
+    ])
+  })
+})
 
 describe('trimOverlap', () => {
   it('removes a duplicated three-word tail', () => {

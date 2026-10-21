@@ -116,8 +116,9 @@ trusted code-signing certificate before distributing it.
 ### Transcription — Groq
 
 Create a key at <https://console.groq.com/keys>. The default model is
-`whisper-large-v3-turbo`; `whisper-large-v3` is available as a slower, more
-accurate option.
+`whisper-large-v3`, which is the most accurate for Portuguese.
+`whisper-large-v3-turbo` is available as a faster, cheaper option with a
+slightly higher error rate.
 
 ### Notes — native adapters and OpenAI-compatible
 
@@ -176,10 +177,11 @@ Microphone
   → Documents\ezNotes\<Course>\<date> <title>.md
 ```
 
-- Live transcription sends 7.5-second chunks every 5 seconds and removes
-  overlapping words. Expect roughly 3–6 seconds of lag.
+- Live transcription sends 12-second windows every 8 seconds, trims silence
+  before each request, and discards low-confidence, silent, or repeated
+  segments. Expect roughly 4–8 seconds of lag.
 - The final pass re-transcribes the full audio, so it is more accurate than the
-  live text.
+  live text. It uses the same silence trimming and quality filters.
 - The prompt asks the model to drop logistics, chatter, and repetition while
   keeping definitions, formulas, examples, and lecturer emphasis.
 - Live outlines refresh on a configurable interval (90 seconds by default) and

@@ -31,6 +31,8 @@ export const settings: Record<string, string> = {
   Test: 'Testar',
   'Remove Groq key': 'Remover chave do Groq',
   'Whisper model': 'Modelo Whisper',
+  'Large v3 is the most accurate for Portuguese. Turbo is faster and cheaper.':
+    'O Large v3 é o mais preciso para português. O Turbo é mais rápido e mais barato.',
   'Lecture language': 'Idioma da aula',
   'Live transcript and outline during class':
     'Transcrito e estrutura em direto durante a aula',
