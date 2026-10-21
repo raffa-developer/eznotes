@@ -46,6 +46,21 @@ const PROVIDER_PRESETS: Record<
     baseURL: 'http://localhost:11434/v1',
     model: 'qwen2.5:7b',
     label: 'Ollama (local)'
+  },
+  anthropic: {
+    baseURL: 'https://api.anthropic.com',
+    model: 'claude-opus-5-5',
+    label: 'Anthropic (Claude)'
+  },
+  gemini: {
+    baseURL: 'https://generativelanguage.googleapis.com/v1beta',
+    model: 'gemini-3.8-flash',
+    label: 'Google Gemini'
+  },
+  'openai-responses': {
+    baseURL: 'https://api.openai.com/v1',
+    model: 'gpt-6-astra',
+    label: 'OpenAI (Responses)'
   }
 }
 
@@ -62,7 +77,14 @@ const LLM_MODELS = [
   'hy3',
   'step-5-preview',
   'openai/gpt-oss-120b',
-  'qwen2.5:7b'
+  'qwen2.5:7b',
+  'claude-opus-5-5',
+  'claude-sonnet-5-5',
+  'claude-haiku-5-5',
+  'gemini-3.8-flash',
+  'gemini-3.1-pro-preview',
+  'gpt-6-astra',
+  'gpt-5.1'
 ]
 
 const STT_MODELS = ['whisper-large-v3-turbo', 'whisper-large-v3']
@@ -277,6 +299,16 @@ export default function SettingsPage(): React.JSX.Element {
   const localLlm = provider === 'ollama'
   const groqLlm = provider === 'groq'
   const llmReady = hasLlm || localLlm || (groqLlm && hasGroq)
+  const providerName =
+    provider === 'anthropic'
+      ? 'Anthropic'
+      : provider === 'gemini'
+        ? 'Google Gemini'
+        : provider === 'openai-responses'
+          ? 'OpenAI'
+          : provider === 'custom'
+            ? 'your endpoint'
+            : 'OpenCode'
 
   return (
     <div className="page settings-page">
@@ -584,12 +616,21 @@ export default function SettingsPage(): React.JSX.Element {
                 <option value="opencode-console">OpenCode Console</option>
                 <option value="groq">Groq (free tier)</option>
                 <option value="ollama">Ollama (local, free)</option>
+                <option value="anthropic">Anthropic (Claude)</option>
+                <option value="gemini">Google Gemini</option>
+                <option value="openai-responses">OpenAI (Responses)</option>
                 <option value="custom">Custom OpenAI-compatible</option>
               </select>
             </Field>
             <Field
               label="Model"
-              hint="Use a Chat Completions model such as DeepSeek, GLM, or Kimi. GPT, Claude, Gemini, and Qwen use different API shapes and are not supported yet."
+              hint={
+                provider === 'anthropic' ||
+                provider === 'gemini' ||
+                provider === 'openai-responses'
+                  ? 'Use the provider model ID, for example claude-opus-5-5, gemini-3.8-flash, or gpt-6-astra.'
+                  : 'Use a Chat Completions model such as DeepSeek, GLM, or Kimi. Native adapters exist for Anthropic, Gemini, and OpenAI Responses.'
+              }
             >
               <input
                 value={model}
@@ -607,7 +648,15 @@ export default function SettingsPage(): React.JSX.Element {
 
           <Field
             label="Base URL"
-            hint="The app calls /chat/completions on this URL. No trailing slash needed."
+            hint={
+              provider === 'anthropic'
+                ? 'Anthropic base URL; the app calls /v1/messages. Use https://api.anthropic.com (without /v1).'
+                : provider === 'gemini'
+                  ? 'Generative Language base URL; the app calls /models/<model>:generateContent.'
+                  : provider === 'openai-responses'
+                    ? 'OpenAI base URL; the app calls /responses.'
+                    : 'The app calls /chat/completions on this URL. No trailing slash needed.'
+            }
           >
             <input
               value={baseURL}
@@ -657,7 +706,15 @@ export default function SettingsPage(): React.JSX.Element {
               hint={
                 provider === 'opencode-go'
                   ? 'Uses your Go subscription. Go is intended for coding-agent traffic, so the Console API is safer for a general app.'
-                  : 'Create a service-account key in the OpenCode Console.'
+                  : provider === 'opencode-console'
+                    ? 'Create a service-account key in the OpenCode Console.'
+                    : provider === 'anthropic'
+                      ? 'Create a key at console.anthropic.com.'
+                      : provider === 'gemini'
+                        ? 'Create a key in Google AI Studio (aistudio.google.com).'
+                        : provider === 'openai-responses'
+                          ? 'Create a key at platform.openai.com.'
+                          : 'Any key accepted by your OpenAI-compatible endpoint.'
               }
             >
               <div className="secret-row">
@@ -704,7 +761,7 @@ export default function SettingsPage(): React.JSX.Element {
               ? 'The transcript never leaves this PC when using Ollama. A 7B model is a good fit for a 6 GB GPU.'
               : provider === 'groq'
                 ? 'The transcript is sent to Groq to write the note. Groq free-tier token limits apply.'
-                : 'The transcript is sent to OpenCode to write the note. It is not used to train models on the Go endpoint; see the Console for retention details.'}
+                : `The transcript is sent to ${providerName} to write the note. Check that provider's retention policy.`}
           </p>
         </Card>
       </section>

@@ -115,22 +115,27 @@ Create a key at <https://console.groq.com/keys>. The default model is
 `whisper-large-v3-turbo`; `whisper-large-v3` is available as a slower, more
 accurate option.
 
-### Notes — OpenAI-compatible Chat Completions
+### Notes — native adapters and OpenAI-compatible
 
-ezNotes calls `POST {baseURL}/chat/completions`. Presets:
+ezNotes has native adapters for Anthropic Messages, Google Gemini
+`generateContent`, and the OpenAI Responses API. Other providers use Chat
+Completions (`POST {baseURL}/chat/completions`). Presets:
 
 | Provider | Base URL | Default model |
 | --- | --- | --- |
 | OpenCode Go (default) | `https://opencode.ai/inference/go/openai/v1` | `deepseek-v4.1-flash` |
 | OpenCode Console | `https://opencode.ai/inference/openai/v1` | `deepseek-v4.1-flash` |
+| Anthropic (Claude) | `https://api.anthropic.com` | `claude-opus-5-5` |
+| Google Gemini | `https://generativelanguage.googleapis.com/v1beta` | `gemini-3.8-flash` |
+| OpenAI Responses | `https://api.openai.com/v1` | `gpt-6-astra` |
 | Groq | `https://api.groq.com/openai/v1` | `openai/gpt-oss-120b` |
 | Ollama (local) | `http://localhost:11434/v1` | `qwen2.5:7b` |
 | Custom | any compatible endpoint | any |
 
-OpenCode's docs describe Go as intended for coding-agent traffic; for a general
-app, **OpenCode Console** is the safer choice. Only Chat Completions-shaped APIs
-are supported — GPT, Claude, and Gemini native APIs have a different shape and
-are on the roadmap.
+Model IDs change often; the model field is editable. For Anthropic, use the base
+URL without `/v1` because the adapter calls `/v1/messages`. OpenCode's docs
+describe Go as intended for coding-agent traffic; for a general app,
+**OpenCode Console** is the safer choice.
 
 ### Running at $0
 
@@ -291,8 +296,9 @@ The library also has a quick copy button on every note.
 Unit tests cover transcript overlap trimming and deduplication, frontmatter
 parsing, filename sanitising, upcoming-class calculation, auto-start scheduling,
 quick-recording class lookup, cue detection, log rotation, speaker assignment,
-and title/summary extraction. The main-process modules are imported under Node
-with `electron` aliased to `tests/electron-stub.ts`.
+provider response parsing, and title/summary extraction. The main-process
+modules are imported under Node with `electron` aliased to
+`tests/electron-stub.ts`.
 
 `.github/workflows/ci.yml` runs `npm ci`, `typecheck`, `test`, and `build` on
 Node 24 for every push to `main` and every pull request.
@@ -339,13 +345,13 @@ it, the diarization worker, and the sherpa native modules into
 
 The detailed, tickable list lives in [`TODO.md`](TODO.md). Highlights:
 
-- Native adapters for non-Chat-Completions providers
 - Portuguese (pt-PT) interface localization
 - More UI refinements and cross-monitor island behaviour
 
 Recently shipped: crash-safe recordings, recovery of interrupted lectures,
 transcript-only notes, optional local speaker labels, opt-in auto-start, the
-tray icon with a configurable global hotkey, and compact Opus audio.
+tray icon with a configurable global hotkey, compact Opus audio, and native
+Anthropic/Gemini/OpenAI adapters.
 
 ## Contributing
 

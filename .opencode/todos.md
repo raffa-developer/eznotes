@@ -41,9 +41,10 @@ tick the box here and in `TODO.md` when it lands.
       hotkey with conflict warning
       `src/main/index.ts`, `src/shared/hotkeys.ts`, `src/renderer/src/pages/SettingsPage.tsx`
       — hotkey off by default; default `Ctrl+Alt+Shift+R`; 50 tests.
-- [ ] **P1-5** LLM provider adapters for Anthropic/Gemini/OpenAI Responses;
-      keep Chat Completions as one adapter
-      `src/main/llm.ts`, `src/shared/types.ts`
+- [x] **P1-5** LLM provider adapters for Anthropic/Gemini/OpenAI Responses;
+      Chat Completions stays for the other providers
+      `src/main/llm.ts`, `src/shared/types.ts`, `src/renderer/src/pages/SettingsPage.tsx`
+      — Anthropic uses the official SDK with streaming; 61 tests.
 - [ ] **P1-6** Wire up `Settings.uiLanguage` with a small dictionary module
       `src/shared/types.ts`, `src/renderer/src/pages/*`
 
@@ -62,7 +63,7 @@ tick the box here and in `TODO.md` when it lands.
 
 - [x] **H-1** Add `vitest` + `npm test`; cover `trimOverlap`, `dedupeSegments`,
       `splitFrontmatter`, `sanitizeFilename`, `upcomingClasses`, `detectCues`
-      — 50 tests in 7 files; `electron` is aliased to `tests/electron-stub.ts`.
+      — 61 tests in 8 files; `electron` is aliased to `tests/electron-stub.ts`.
 - [x] **H-2** Add CI: `typecheck` + `test` + `build`
       — `.github/workflows/ci.yml`, Node 24, Electron binary download skipped.
 - [x] **H-3** Replace hardcoded `User-Agent: ezNotes/0.5.2` with

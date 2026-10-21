@@ -98,14 +98,14 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
   - *Verified:* the shortcut started “Hotkey Course”, a second press stopped it
     and opened the retention dialog; the Settings select shows the stored key.
 
-- [ ] **More LLM providers (non-Chat-Completions shapes)**
-  `chat()` hardcodes `POST {baseURL}/chat/completions` and `max_tokens`
-  (`src/main/llm.ts:50,69`), so GPT, Claude, and Gemini native APIs are out.
-  - Split `LlmProvider` into an adapter interface: `chat()` per provider, with
-    its own endpoint, auth header, token field, and response parser.
-  - Keep `opencode-*`, `groq`, `ollama`, `custom` on the current adapter.
-  - *Done when:* Settings can pick a Claude or Gemini model and the test button
-    passes.
+- [x] **More LLM providers (native adapters)**
+  - `chat()` dispatches by provider: Chat Completions for `opencode-*`,
+    `groq`, `ollama`, and `custom`; native adapters for Anthropic (official SDK,
+    streaming), Gemini `generateContent`, and OpenAI Responses.
+  - Settings presets: `claude-opus-5-5`, `gemini-3.8-flash`, and `gpt-6-astra`,
+    with an editable model field because IDs move fast.
+  - *Verified:* mock HTTP/SSE tests cover request shapes, auth headers, system
+    prompts, and response parsing; 61 tests pass.
 
 - [ ] **Wire up the UI language setting**
   `Settings.uiLanguage` (`'en' | 'pt'`) is persisted and validated but never
@@ -135,7 +135,7 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
   `vitest` + `npm test` now cover `trimOverlap`/`dedupeSegments`,
   `splitFrontmatter`, `sanitizeFilename`, `upcomingClasses`, `detectCues`, log
   rotation, speaker assignment, auto-start scheduling, and title/summary
-  extraction — 50 tests across 7 files.
+  extraction — 61 tests across 8 files.
   - `electron` is aliased to `tests/electron-stub.ts` so main-process modules
     import cleanly under Node.
   - `.github/workflows/ci.yml` runs `npm ci`, `typecheck`, `test`, and `build`

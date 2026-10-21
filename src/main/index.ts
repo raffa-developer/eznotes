@@ -428,6 +428,7 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
       apiKey: key || '',
       baseURL: settings.llm.baseURL,
       model: settings.llm.model,
+      provider: settings.llm.provider,
       sessionId: `test_${Date.now()}`
     })
   })
@@ -594,6 +595,7 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
         apiKey: key || (keyless ? '' : 'demo'),
         baseURL: settings.llm.baseURL,
         model: settings.llm.model,
+        provider: settings.llm.provider,
         sessionId: `regen_${note.id}`,
         maxTokens: 16_000
       }

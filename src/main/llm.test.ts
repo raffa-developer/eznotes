@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { detectCues, extractSummary, extractTitle } from './llm'
+import {
+  detectCues,
+  extractSummary,
+  extractTitle,
+  textFromAnthropic,
+  textFromGemini,
+  textFromResponses
+} from './llm'
 
 describe('detectCues', () => {
   it('finds exam, definition, and example cues with timestamps', () => {
@@ -63,5 +70,61 @@ describe('extractSummary', () => {
 `
 
     expect(extractSummary(markdown)).toBe('Um · Dois · Três')
+  })
+})
+
+describe('textFromAnthropic', () => {
+  it('joins text blocks and ignores thinking blocks', () => {
+    expect(
+      textFromAnthropic({
+        content: [
+          { type: 'thinking', text: '' },
+          { type: 'text', text: 'Hello ' },
+          { type: 'text', text: 'world' }
+        ]
+      })
+    ).toBe('Hello world')
+  })
+
+  it('returns an empty string when there is no text', () => {
+    expect(
+      textFromAnthropic({ content: [{ type: 'thinking', text: '' }] })
+    ).toBe('')
+  })
+})
+
+describe('textFromGemini', () => {
+  it('joins candidate parts', () => {
+    expect(
+      textFromGemini({
+        candidates: [{ content: { parts: [{ text: 'A' }, { text: 'B' }] } }]
+      })
+    ).toBe('AB')
+  })
+
+  it('returns an empty string when the prompt is blocked', () => {
+    expect(textFromGemini({ promptFeedback: { blockReason: 'SAFETY' } })).toBe('')
+  })
+})
+
+describe('textFromResponses', () => {
+  it('prefers the output_text field', () => {
+    expect(textFromResponses({ output_text: 'Hello' })).toBe('Hello')
+  })
+
+  it('reads output_text parts from the output array', () => {
+    expect(
+      textFromResponses({
+        output: [{ content: [{ type: 'output_text', text: 'Note' }] }]
+      })
+    ).toBe('Note')
+  })
+
+  it('ignores non-text parts', () => {
+    expect(
+      textFromResponses({
+        output: [{ content: [{ type: 'reasoning', text: 'x' }] }]
+      })
+    ).toBe('')
   })
 })

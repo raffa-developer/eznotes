@@ -6,6 +6,9 @@ export type LlmProvider =
   | 'opencode-console'
   | 'groq'
   | 'ollama'
+  | 'anthropic'
+  | 'gemini'
+  | 'openai-responses'
   | 'custom'
 export type SttProvider = 'groq'
 

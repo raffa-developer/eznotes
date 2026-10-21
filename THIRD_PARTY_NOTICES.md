@@ -26,6 +26,12 @@ the following third-party components.
 - License: MIT, Copyright © 2022 Vanilagy.
 - <https://github.com/Vanilagy/webm-muxer>
 
+### @anthropic-ai/sdk
+
+- Purpose: official client for Anthropic's Messages API.
+- License: MIT.
+- <https://github.com/anthropics/anthropic-sdk-typescript>
+
 ## Downloaded on first use
 
 These models are downloaded by the app into

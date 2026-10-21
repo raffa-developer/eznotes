@@ -1,10 +1,17 @@
-import type { LlmMessage, TestResult, TranscriptSegment } from '../shared/types'
+import Anthropic from '@anthropic-ai/sdk'
+import type {
+  LlmMessage,
+  LlmProvider,
+  TestResult,
+  TranscriptSegment
+} from '../shared/types'
 import { formatTimestamp, transcriptToText } from './stt'
 import { demoMode, MOCK_OUTLINE, mockNote } from './mock'
 import { log } from './log'
 import { userAgent } from './appVersion'
 
 export interface LlmOptions {
+  provider?: LlmProvider
   apiKey: string
   baseURL: string
   model: string
@@ -44,6 +51,22 @@ export class EmptyModelResponseError extends Error {
 }
 
 export async function chat(
+  messages: LlmMessage[],
+  options: LlmOptions
+): Promise<string> {
+  switch (options.provider) {
+    case 'anthropic':
+      return chatAnthropic(messages, options)
+    case 'gemini':
+      return chatGemini(messages, options)
+    case 'openai-responses':
+      return chatResponses(messages, options)
+    default:
+      return chatCompletions(messages, options)
+  }
+}
+
+async function chatCompletions(
   messages: LlmMessage[],
   options: LlmOptions
 ): Promise<string> {
@@ -123,6 +146,236 @@ function textFromChoice(
   }
   if (typeof choice?.text === 'string') return choice.text
   return null
+}
+
+export interface GeminiResponse {
+  candidates?: Array<{
+    content?: { parts?: Array<{ text?: string }> }
+    finishReason?: string
+  }>
+  promptFeedback?: { blockReason?: string }
+  error?: { message?: string }
+}
+
+export interface ResponsesApiResponse {
+  output_text?: string
+  output?: Array<{
+    type?: string
+    content?: Array<{ type?: string; text?: string }>
+  }>
+  status?: string
+  incomplete_details?: { reason?: string }
+  error?: { message?: string }
+}
+
+export function textFromAnthropic(message: {
+  content?: Array<{ type?: string; text?: string }>
+}): string {
+  return (message.content ?? [])
+    .map((block) => (block.type === 'text' ? block.text ?? '' : ''))
+    .join('')
+    .trim()
+}
+
+export function textFromGemini(payload: GeminiResponse): string {
+  return (payload.candidates?.[0]?.content?.parts ?? [])
+    .map((part) => part.text ?? '')
+    .join('')
+    .trim()
+}
+
+export function textFromResponses(payload: ResponsesApiResponse): string {
+  if (typeof payload.output_text === 'string' && payload.output_text.trim()) {
+    return payload.output_text.trim()
+  }
+  return (payload.output ?? [])
+    .flatMap((item) => item.content ?? [])
+    .filter((part) => part.type === 'output_text')
+    .map((part) => part.text ?? '')
+    .join('')
+    .trim()
+}
+
+async function chatAnthropic(
+  messages: LlmMessage[],
+  options: LlmOptions
+): Promise<string> {
+  const client = new Anthropic({
+    apiKey: options.apiKey,
+    ...(options.baseURL ? { baseURL: options.baseURL } : {}),
+    timeout: options.timeoutMs ?? 180_000,
+    maxRetries: 1
+  })
+
+  const system = messages
+    .filter((message) => message.role === 'system')
+    .map((message) => message.content)
+    .join('\n\n')
+  const turns = messages
+    .filter((message) => message.role !== 'system')
+    .map((message) => ({
+      role: message.role as 'user' | 'assistant',
+      content: message.content
+    }))
+
+  try {
+    // Streaming avoids request timeouts on long transcripts. Temperature is
+    // intentionally omitted: current Claude models reject it.
+    const stream = client.messages.stream({
+      model: options.model,
+      max_tokens: options.maxTokens ?? 6000,
+      ...(system ? { system } : {}),
+      messages: turns
+    })
+    const message = await stream.finalMessage()
+    const text = textFromAnthropic(message)
+    if (text) return text
+
+    log('llm', 'anthropic returned no text', {
+      model: options.model,
+      stopReason: message.stop_reason
+    })
+    throw new EmptyModelResponseError(
+      message.stop_reason === 'max_tokens'
+        ? 'length'
+        : message.stop_reason ?? undefined
+    )
+  } catch (error) {
+    if (error instanceof EmptyModelResponseError) throw error
+    const status = (error as { status?: number }).status
+    throw new Error(
+      `Notes model failed${status ? ` (${status})` : ''}: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    )
+  }
+}
+
+async function chatGemini(
+  messages: LlmMessage[],
+  options: LlmOptions
+): Promise<string> {
+  const baseURL = options.baseURL.replace(/\/+$/, '')
+  const model = options.model.replace(/^models\//, '')
+  const endpoint = `${baseURL}/models/${encodeURIComponent(model)}:generateContent`
+  const system = messages
+    .filter((message) => message.role === 'system')
+    .map((message) => message.content)
+    .join('\n\n')
+  const turns = messages.filter((message) => message.role !== 'system')
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': options.apiKey,
+        'User-Agent': userAgent()
+      },
+      body: JSON.stringify({
+        ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
+        contents: turns.map((message) => ({
+          role: message.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: message.content }]
+        })),
+        generationConfig: {
+          maxOutputTokens: options.maxTokens ?? 6000
+        }
+      }),
+      signal: AbortSignal.timeout(options.timeoutMs ?? 180_000)
+    })
+
+    const raw = await response.text()
+    if (!response.ok) {
+      throw new Error(
+        `Notes model failed (${response.status}): ${
+          extractError(raw) || response.statusText
+        }`
+      )
+    }
+
+    const data = JSON.parse(raw) as GeminiResponse
+    const text = textFromGemini(data)
+    if (text) return text
+
+    const finish = data.candidates?.[0]?.finishReason
+    const blocked = data.promptFeedback?.blockReason
+    log('llm', 'gemini returned no text', {
+      model: options.model,
+      finish,
+      blocked
+    })
+    throw new EmptyModelResponseError(
+      finish === 'MAX_TOKENS' ? 'length' : blocked ?? finish
+    )
+  } catch (error) {
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      throw new Error('The notes model timed out. Try again or use a faster model.')
+    }
+    throw error
+  }
+}
+
+async function chatResponses(
+  messages: LlmMessage[],
+  options: LlmOptions
+): Promise<string> {
+  const baseURL = options.baseURL.replace(/\/+$/, '')
+  const system = messages
+    .filter((message) => message.role === 'system')
+    .map((message) => message.content)
+    .join('\n\n')
+  const turns = messages.filter((message) => message.role !== 'system')
+
+  try {
+    const response = await fetch(`${baseURL}/responses`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${options.apiKey}`,
+        'User-Agent': userAgent()
+      },
+      body: JSON.stringify({
+        model: options.model,
+        ...(system ? { instructions: system } : {}),
+        input: turns.map((message) => ({
+          role: message.role,
+          content: message.content
+        })),
+        max_output_tokens: options.maxTokens ?? 6000
+      }),
+      signal: AbortSignal.timeout(options.timeoutMs ?? 180_000)
+    })
+
+    const raw = await response.text()
+    if (!response.ok) {
+      throw new Error(
+        `Notes model failed (${response.status}): ${
+          extractError(raw) || response.statusText
+        }`
+      )
+    }
+
+    const data = JSON.parse(raw) as ResponsesApiResponse
+    const text = textFromResponses(data)
+    if (text) return text
+
+    log('llm', 'responses returned no text', {
+      model: options.model,
+      status: data.status,
+      incomplete: data.incomplete_details?.reason
+    })
+    throw new EmptyModelResponseError(
+      data.incomplete_details?.reason === 'max_output_tokens'
+        ? 'length'
+        : data.incomplete_details?.reason
+    )
+  } catch (error) {
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      throw new Error('The notes model timed out. Try again or use a faster model.')
+    }
+    throw error
+  }
 }
 
 export async function testLlm(options: LlmOptions): Promise<TestResult> {

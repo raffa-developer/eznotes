@@ -437,6 +437,7 @@ export class RecordingManager {
               apiKey: llmKey || (keyless ? '' : 'demo'),
               baseURL: settings.llm.baseURL,
               model: settings.llm.model,
+              provider: settings.llm.provider,
               sessionId: session.id,
               maxTokens: 16_000
             }
@@ -769,6 +770,7 @@ export class RecordingManager {
         apiKey: apiKey || (keyless ? '' : 'demo'),
         baseURL: settings.llm.baseURL,
         model: settings.llm.model,
+        provider: settings.llm.provider,
         sessionId: session.id
       })
       if (bullets.length && bullets.join('|') !== session.outline.join('|')) {
