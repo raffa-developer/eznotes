@@ -1,6 +1,8 @@
 export const app = {
   getPath: (name: string): string => `${process.cwd()}\\.test-${name}`,
   getVersion: (): string => '0.0.0-test',
+  getAppPath: (): string => process.cwd(),
+  isPackaged: false,
   setName: (): void => undefined,
   whenReady: async (): Promise<void> => undefined,
   on: (): void => undefined,

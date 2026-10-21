@@ -26,9 +26,10 @@ tick the box here and in `TODO.md` when it lands.
       dialog offers "Save transcript only" without needing Groq or the LLM.
 ## P1 — Product gaps
 
-- [ ] **P1-1** Speaker diarization: add `speaker?: string` to
-      `TranscriptSegment`, diarize before note generation, render in Live/NotePage
-      `src/shared/types.ts`, `src/main/stt.ts`, `src/renderer/src/pages/Live.tsx`
+- [x] **P1-1** Speaker diarization: add `speaker?: string` to
+      `TranscriptSegment`, diarize before note generation, render in NotePage
+      `src/main/diarization.ts`, `src/main/diarizer/`, `src/renderer/src/pages/NotePage.tsx`
+      — local sherpa-onnx via a bundled Node runtime; models download on demand.
 - [ ] **P1-2** Class-time notifications + optional auto-start, using
       `notifyBeforeMinutes` and `UpcomingClass.isNow`
       `src/main/schedule.ts`, `src/main/index.ts`
@@ -59,7 +60,7 @@ tick the box here and in `TODO.md` when it lands.
 
 - [x] **H-1** Add `vitest` + `npm test`; cover `trimOverlap`, `dedupeSegments`,
       `splitFrontmatter`, `sanitizeFilename`, `upcomingClasses`, `detectCues`
-      — 33 tests in 5 files; `electron` is aliased to `tests/electron-stub.ts`.
+      — 39 tests in 6 files; `electron` is aliased to `tests/electron-stub.ts`.
 - [x] **H-2** Add CI: `typecheck` + `test` + `build`
       — `.github/workflows/ci.yml`, Node 24, Electron binary download skipped.
 - [x] **H-3** Replace hardcoded `User-Agent: ezNotes/0.5.2` with

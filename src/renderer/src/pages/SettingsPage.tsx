@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   BookOpen,
   CheckCircle2,
+  Download,
   ExternalLink,
   FlaskConical,
   FolderOpen,
@@ -80,6 +81,8 @@ export default function SettingsPage(): React.JSX.Element {
   const [sttModel, setSttModel] = useState('whisper-large-v3-turbo')
   const [language, setLanguage] = useState('pt')
   const [liveTranscript, setLiveTranscript] = useState(true)
+  const [speakerLabels, setSpeakerLabels] = useState(false)
+  const [downloadingModels, setDownloadingModels] = useState(false)
   const [provider, setProvider] = useState<LlmProvider>('opencode-go')
   const [baseURL, setBaseURL] = useState(PROVIDER_PRESETS['opencode-go'].baseURL)
   const [model, setModel] = useState(PROVIDER_PRESETS['opencode-go'].model)
@@ -99,6 +102,7 @@ export default function SettingsPage(): React.JSX.Element {
     setSttModel(settings.settings.stt.model)
     setLanguage(settings.settings.stt.language)
     setLiveTranscript(settings.settings.stt.liveTranscript)
+    setSpeakerLabels(settings.settings.stt.speakerLabels)
     setProvider(settings.settings.llm.provider)
     setBaseURL(settings.settings.llm.baseURL)
     setModel(settings.settings.llm.model)
@@ -136,7 +140,8 @@ export default function SettingsPage(): React.JSX.Element {
           provider: settings.settings.stt.provider,
           model: sttModel,
           language,
-          liveTranscript
+          liveTranscript,
+          speakerLabels
         },
         llm: { provider, baseURL, model },
         retentionDays: retention,
@@ -148,6 +153,19 @@ export default function SettingsPage(): React.JSX.Element {
       toast(error instanceof Error ? error.message : String(error), 'error')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function downloadModels(): Promise<void> {
+    setDownloadingModels(true)
+    try {
+      const result = await window.ezNotes.settings.downloadDiarizationModels()
+      toast(result.message, result.ok ? 'success' : 'error')
+      await refreshSettings()
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'error')
+    } finally {
+      setDownloadingModels(false)
     }
   }
 
@@ -381,6 +399,54 @@ export default function SettingsPage(): React.JSX.Element {
               </small>
             </span>
           </label>
+
+          <label className="toggle-row">
+            <input
+              type="checkbox"
+              checked={speakerLabels}
+              onChange={(event) => setSpeakerLabels(event.target.checked)}
+            />
+            <span>
+              <strong>Detect speakers after class (offline)</strong>
+              <small>
+                Labels the lecturer and students in the final transcript. Runs on this
+                PC and adds a few minutes to processing. Needs a one-time{' '}
+                {settings.diarization.modelsSizeMb} MB model download.
+              </small>
+            </span>
+          </label>
+
+          {speakerLabels ? (
+            <div className="speaker-models">
+              {!settings.diarization.runtimeReady ? (
+                <span>
+                  The offline speaker runtime is missing. In development, run{' '}
+                  <code>npm run fetch:node</code>.
+                </span>
+              ) : settings.diarization.modelsReady ? (
+                <span>Speaker models are ready. Detection runs entirely on this PC.</span>
+              ) : (
+                <>
+                  <span>
+                    Speaker models are not downloaded yet (
+                    {settings.diarization.modelsSizeMb} MB).
+                  </span>
+                  <Button
+                    variant="outline"
+                    onClick={() => void downloadModels()}
+                    disabled={downloadingModels}
+                  >
+                    {downloadingModels ? (
+                      <Loader2 size={15} className="spin" />
+                    ) : (
+                      <Download size={15} />
+                    )}
+                    {downloadingModels ? 'Downloading…' : 'Download models'}
+                  </Button>
+                </>
+              )}
+            </div>
+          ) : null}
 
           <p className="settings-note">
             {liveTranscript

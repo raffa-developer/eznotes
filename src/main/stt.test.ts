@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dedupeSegments, trimOverlap } from './stt'
+import { dedupeSegments, transcriptToText, trimOverlap } from './stt'
 
 describe('trimOverlap', () => {
   it('removes a duplicated three-word tail', () => {
@@ -68,5 +68,16 @@ describe('dedupeSegments', () => {
     expect(
       dedupeSegments([{ id: 'a', start: 0, end: 1, text: '   ' }])
     ).toHaveLength(0)
+  })
+})
+
+describe('transcriptToText', () => {
+  it('prefixes timestamps and speaker labels', () => {
+    expect(
+      transcriptToText([
+        { id: 'a', start: 0, end: 2, text: 'Bom dia.' },
+        { id: 'b', start: 65, end: 70, text: 'Pergunta?', speaker: 'Speaker 2' }
+      ])
+    ).toBe('[0:00] Bom dia.\n[1:05] Speaker 2: Pergunta?')
   })
 })

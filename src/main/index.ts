@@ -47,6 +47,7 @@ import {
 import { RecordingManager } from './recording'
 import { generateNotes, testLlm } from './llm'
 import { testGroqKey } from './stt'
+import { downloadDiarizationModels } from './diarization'
 import { demoMode } from './mock'
 import { migrateUserData } from './migrate'
 
@@ -425,6 +426,9 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
     if (!key) return { ok: false, message: 'Add the Groq key first.' }
     return testGroqKey(key)
   })
+  ipcMain.handle('settings:downloadDiarizationModels', () =>
+    downloadDiarizationModels()
+  )
 
   ipcMain.handle('schedule:get', () => loadSchedule())
   ipcMain.handle('schedule:save', (_event, schedule: Schedule) =>

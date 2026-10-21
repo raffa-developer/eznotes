@@ -35,7 +35,9 @@ const api: EzNotesApi = {
     chooseNotesDir: () => ipcRenderer.invoke('settings:chooseNotesDir'),
     chooseObsidianVault: () => ipcRenderer.invoke('settings:chooseObsidianVault'),
     testLlm: () => ipcRenderer.invoke('settings:testLlm'),
-    testStt: () => ipcRenderer.invoke('settings:testStt')
+    testStt: () => ipcRenderer.invoke('settings:testStt'),
+    downloadDiarizationModels: () =>
+      ipcRenderer.invoke('settings:downloadDiarizationModels')
   },
   schedule: {
     get: () => ipcRenderer.invoke('schedule:get'),

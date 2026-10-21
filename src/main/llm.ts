@@ -320,6 +320,7 @@ Regras de conteúdo:
 - Quando o professor sinalizar importância ("isto vai sair no exame", "atenção", "não se esqueçam", repetição ou ênfase clara), marca com uma citação "> **Importante:** ..." e inclui o ponto em "Para o exame".
 - Agrupa por tópicos, não por ordem cronológica cega. Reorganiza para clareza, mas não acrescentes informação.
 - Usa os timestamps [m:ss] da transcrição para ligar cada secção à aula.
+- Se a transcrição tiver etiquetas de orador ("Speaker 1: ..."), usa-as para distinguir o professor dos alunos. Assume que o orador com mais intervenções é o professor e assinala perguntas ou comentários de alunos como tal.
 - Corrige hesitações e erros óbvios de transcrição. Corrige nomes próprios apenas quando tiveres certeza.
 - Se a transcrição tiver partes irrelevantes, omite-as sem as comentar.
 - Não escrevas metacomentários sobre a transcrição nem sobre o teu processo.
@@ -397,7 +398,7 @@ Usa esta estrutura:
 | --- | --- |
 | ... | ... |
 
-Omite secções vazias. Não inventes conteúdo que não esteja na transcrição. Ignora logística e conversa social.`
+Omite secções vazias. Não inventes conteúdo que não esteja na transcrição. Ignora logística e conversa social. Se houver etiquetas de orador, distingue o professor dos alunos.`
 
 export interface Cue {
   start: number

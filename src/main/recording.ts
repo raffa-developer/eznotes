@@ -41,6 +41,11 @@ import {
 import { readWavInfo, wavHeader } from './wav'
 import { demoMode } from './mock'
 import { log } from './log'
+import {
+  assignSpeakers,
+  diarizationStatus,
+  runDiarization
+} from './diarization'
 
 const SAMPLE_RATE = 16000
 const LIVE_INTERVAL_MS = 5_000
@@ -334,6 +339,34 @@ export class RecordingManager {
 
       if (!segments.length) {
         throw new Error('No speech was detected in the recording.')
+      }
+
+      if (
+        !input.transcriptOnly &&
+        settings.stt.speakerLabels &&
+        !segments.some((segment) => segment.speaker)
+      ) {
+        const status = diarizationStatus()
+        if (status.runtimeReady && status.modelsReady) {
+          this.progress('Detecting speakers', 0.85)
+          try {
+            const turns = await runDiarization(session.audioPath)
+            segments = assignSpeakers(segments, turns)
+            writeCachedTranscript(session.dir, segments)
+            log('recording', 'speakers assigned', {
+              segments: segments.length,
+              turns: turns.length
+            })
+          } catch (error) {
+            warnings.push(
+              `Speaker detection failed, so the note has no speaker labels: ${errorMessage(error)}`
+            )
+          }
+        } else {
+          warnings.push(
+            'Speaker detection is on, but its models are not downloaded. Continuing without speaker labels.'
+          )
+        }
       }
 
       ensureNotesDir(settings.notesDir)
@@ -952,6 +985,10 @@ function validIsoDate(value: string | undefined): string | null {
 
 function round(value: number): number {
   return Math.round(value * 100) / 100
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
 
 export function transcriptLabel(segment: TranscriptSegment): string {

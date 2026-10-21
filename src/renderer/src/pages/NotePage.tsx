@@ -428,7 +428,16 @@ export default function NotePage(): React.JSX.Element {
                       onClick={() => seek(segment.start)}
                     >
                       <span>{formatTimestamp(segment.start)}</span>
-                      <p>{segment.text}</p>
+                      <p>
+                        {segment.speaker ? (
+                          <>
+                            <strong className="transcript-speaker">
+                              {segment.speaker}
+                            </strong>{' '}
+                          </>
+                        ) : null}
+                        {segment.text}
+                      </p>
                     </button>
                   ))}
                 </div>

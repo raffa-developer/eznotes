@@ -367,7 +367,10 @@ function errorMessage(error: unknown): string {
 
 export function transcriptToText(segments: TranscriptSegment[]): string {
   return segments
-    .map((segment) => `[${formatTimestamp(segment.start)}] ${segment.text}`)
+    .map((segment) => {
+      const speaker = segment.speaker ? `${segment.speaker}: ` : ''
+      return `[${formatTimestamp(segment.start)}] ${speaker}${segment.text}`
+    })
     .join('\n')
 }
 

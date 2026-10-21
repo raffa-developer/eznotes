@@ -54,13 +54,18 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
 
 ## P1 — Product gaps
 
-- [ ] **Speaker diarization (lecturer vs. students)**
-  Groq Whisper returns flat segments. Needs either a diarizing STT provider or a
-  local pass (whisperX / pyannote) before `generateNotes`.
-  - Data shape already supports it loosely: add `speaker?: string` to
-    `TranscriptSegment` (`src/shared/types.ts:91`) and render it in `Live` and
-    `NotePage`.
-  - *Done when:* the note prompt can prefer lecturer content and label quotes.
+- [x] **Speaker diarization (lecturer vs. students)**
+  Groq Whisper returns flat segments, and Electron's V8 memory cage blocks the
+  sherpa native addon in-process. The app now ships a standalone Node runtime
+  and runs diarization in a child process.
+  - `TranscriptSegment.speaker` plus `assignSpeakers()` (maximum time overlap,
+    labels numbered by first appearance).
+  - Settings → Listening toggle; models (~45 MB) download on demand into
+    `%APPDATA%\ezNotes\models\sherpa\`.
+  - The note prompt treats the most active speaker as the lecturer and marks
+    student questions; the note transcript shows speaker badges.
+  - *Verified:* a seeded 57-second lecture diarized and produced a note in
+    3.3 s; the packaged worker also runs from `resources/`.
 
 - [ ] **Automatic recording at class time**
   `upcomingClasses()` already computes `isNow` (`src/main/schedule.ts:113`) and
@@ -123,7 +128,8 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
 - [x] **Tests and CI**
   `vitest` + `npm test` now cover `trimOverlap`/`dedupeSegments`,
   `splitFrontmatter`, `sanitizeFilename`, `upcomingClasses`, `detectCues`, log
-  rotation, and title/summary extraction — 33 tests across 5 files.
+  rotation, speaker assignment, and title/summary extraction — 39 tests across
+  6 files.
   - `electron` is aliased to `tests/electron-stub.ts` so main-process modules
     import cleanly under Node.
   - `.github/workflows/ci.yml` runs `npm ci`, `typecheck`, `test`, and `build`

@@ -30,6 +30,9 @@ source for now.
   of relying on the live chunks.
 - **Structured notes** — concepts, definitions, examples, exam hints, open
   questions, and a glossary, grouped by topic rather than chronology.
+- **Speaker labels** (optional) — an offline diarization pass separates the
+  lecturer from students in the final transcript. No extra API key; the models
+  download once.
 - **Markdown you own** — one plain file per lecture, organised by course and date.
 - **Audio retention is a choice** — keep the recording for replay or delete it
   immediately. The transcript and note are kept either way.
@@ -52,6 +55,7 @@ source for now.
 | Microphone | Any input device; selectable in Settings |
 | Network | Needed for Groq and cloud notes models. Ollama can run the notes step locally. |
 | API keys | A Groq key for transcription, plus an OpenCode/Groq key or local Ollama for notes |
+| Speaker labels | Optional. ~45 MB model download and a few minutes of local CPU per lecture |
 
 macOS and Linux are not supported or tested: DPAPI encryption and the recording
 island are Windows-specific.
@@ -151,6 +155,7 @@ Microphone
   → WAV on disk
   → Groq Whisper (live chunks + final full pass)
   → timestamped transcript
+  → optional local speaker diarization
   → notes model
   → importance filter + structured Markdown
   → Documents\ezNotes\<Course>\<date> <title>.md
@@ -166,6 +171,27 @@ Microphone
 - Audio retention is decided after every class. Kept audio is deleted after 30
   days by default (configurable), while transcripts and notes remain.
 
+## Speaker labels (optional)
+
+Turn on **Settings → Listening → Detect speakers after class**. The final
+transcript is then diarized on your PC before the note is written.
+
+- This step runs entirely on your machine: no extra API key, and no additional
+  audio leaves the PC.
+- The first run downloads about 45 MB of models (pyannote segmentation and
+  NVIDIA TitaNet), stored under `%APPDATA%\ezNotes\models\sherpa\`.
+- A small Node runtime is bundled for the diarizer, which adds about 90 MB to
+  the installer.
+- Expect a few minutes of CPU time for a long lecture — roughly 4 minutes for a
+  90-minute lecture on a modern 4-core laptop. The processing screen shows
+  **Detecting speakers**. Memory use grows with the lecture; a 90-minute
+  recording needs roughly 350 MB while it runs.
+- Labels are `Speaker 1`, `Speaker 2`, … in order of first appearance. The note
+  prompt treats the most active speaker as the lecturer and marks student
+  questions.
+- If diarization fails or the models are missing, the note is still written,
+  with a warning.
+
 ## Data and privacy
 
 | What | Where |
@@ -174,10 +200,12 @@ Microphone
 | Note index and transcripts | `Documents\ezNotes\.eznotes\` |
 | Audio | `%APPDATA%\ezNotes\recordings\rec_*\audio.wav` |
 | Settings, schedule, encrypted keys | `%APPDATA%\ezNotes\` |
+| Speaker models | `%APPDATA%\ezNotes\models\sherpa\` |
 | Diagnostics log | `%APPDATA%\ezNotes\eznotes.log` |
 
 - Audio is sent to Groq for transcription.
 - The transcript is sent to the chosen notes endpoint.
+- Speaker detection runs locally; its models are downloaded from GitHub releases.
 - No analytics or telemetry is built in.
 - Keys are never written to the notes folder or the repository.
 - Recording a lecture may require consent. Inform the lecturer and follow your
@@ -215,6 +243,7 @@ The library also has a quick copy button on every note.
 | `npm run typecheck` | Typecheck the Node and web TypeScript projects |
 | `npm test` | Run the Vitest suite |
 | `npm run test:watch` | Run tests in watch mode |
+| `npm run fetch:node` | Download the Node runtime used by speaker detection (Windows x64) |
 | `npm run preview` | Preview the production build |
 | `npm run pack` | Build an unpacked app in `release/win-unpacked` |
 | `npm run dist` | Build the NSIS installer in `release/` |
@@ -223,8 +252,9 @@ The library also has a quick copy button on every note.
 
 Unit tests cover transcript overlap trimming and deduplication, frontmatter
 parsing, filename sanitising, upcoming-class calculation, cue detection, log
-rotation, and title/summary extraction. The main-process modules are imported
-under Node with `electron` aliased to `tests/electron-stub.ts`.
+rotation, speaker assignment, and title/summary extraction. The main-process
+modules are imported under Node with `electron` aliased to
+`tests/electron-stub.ts`.
 
 `.github/workflows/ci.yml` runs `npm ci`, `typecheck`, `test`, and `build` on
 Node 24 for every push to `main` and every pull request.
@@ -239,12 +269,18 @@ during UI work.
 ```text
 src/
   main/        Electron main process: recording, STT, LLM, notes, storage
+    diarizer/  Offline speaker-detection worker
   preload/     Typed IPC bridge
   renderer/    React UI (dashboard, live, library, note, schedule, settings)
   shared/      Types shared by main and renderer
 tests/         Node stubs for unit tests
-scripts/       Local CDP and mock-service helpers
+scripts/       Local CDP, mock-service, and Node-runtime helpers
+vendor/        Node runtime fetched by npm run fetch:node (gitignored)
 ```
+
+`npm run pack` and `npm run dist` fetch the Node runtime automatically and copy
+it, the diarization worker, and the sherpa native modules into
+`resources/`.
 
 ## Troubleshooting
 
@@ -265,7 +301,6 @@ scripts/       Local CDP and mock-service helpers
 
 The detailed, tickable list lives in [`TODO.md`](TODO.md). Highlights:
 
-- Speaker diarization (lecturer vs. students)
 - Optional auto-start at class time
 - Opus audio instead of WAV to save disk
 - Tray icon and a global recording hotkey
@@ -273,8 +308,8 @@ The detailed, tickable list lives in [`TODO.md`](TODO.md). Highlights:
 - Portuguese (pt-PT) interface localization
 - More UI refinements and cross-monitor island behaviour
 
-Recently shipped: crash-safe recordings, recovery of interrupted lectures, and
-transcript-only notes.
+Recently shipped: crash-safe recordings, recovery of interrupted lectures,
+transcript-only notes, and optional local speaker labels.
 
 ## Contributing
 
@@ -291,4 +326,7 @@ app, see the `uiLanguage` setting and P1-6 in the roadmap.
 
 ## License
 
-[MIT](LICENSE) © 2026 Rafael Gonçalves
+[MIT](LICENSE) © 2026 Rafael
+
+Bundled and downloaded third-party components are listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Gonçalves

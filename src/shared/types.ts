@@ -15,6 +15,7 @@ export interface Settings {
     model: string
     language: string
     liveTranscript: boolean
+    speakerLabels: boolean
   }
   llm: {
     provider: LlmProvider
@@ -38,6 +39,13 @@ export interface SettingsStatus {
   appVersion: string
   recordingsDir: string
   demoMode: boolean
+  diarization: DiarizationStatus
+}
+
+export interface DiarizationStatus {
+  runtimeReady: boolean
+  modelsReady: boolean
+  modelsSizeMb: number
 }
 
 export type SecretKey = 'groqApiKey' | 'llmApiKey'
@@ -93,6 +101,7 @@ export interface TranscriptSegment {
   start: number
   end: number
   text: string
+  speaker?: string
 }
 
 export interface NoteDetail extends NoteMeta {
@@ -233,6 +242,7 @@ export interface EzNotesApi {
     chooseObsidianVault: () => Promise<SettingsStatus>
     testLlm: () => Promise<TestResult>
     testStt: () => Promise<TestResult>
+    downloadDiarizationModels: () => Promise<TestResult>
   }
   schedule: {
     get: () => Promise<Schedule>

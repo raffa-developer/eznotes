@@ -7,13 +7,15 @@ import type {
   SettingsStatus
 } from '../shared/types'
 import { demoMode } from './mock'
+import { diarizationStatus } from './diarization'
 
 const DEFAULT_SETTINGS: Settings = {
   stt: {
     provider: 'groq',
     model: 'whisper-large-v3-turbo',
     language: 'pt',
-    liveTranscript: true
+    liveTranscript: true,
+    speakerLabels: false
   },
   llm: {
     provider: 'opencode-go',
@@ -162,6 +164,7 @@ export function loadSettings(): Settings {
   settings.obsidianVault =
     typeof settings.obsidianVault === 'string' ? settings.obsidianVault : ''
   settings.stt.liveTranscript = settings.stt.liveTranscript !== false
+  settings.stt.speakerLabels = settings.stt.speakerLabels === true
   const notesMoved = migrateNotesDirectory(settings)
   settings.retentionDays = clamp(Number(settings.retentionDays) || 30, 1, 365)
   settings.notifyBeforeMinutes = clamp(
@@ -253,7 +256,8 @@ export function settingsStatus(): SettingsStatus {
     notesDir: settings.notesDir,
     appVersion: app.getVersion(),
     recordingsDir: recordingsDir(),
-    demoMode
+    demoMode,
+    diarization: diarizationStatus()
   }
 }
 
