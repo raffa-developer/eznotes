@@ -264,7 +264,12 @@ export default function Live(): React.JSX.Element {
               hour: '2-digit',
               minute: '2-digit'
             }).format(new Date(recording.startedAt))}
-            {course?.lecturer ? ` · ${course.lecturer}` : ''}
+            {course?.lecturer ? (
+              <>
+                <span className="meta-sep" />
+                {course.lecturer}
+              </>
+            ) : null}
           </p>
         </div>
         <div className="live-timer">
@@ -320,8 +325,8 @@ export default function Live(): React.JSX.Element {
               <p>
                 {segments.length
                   ? segments.length === 1
-                    ? t('1 segment · Portuguese')
-                    : t('{count} segments · Portuguese', { count: segments.length })
+                    ? t('1 segment, Portuguese')
+                    : t('{count} segments, Portuguese', { count: segments.length })
                   : t('Listening for speech…')}
               </p>
             </div>
@@ -397,7 +402,11 @@ export default function Live(): React.JSX.Element {
             <div className="panel-head">
               <div>
                 <h2>{t('Live outline')}</h2>
-                <p>{t('Updates every ~90 seconds')}</p>
+                <p>
+                  {t('Updates every ~{seconds} seconds', {
+                    seconds: settings?.settings.stt.liveOutlineSeconds ?? 90
+                  })}
+                </p>
               </div>
               <SparkIcon />
             </div>

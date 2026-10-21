@@ -29,8 +29,8 @@ export const live: Record<string, string> = {
   or: 'ou',
   'delete this recording': 'apagar esta gravação',
   Transcript: 'Transcrição',
-  '1 segment · Portuguese': '1 segmento · Português',
-  '{count} segments · Portuguese': '{count} segmentos · Português',
+  '1 segment, Portuguese': '1 segmento em português',
+  '{count} segments, Portuguese': '{count} segmentos em português',
   'Listening for speech…': 'A aguardar fala…',
   'Live transcript is off.': 'A transcrição em direto está desativada.',
   'The microphone is open.': 'O microfone está aberto.',
@@ -46,6 +46,8 @@ export const live: Record<string, string> = {
   'Default microphone': 'Microfone predefinido',
   'Live outline': 'Estrutura em direto',
   'Updates every ~90 seconds': 'Atualiza a cada ~90 segundos',
+  'Updates every ~{seconds} seconds':
+    'Atualiza a cada ~{seconds} segundos',
   'Live outline is off. The transcript and notes are written after class.':
     'A estrutura em direto está desativada. A transcrição e as notas são escritas após a aula.',
   'The outline will appear once there is enough academic content.':

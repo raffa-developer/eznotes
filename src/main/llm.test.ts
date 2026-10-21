@@ -69,7 +69,7 @@ describe('extractSummary', () => {
 | Termo | Significado |
 `
 
-    expect(extractSummary(markdown)).toBe('Um · Dois · Três')
+    expect(extractSummary(markdown)).toBe('Um Dois Três')
   })
 })
 

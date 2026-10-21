@@ -99,6 +99,7 @@ export default function SettingsPage(): React.JSX.Element {
   const [sttModel, setSttModel] = useState('whisper-large-v3-turbo')
   const [language, setLanguage] = useState('pt')
   const [liveTranscript, setLiveTranscript] = useState(true)
+  const [liveOutlineSeconds, setLiveOutlineSeconds] = useState(90)
   const [speakerLabels, setSpeakerLabels] = useState(false)
   const [downloadingModels, setDownloadingModels] = useState(false)
   const [autoStartRecording, setAutoStartRecording] = useState(false)
@@ -125,6 +126,7 @@ export default function SettingsPage(): React.JSX.Element {
     setSttModel(settings.settings.stt.model)
     setLanguage(settings.settings.stt.language)
     setLiveTranscript(settings.settings.stt.liveTranscript)
+    setLiveOutlineSeconds(settings.settings.stt.liveOutlineSeconds)
     setSpeakerLabels(settings.settings.stt.speakerLabels)
     setAutoStartRecording(settings.settings.autoStartRecording)
     setNotifyBefore(settings.settings.notifyBeforeMinutes)
@@ -171,6 +173,7 @@ export default function SettingsPage(): React.JSX.Element {
           model: sttModel,
           language,
           liveTranscript,
+          liveOutlineSeconds,
           speakerLabels
         },
         llm: { provider, baseURL, model },
@@ -454,6 +457,27 @@ export default function SettingsPage(): React.JSX.Element {
               </small>
             </span>
           </label>
+
+          {liveTranscript ? (
+            <Field
+              label={t('Live outline interval')}
+              hint={t(
+                'How often the outline refreshes while the lecture is running.'
+              )}
+            >
+              <select
+                value={liveOutlineSeconds}
+                onChange={(event) =>
+                  setLiveOutlineSeconds(Number(event.target.value))
+                }
+              >
+                <option value={60}>{t('Every 60 seconds')}</option>
+                <option value={90}>{t('Every 90 seconds')}</option>
+                <option value={120}>{t('Every 2 minutes')}</option>
+                <option value={180}>{t('Every 3 minutes')}</option>
+              </select>
+            </Field>
+          ) : null}
 
           <label className="toggle-row">
             <input
@@ -937,7 +961,7 @@ export default function SettingsPage(): React.JSX.Element {
           </span>
           <div>
             <h2>{t('Appearance')}</h2>
-            <p>{t('Dark is the default. System follows Windows.')}</p>
+            <p>{t('Choose light, dark, or follow Windows.')}</p>
           </div>
         </div>
         <Card className="settings-card inline-card">

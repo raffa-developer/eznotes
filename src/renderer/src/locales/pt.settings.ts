@@ -156,8 +156,8 @@ export const settings: Record<string, string> = {
   'with their frontmatter and tags. The path is saved for future exports.':
     'com o frontmatter e as etiquetas. O caminho é guardado para exportações futuras.',
   Appearance: 'Aparência',
-  'Dark is the default. System follows Windows.':
-    'O escuro é a predefinição. O sistema segue o Windows.',
+  'Choose light, dark, or follow Windows.':
+    'Escolha claro, escuro ou siga o Windows.',
   Dark: 'Escuro',
   Light: 'Claro',
   System: 'Sistema',
@@ -186,4 +186,12 @@ export const settings: Record<string, string> = {
   'No analytics or telemetry from ezNotes': 'Sem análises ou telemetria do ezNotes',
   "Recording a lecture may require consent. Inform the lecturer and follow your institution's rules. ezNotes shows a visible recording indicator.":
     'Gravar uma aula pode exigir consentimento. Informe o docente e cumpra as regras da sua instituição. O ezNotes mostra um indicador de gravação visível.'
+,
+  'Live outline interval': 'Intervalo do esboço em direto',
+  'How often the outline refreshes while the lecture is running.':
+    'Com que frequência o esboço é atualizado durante a aula.',
+  'Every 60 seconds': 'A cada 60 segundos',
+  'Every 90 seconds': 'A cada 90 segundos',
+  'Every 2 minutes': 'A cada 2 minutos',
+  'Every 3 minutes': 'A cada 3 minutos'
 }

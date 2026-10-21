@@ -16,6 +16,7 @@ const DEFAULT_SETTINGS: Settings = {
     model: 'whisper-large-v3-turbo',
     language: 'pt',
     liveTranscript: true,
+    liveOutlineSeconds: 90,
     speakerLabels: false
   },
   llm: {
@@ -27,7 +28,7 @@ const DEFAULT_SETTINGS: Settings = {
   obsidianVault: '',
   microphoneId: null,
   retentionDays: 30,
-  theme: 'dark',
+  theme: 'system',
   uiLanguage: 'en',
   notifyBeforeMinutes: 5,
   autoStartRecording: false,
@@ -168,6 +169,11 @@ export function loadSettings(): Settings {
   settings.obsidianVault =
     typeof settings.obsidianVault === 'string' ? settings.obsidianVault : ''
   settings.stt.liveTranscript = settings.stt.liveTranscript !== false
+  settings.stt.liveOutlineSeconds = clamp(
+    Number(settings.stt.liveOutlineSeconds) || 90,
+    30,
+    600
+  )
   settings.stt.speakerLabels = settings.stt.speakerLabels === true
   const notesMoved = migrateNotesDirectory(settings)
   settings.retentionDays = clamp(Number(settings.retentionDays) || 30, 1, 365)

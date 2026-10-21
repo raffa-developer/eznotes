@@ -167,7 +167,10 @@ export default function NotePage(): React.JSX.Element {
 
   const readMinutes = Math.max(1, Math.ceil((note?.wordCount ?? 0) / 200))
   const displayMarkdown = note
-    ? note.markdown.replace(/^\s*#\s+.+(?:\r?\n)+/, '')
+    ? note.markdown
+        .replace(/^\s*#\s+.+(?:\r?\n)+/, '')
+        .replace(/^\*\*(Disciplina|Data|Duração|Tópicos|Topics):\*\*.*(?:\r?\n|$)/gm, '')
+        .replace(/^\s+/, '')
     : ''
 
   if (loading) {

@@ -50,7 +50,6 @@ import {
 const SAMPLE_RATE = 16000
 const LIVE_INTERVAL_MS = 5_000
 const LIVE_CHUNK_SECONDS = 7.5
-const OUTLINE_INTERVAL_MS = 90_000
 const ROLLING_SECONDS = 30
 const CHECKPOINT_INTERVAL_MS = 30_000
 const MANIFEST_FILE = 'session.json'
@@ -81,6 +80,7 @@ interface Session {
   liveRawTail: string
   liveText: string
   outline: string[]
+  lastOutlineText: string
   lastLevelSent: number
   lastNoticeAt: number
   error?: string
@@ -149,6 +149,7 @@ export class RecordingManager {
       liveRawTail: '',
       liveText: '',
       outline: [],
+      lastOutlineText: '',
       lastLevelSent: 0,
       lastNoticeAt: 0
     }
@@ -180,9 +181,12 @@ export class RecordingManager {
       session.liveTimer = setInterval(() => {
         void this.tickLive()
       }, LIVE_INTERVAL_MS)
-      session.outlineTimer = setInterval(() => {
-        void this.tickOutline()
-      }, OUTLINE_INTERVAL_MS)
+      session.outlineTimer = setInterval(
+        () => {
+          void this.tickOutline()
+        },
+        settings.stt.liveOutlineSeconds * 1000
+      )
     }
 
     return this.snapshot()
@@ -651,6 +655,7 @@ export class RecordingManager {
         .join(' ')
         .slice(-30_000),
       outline: [],
+      lastOutlineText: '',
       lastLevelSent: 0,
       lastNoticeAt: 0
     }
@@ -753,6 +758,7 @@ export class RecordingManager {
     const session = this.session
     if (!session || session.status !== 'recording' || session.outlineBusy) return
     if (session.liveText.trim().length < 350) return
+    if (session.liveText === session.lastOutlineText) return
 
     const settings = loadSettings()
     if (!settings.stt.liveTranscript) return
@@ -773,6 +779,7 @@ export class RecordingManager {
         provider: settings.llm.provider,
         sessionId: session.id
       })
+      session.lastOutlineText = session.liveText
       if (bullets.length && bullets.join('|') !== session.outline.join('|')) {
         session.outline = bullets
         this.send({

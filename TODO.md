@@ -120,17 +120,25 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
 
 ---
 
+## Design
+
+- [x] Full UI redesign — light-first macOS Tahoe-inspired shell, Apple blue
+  accent, Inter for the interface, Newsreader for note reading, balanced
+  density, Dynamic Island-style recording pill, and dark mode.
+  - `src/renderer/src/apple.css` is the design layer; `island.css` is the pill.
+  - Dates, counts, and weekday labels use the active locale.
+  - *Verified:* screenshots of Dashboard, Library, Note, Settings, Schedule,
+    Live, and dark mode; no serif leaks into UI chrome.
+
 ## P2 — Refinements
 
-- [ ] Make the live-outline cadence configurable (currently fixed at 90 s,
-  `src/main/recording.ts:44`) and skip the call when the lecture is silent.
-- [ ] Island: verify behaviour across monitors with different DPI/scale factors;
-  it is positioned from `mainWindow` bounds (`positionIsland`,
-  `src/main/index.ts:206`).
-- [ ] Make the island's `hasShadow: false` a platform decision instead of a
-  blanket hardcode (`src/main/index.ts:181`).
-- [ ] Add a React error boundary so a renderer crash doesn't leave a blank window
-  while a recording is running.
+- [x] Make the live-outline cadence configurable (`stt.liveOutlineSeconds`,
+  default 90 s; 60/90/120/180 in Settings) and skip calls when the transcript
+  has not changed.
+- [x] Island: position on the cursor's display when the main window is minimized
+  and re-position on display metrics changes (`positionIsland`).
+- [x] Make the island's shadow platform-aware (`process.platform === 'darwin'`).
+- [x] Add a React error boundary for the main window and the island.
 
 ---
 

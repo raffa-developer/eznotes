@@ -18,6 +18,7 @@ export interface Settings {
     model: string
     language: string
     liveTranscript: boolean
+    liveOutlineSeconds: number
     speakerLabels: boolean
   }
   llm: {

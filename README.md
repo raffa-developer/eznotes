@@ -51,6 +51,8 @@ source for now.
   configurable global shortcut.
 - **Bilingual interface** — English and European Portuguese (pt-PT), switchable
   without a restart.
+- **Light-first design** — macOS-inspired layout, Apple blue, Inter for the
+  interface and Newsreader for note reading, with a full dark theme.
 - **Local-first keys** — API keys are encrypted with Windows DPAPI through
   Electron `safeStorage`.
 
@@ -180,7 +182,8 @@ Microphone
   live text.
 - The prompt asks the model to drop logistics, chatter, and repetition while
   keeping definitions, formulas, examples, and lecturer emphasis.
-- Live outlines refresh about every 90 seconds to keep token use low.
+- Live outlines refresh on a configurable interval (90 seconds by default) and
+  skip periods with no new speech.
 - Audio retention is decided after every class. Kept audio is deleted after 30
   days by default (configurable), while transcripts and notes remain.
 - Kept audio is Opus in WebM (about 11 MB/hour). WAV is used for transcription
@@ -347,12 +350,13 @@ it, the diarization worker, and the sherpa native modules into
 
 The detailed, tickable list lives in [`TODO.md`](TODO.md). Highlights:
 
-- More UI refinements and cross-monitor island behaviour
+- More keyboard shortcuts and accessibility refinements
 
 Recently shipped: crash-safe recordings, recovery of interrupted lectures,
 transcript-only notes, optional local speaker labels, opt-in auto-start, the
 tray icon with a configurable global hotkey, compact Opus audio, native
-Anthropic/Gemini/OpenAI adapters, and a bilingual English/pt-PT interface.
+Anthropic/Gemini/OpenAI adapters, a bilingual English/pt-PT interface, and a
+light-first macOS-inspired redesign.
 
 ## Contributing
 

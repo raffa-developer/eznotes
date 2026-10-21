@@ -48,5 +48,9 @@ export const common: Record<string, string> = {
   'Still up': 'Ainda acordado',
   'Good morning': 'Bom dia',
   'Good afternoon': 'Boa tarde',
-  'Good evening': 'Boa noite'
+  'Good evening': 'Boa noite',
+  'Something went wrong.': 'Algo correu mal.',
+  'ezNotes hit an unexpected error. Your notes and recordings are safe on disk.':
+    'O ezNotes encontrou um erro inesperado. As suas notas e gravações estão seguras no disco.',
+  'Reload ezNotes': 'Recarregar o ezNotes'
 }

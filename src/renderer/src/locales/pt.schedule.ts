@@ -26,7 +26,7 @@ export const schedule: Record<string, string> = {
   'Jump to {day}': 'Ir para {day}',
   'Add class on {day}': 'Adicionar aula: {day}',
   'No room': 'Sem sala',
-  'No classes — add one': 'Sem aulas — adicione uma',
+  'No classes. Add one.': 'Sem aulas. Adicione uma.',
   Courses: 'Disciplinas',
   Add: 'Adicionar',
   'Edit course': 'Editar disciplina',

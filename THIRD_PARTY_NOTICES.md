@@ -32,6 +32,18 @@ the following third-party components.
 - License: MIT.
 - <https://github.com/anthropics/anthropic-sdk-typescript>
 
+### Inter
+
+- Purpose: UI typeface.
+- License: SIL Open Font License 1.1.
+- <https://github.com/rsms/inter>
+
+### Newsreader
+
+- Purpose: note reading typeface.
+- License: SIL Open Font License 1.1.
+- <https://github.com/productiontype/Newsreader>
+
 ## Downloaded on first use
 
 These models are downloaded by the app into

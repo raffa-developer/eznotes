@@ -23,8 +23,8 @@
   --warn-soft: rgba(244, 201, 93, 0.1);
   --info: #8db4ff;
   --info-soft: rgba(141, 180, 255, 0.1);
-  --font-ui: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
-  --font-display: "Fraunces Variable", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-ui: "Inter Variable", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Newsreader Variable", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
   --font-mono: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
   --radius-lg: 18px;
   --radius: 13px;

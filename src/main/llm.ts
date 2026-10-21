@@ -691,7 +691,7 @@ export function extractSummary(markdown: string): string {
     .split(/\r?\n/)
     .map((line) => line.replace(/^\s*[-*]\s*/, '').trim())
     .filter(Boolean)
-  return bullets.slice(0, 3).join(' · ').slice(0, 320)
+  return bullets.slice(0, 3).join(' ').slice(0, 320)
 }
 
 function extractError(raw: string): string {

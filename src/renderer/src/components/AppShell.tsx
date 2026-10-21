@@ -119,7 +119,9 @@ export default function AppShell(): React.JSX.Element {
               </small>
               <strong>{nextClass.course.name}</strong>
               <small>
-                {formatTime(nextClass.slot.startTime)} · {nextClass.slot.room || t('No room')}
+                {formatTime(nextClass.slot.startTime)}
+                <span className="meta-sep" />
+                {nextClass.slot.room || t('No room')}
               </small>
             </span>
           </button>

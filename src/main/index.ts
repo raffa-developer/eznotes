@@ -191,7 +191,7 @@ function createIslandWindow(): BrowserWindow {
     fullscreenable: false,
     skipTaskbar: true,
     alwaysOnTop: true,
-    hasShadow: false,
+    hasShadow: process.platform === 'darwin',
     backgroundColor: '#00000000',
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
@@ -219,9 +219,10 @@ function createIslandWindow(): BrowserWindow {
 function positionIsland(): void {
   if (!islandWindow) return
   const [width, height] = islandWindow.getSize()
-  const display = mainWindow
-    ? screen.getDisplayMatching(mainWindow.getBounds())
-    : screen.getPrimaryDisplay()
+  const display =
+    mainWindow && !mainWindow.isMinimized()
+      ? screen.getDisplayMatching(mainWindow.getBounds())
+      : screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
   const area = display.workArea
   islandWindow.setPosition(
     Math.round(area.x + (area.width - width) / 2),
@@ -1040,6 +1041,13 @@ if (!gotLock) {
     createTray()
     syncGlobalHotkey()
     startAutoStartScheduler()
+
+    const repositionIsland = (): void => {
+      if (islandWindow?.isVisible()) positionIsland()
+    }
+    screen.on('display-metrics-changed', repositionIsland)
+    screen.on('display-added', repositionIsland)
+    screen.on('display-removed', repositionIsland)
 
     const removed = recording.cleanupExpiredRecordings()
     if (removed.length) {

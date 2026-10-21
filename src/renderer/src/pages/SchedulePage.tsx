@@ -322,7 +322,7 @@ export default function SchedulePage(): React.JSX.Element {
                       })
                     ) : (
                       <button className="slot-empty" onClick={() => newSlot(day.value)}>
-                        {t('No classes — add one')}
+                        {t('No classes. Add one.')}
                       </button>
                     )}
                   </div>

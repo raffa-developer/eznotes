@@ -7,6 +7,7 @@ import {
   CalendarDays,
   Check,
   CheckCircle2,
+  ChevronRight,
   Clock,
   Copy,
   KeyRound,
@@ -172,9 +173,14 @@ export default function Dashboard(): React.JSX.Element {
                       dateStyle: 'medium',
                       timeStyle: 'short'
                     }).format(new Date(item.startedAt))}
-                    {' · '}
+                    <span className="meta-sep" />
                     {formatDuration(item.durationSec)}
-                    {item.hasTranscript ? ` · ${t('transcript ready')}` : ''}
+                    {item.hasTranscript ? (
+                      <>
+                        <span className="meta-sep" />
+                        {t('transcript ready')}
+                      </>
+                    ) : null}
                   </small>
                 </span>
                 <Button variant="soft" onClick={() => void recoverLecture(item)}>
@@ -281,10 +287,21 @@ export default function Dashboard(): React.JSX.Element {
                   </p>
                   <h2>{nextClass.course.name}</h2>
                   <p className="next-class-meta">
-                    {nextClass.course.code ? `${nextClass.course.code} · ` : ''}
-                    {weekdayLong(nextClass.slot.weekday)}, {formatTime(nextClass.slot.startTime)}–
+                    {nextClass.course.code ? (
+                      <>
+                        {nextClass.course.code}
+                        <span className="meta-sep" />
+                      </>
+                    ) : null}
+                    {weekdayLong(nextClass.slot.weekday)},{' '}
+                    {formatTime(nextClass.slot.startTime)}–
                     {formatTime(nextClass.slot.endTime)}
-                    {nextClass.slot.room ? ` · ${nextClass.slot.room}` : ''}
+                    {nextClass.slot.room ? (
+                      <>
+                        <span className="meta-sep" />
+                        {nextClass.slot.room}
+                      </>
+                    ) : null}
                   </p>
                 </div>
                 <Badge tone={nextClass.isNow ? 'accent' : 'neutral'}>
@@ -382,7 +399,7 @@ export default function Dashboard(): React.JSX.Element {
           <div className="section-head">
             <h2>{t('Today')}</h2>
             <Link to="/schedule" className="text-link">
-              {t('Full week')} <ArrowRight size={14} />
+              {t('Full week')} <ChevronRight size={13} />
             </Link>
           </div>
           {todayClasses.length ? (
@@ -401,7 +418,12 @@ export default function Dashboard(): React.JSX.Element {
                     <strong>{item.course.name}</strong>
                     <small>
                       {item.slot.room || t('No room')}
-                      {item.course.lecturer ? ` · ${item.course.lecturer}` : ''}
+                      {item.course.lecturer ? (
+                        <>
+                          <span className="meta-sep" />
+                          {item.course.lecturer}
+                        </>
+                      ) : null}
                     </small>
                   </span>
                   <Badge tone={item.isNow ? 'accent' : 'neutral'}>
@@ -421,7 +443,7 @@ export default function Dashboard(): React.JSX.Element {
           <div className="section-head">
             <h2>{t('Recent notes')}</h2>
             <Link to="/library" className="text-link">
-              {t('All notes')} <ArrowRight size={14} />
+              {t('All notes')} <ChevronRight size={13} />
             </Link>
           </div>
           {recent.length ? (
@@ -468,7 +490,10 @@ export default function Dashboard(): React.JSX.Element {
                         {note.hasAudio ? <Badge tone="info">{t('audio')}</Badge> : null}
                       </span>
                       <small>
-                        {note.courseName} · {formatDuration(note.durationSec)} ·{' '}
+                        {note.courseName}
+                        <span className="meta-sep" />
+                        {formatDuration(note.durationSec)}
+                        <span className="meta-sep" />
                         {t('{minutes} min read', { minutes: readMinutes })}
                       </small>
                       {note.summary ? <em>{note.summary}</em> : null}

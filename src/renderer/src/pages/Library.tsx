@@ -262,16 +262,16 @@ export default function Library(): React.JSX.Element {
                   </div>
                   <p className="note-meta">
                     {note.courseName}
-                    <span>·</span>
+                    <span className="meta-sep" />
                     {formatDate(note.date)}
-                    <span>·</span>
+                    <span className="meta-sep" />
                     <Clock size={13} /> {formatDuration(note.durationSec)}
-                    <span>·</span>
+                    <span className="meta-sep" />
                     <FileText size={13} />{' '}
                     {t(note.wordCount === 1 ? '{count} word' : '{count} words', {
                       count: note.wordCount.toLocaleString()
                     })}
-                    <span>·</span>
+                    <span className="meta-sep" />
                     {t('{minutes} min read', {
                       minutes: Math.max(1, Math.ceil(note.wordCount / 200))
                     })}
@@ -298,7 +298,7 @@ export default function Library(): React.JSX.Element {
                 >
                   {copyingId === note.id ? <Check size={15} /> : <Copy size={15} />}
                 </button>
-                <span className="note-open">{t('Open')} →</span>
+                <span className="note-open">{t('Open')}</span>
               </div>
             )
           })}

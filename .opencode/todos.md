@@ -49,16 +49,23 @@ tick the box here and in `TODO.md` when it lands.
       `src/renderer/src/i18n.ts`, `src/renderer/src/locales/`, `src/main/uiText.ts`
       — English/pt-PT, live switching, locale-aware dates, tray/dialogs; 64 tests.
 
+## Design
+
+- [x] **UI redesign** — light-first macOS Tahoe-inspired shell, Apple blue,
+      Inter + Newsreader, balanced density, Dynamic Island, dark mode.
+      `src/renderer/src/apple.css`, `src/renderer/src/island.css`
+
 ## P2 — Refinements
 
-- [ ] **P2-1** Configurable live-outline cadence (fixed 90 s today)
-      `src/main/recording.ts`
-- [ ] **P2-2** Island across mixed-DPI monitors
-      `src/main/index.ts` (`positionIsland`)
-- [ ] **P2-3** Make island `hasShadow` platform-aware
+- [x] **P2-1** Configurable live-outline cadence (60/90/120/180 s) and skip
+      unchanged transcripts
+      `src/main/recording.ts`, `src/renderer/src/pages/SettingsPage.tsx`
+- [x] **P2-2** Island across mixed-DPI monitors
+      `src/main/index.ts` (`positionIsland`, display metrics listeners)
+- [x] **P2-3** Make island `hasShadow` platform-aware
       `src/main/index.ts`
-- [ ] **P2-4** React error boundary around the app shell
-      `src/renderer/src/main.tsx`
+- [x] **P2-4** React error boundary around the app and island
+      `src/renderer/src/components/ErrorBoundary.tsx`
 
 ## Engineering hygiene
 
