@@ -1148,21 +1148,6 @@ textarea {
   font-size: 0.95em;
 }
 
-.segmented {
-  border: 1px solid var(--line);
-  background: var(--surface-2);
-}
-
-.segmented button {
-  color: var(--muted);
-  font-weight: 700;
-}
-
-.segmented button.active {
-  background: var(--primary);
-  color: var(--primary-ink);
-}
-
 .toggle-row {
   display: flex;
   align-items: flex-start;
