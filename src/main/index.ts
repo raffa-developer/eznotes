@@ -200,7 +200,7 @@ function createIslandWindow(): BrowserWindow {
     fullscreenable: false,
     skipTaskbar: true,
     alwaysOnTop: true,
-    hasShadow: process.platform === 'darwin',
+    hasShadow: false,
     backgroundColor: '#00000000',
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
@@ -211,6 +211,7 @@ function createIslandWindow(): BrowserWindow {
   })
 
   islandWindow.setAlwaysOnTop(true, 'floating')
+  islandWindow.setHasShadow(false)
   islandWindow.setMenuBarVisibility(false)
   islandWindow.loadURL(islandUrl())
   islandWindow.once('ready-to-show', () => {

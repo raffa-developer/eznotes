@@ -62,8 +62,8 @@ tick the box here and in `TODO.md` when it lands.
       `src/main/recording.ts`, `src/renderer/src/pages/SettingsPage.tsx`
 - [x] **P2-2** Island across mixed-DPI monitors
       `src/main/index.ts` (`positionIsland`, display metrics listeners)
-- [x] **P2-3** Make island `hasShadow` platform-aware
-      `src/main/index.ts`
+- [x] **P2-3** Remove the island shadow entirely (CSS and native `hasShadow`)
+      `src/main/index.ts`, `src/renderer/src/island.css`
 - [x] **P2-4** React error boundary around the app and island
       `src/renderer/src/components/ErrorBoundary.tsx`
 

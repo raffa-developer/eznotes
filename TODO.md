@@ -137,7 +137,8 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
   has not changed.
 - [x] Island: position on the cursor's display when the main window is minimized
   and re-position on display metrics changes (`positionIsland`).
-- [x] Make the island's shadow platform-aware (`process.platform === 'darwin'`).
+- [x] Remove the island's shadow entirely — no CSS `box-shadow` and
+  `hasShadow: false` on the native window, leaving only the pill.
 - [x] Add a React error boundary for the main window and the island.
 
 ---
