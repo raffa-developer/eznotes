@@ -4,7 +4,7 @@ body,
   height: 100%;
 }
 
-body.island {
+body.island-window {
   margin: 0;
   overflow: hidden;
   background: transparent !important;
@@ -16,6 +16,7 @@ body.island {
 .island-root {
   display: flex;
   align-items: flex-start;
+  justify-content: center;
   width: 100%;
   height: 100%;
   padding: 3px;
@@ -23,35 +24,58 @@ body.island {
 }
 
 .island {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   height: fit-content;
+  max-height: 100%;
   align-self: flex-start;
   overflow: hidden;
-  border: 1px solid rgba(231, 236, 246, 0.16);
-  border-radius: 17px;
-  background: rgba(13, 19, 28, 0.96);
+  border: 1px solid rgba(231, 236, 246, 0.15);
+  border-radius: 26px;
+  background: rgba(13, 19, 28, 0.95);
   color: #f2eee3;
+  transform: translateY(0);
+  transform-origin: top center;
   -webkit-app-region: drag;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    border-radius 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.island:hover {
+  border-color: rgba(141, 180, 255, 0.32);
+  background: rgba(18, 26, 38, 0.97);
+  transform: translateY(-1px);
+}
+
+.island.expanded {
+  border-radius: 16px;
+  animation: island-expand 200ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .island-bar {
   display: flex;
   align-items: center;
-  gap: 7px;
-  height: 52px;
-  padding: 0 8px 0 13px;
+  gap: 5px;
+  height: 46px;
+  padding: 0 6px 0 11px;
+  flex: none;
 }
 
 .island-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #ff7f77;
   animation: island-pulse 1.6s infinite;
   flex: none;
 }
 
-.island-dot.paused {
+.island-dot.paused,
+.island-dot.stopped {
   background: #f4c95d;
   animation: none;
 }
@@ -61,6 +85,11 @@ body.island {
   animation: island-pulse 1.2s infinite;
 }
 
+.island-dot.done {
+  background: #8ce99a;
+  animation: none;
+}
+
 .island-dot.error {
   background: #ff7f77;
   animation: none;
@@ -68,8 +97,8 @@ body.island {
 
 .island-course {
   overflow: hidden;
-  max-width: 90px;
-  font-size: 11.5px;
+  max-width: 76px;
+  font-size: 10.5px;
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -78,7 +107,7 @@ body.island {
 .island-timer {
   color: #f2eee3;
   font-family: "Cascadia Code", Consolas, monospace;
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: 0.02em;
   opacity: 0.85;
   flex: none;
@@ -88,9 +117,15 @@ body.island {
   display: flex;
   align-items: center;
   gap: 1.5px;
-  height: 18px;
+  height: 15px;
   margin-left: 1px;
+  opacity: 0.7;
+  transition: opacity 160ms ease;
   flex: none;
+}
+
+.island:hover .island-level {
+  opacity: 1;
 }
 
 .island-level i {
@@ -99,28 +134,45 @@ body.island {
   min-height: 3px;
   border-radius: 2px;
   background: #8db4ff;
-  transition: height 100ms ease, opacity 100ms ease;
+  transition:
+    height 100ms ease,
+    opacity 100ms ease;
 }
 
 .island-icon-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 27px;
-  height: 27px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: none;
-  border-radius: 7px;
+  border-radius: 6px;
   background: transparent;
   color: #a7b2c2;
-  -webkit-app-region: no-drag;
+  opacity: 0.82;
   cursor: pointer;
+  -webkit-app-region: no-drag;
   flex: none;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.island:hover .island-icon-button {
+  opacity: 1;
 }
 
 .island-icon-button:hover {
   background: rgba(255, 255, 255, 0.08);
   color: #f2eee3;
+  transform: translateY(-1px);
+}
+
+.island-icon-button:active {
+  transform: translateY(0) scale(0.94);
 }
 
 .island-icon-button.danger {
@@ -129,11 +181,21 @@ body.island {
 
 .island-icon-button.danger:hover {
   background: rgba(255, 127, 119, 0.12);
+  color: #ff9a93;
 }
 
 .island-icon-button:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: default;
+  transform: none;
+}
+
+.island-chevron {
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.island-chevron.open {
+  transform: rotate(180deg);
 }
 
 .island-phase {
@@ -141,7 +203,7 @@ body.island {
   align-items: center;
   gap: 4px;
   color: #a7b2c2;
-  font-size: 10px;
+  font-size: 9.5px;
   white-space: nowrap;
 }
 
@@ -154,22 +216,31 @@ body.island {
 }
 
 .island-panel {
-  max-height: 198px;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 184px;
   overflow-y: auto;
-  padding: 0 13px 12px;
-  border-top: 1px solid rgba(231, 236, 246, 0.09);
+  padding: 0 12px 10px;
+  border-top: 1px solid rgba(231, 236, 246, 0.08);
+  transform-origin: top center;
+  animation: island-panel-in 200ms cubic-bezier(0.22, 1, 0.36, 1);
   -webkit-app-region: no-drag;
 }
 
+.island-panel.closing {
+  pointer-events: none;
+  animation: island-panel-out 150ms ease-in forwards;
+}
+
 .island-transcript {
-  padding-top: 4px;
+  padding-top: 3px;
 }
 
 .island-transcript-line {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  gap: 7px;
-  padding: 6px 0;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 6px;
+  padding: 5px 0;
   border-bottom: 1px solid rgba(231, 236, 246, 0.07);
 }
 
@@ -181,53 +252,57 @@ body.island {
   padding-top: 2px;
   color: #8db4ff;
   font-family: "Cascadia Code", Consolas, monospace;
-  font-size: 9px;
+  font-size: 8.5px;
 }
 
 .island-transcript-line p {
+  display: -webkit-box;
+  overflow: hidden;
   margin: 0;
   color: #f2eee3;
-  font-size: 11.5px;
-  line-height: 1.45;
+  font-size: 10.5px;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .island-outline {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  padding-top: 7px;
+  gap: 4px;
+  padding-top: 6px;
 }
 
 .island-outline span {
-  padding: 2px 6px;
+  padding: 2px 5px;
   border: 1px solid rgba(231, 236, 246, 0.09);
   border-radius: 999px;
   color: #a7b2c2;
-  font-size: 9.5px;
+  font-size: 9px;
 }
 
 .island-muted {
-  margin: 9px 0 2px;
+  margin: 8px 0 2px;
   color: #a7b2c2;
-  font-size: 11.5px;
-  line-height: 1.5;
+  font-size: 10.5px;
+  line-height: 1.45;
 }
 
 .island-decision {
-  padding-top: 10px;
+  padding-top: 9px;
 }
 
 .island-decision > p {
   margin: 0;
   color: #f2eee3;
-  font-size: 12px;
+  font-size: 11.5px;
 }
 
 .island-ready,
 .island-error {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   line-height: 1.4;
 }
 
@@ -237,34 +312,44 @@ body.island {
 
 .island-error {
   color: #ff9a93 !important;
-  font-size: 11px !important;
+  font-size: 10.5px !important;
 }
 
 .island-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 6px;
-  margin-top: 10px;
+  gap: 5px;
+  margin-top: 8px;
 }
 
 .island-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 7px 10px;
+  gap: 4px;
+  padding: 6px 9px;
   border: 1px solid rgba(231, 236, 246, 0.12);
   border-radius: 7px;
   background: rgba(255, 255, 255, 0.04);
   color: #d8dde6;
-  font-size: 10.5px;
+  font-size: 9.5px;
   font-weight: 700;
   cursor: pointer;
   -webkit-app-region: no-drag;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    transform 140ms ease;
 }
 
 .island-action:hover {
   background: rgba(255, 255, 255, 0.09);
+  transform: translateY(-1px);
+}
+
+.island-action:active {
+  transform: translateY(0) scale(0.97);
 }
 
 .island-action.primary {
@@ -283,23 +368,27 @@ body.island {
   color: #ff9a93;
 }
 
+.island-action.danger:hover {
+  background: rgba(255, 127, 119, 0.16);
+}
+
 .island-action:focus-visible {
   outline: 2px solid #8db4ff;
   outline-offset: 1px;
 }
 
 .island-progress {
-  padding-top: 12px;
+  padding-top: 10px;
 }
 
 .island-progress p {
-  margin: 0 0 8px;
+  margin: 0 0 7px;
   color: #a7b2c2;
-  font-size: 11px;
+  font-size: 10.5px;
 }
 
 .island-progress-track {
-  height: 4px;
+  height: 3px;
   overflow: hidden;
   border-radius: 99px;
   background: rgba(255, 255, 255, 0.1);
@@ -314,15 +403,15 @@ body.island {
 
 .island-progress small {
   display: block;
-  margin-top: 5px;
+  margin-top: 4px;
   color: #758397;
   font-family: "Cascadia Code", Consolas, monospace;
-  font-size: 9px;
+  font-size: 8.5px;
 }
 
 .island::-webkit-scrollbar,
 .island-panel::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 .island-panel::-webkit-scrollbar-thumb {
@@ -336,6 +425,51 @@ body.island {
     opacity: 1;
   }
   50% {
-    opacity: 0.45;
+    opacity: 0.4;
+  }
+}
+
+@keyframes island-expand {
+  from {
+    opacity: 0.65;
+    transform: scaleY(0.965);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes island-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes island-panel-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .island,
+  .island-panel,
+  .island-icon-button,
+  .island-action,
+  .island-chevron,
+  .island-level {
+    animation: none !important;
+    transition: none !important;
   }
 }

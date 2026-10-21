@@ -12,7 +12,7 @@ import './polish.css'
 import './island.css'
 
 const islandMode = window.location.hash.startsWith('#/island')
-if (islandMode) document.body.classList.add('island')
+if (islandMode) document.body.classList.add('island-window')
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)
 

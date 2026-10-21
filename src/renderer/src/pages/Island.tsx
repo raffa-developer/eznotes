@@ -3,7 +3,6 @@ import {
   AlertTriangle,
   Check,
   ChevronDown,
-  ChevronUp,
   Loader2,
   Maximize2,
   Pause,
@@ -22,6 +21,15 @@ import { formatTimer, formatTimestamp } from '../lib/format'
 
 type Phase = 'recording' | 'stopped' | 'processing' | 'done' | 'error'
 
+const COLLAPSED_HEIGHT = 54
+const PANEL_HEIGHTS: Record<Phase, number> = {
+  recording: 144,
+  stopped: 128,
+  processing: 120,
+  done: 128,
+  error: 144
+}
+
 export default function Island(): React.JSX.Element {
   const [snapshot, setSnapshot] = useState<RecordingSnapshot | null>(null)
   const [segments, setSegments] = useState<LiveTranscriptSegment[]>([])
@@ -38,10 +46,12 @@ export default function Island(): React.JSX.Element {
   const [noteId, setNoteId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [panelClosing, setPanelClosing] = useState(false)
   const [retentionDays, setRetentionDays] = useState(30)
   const [liveTranscript, setLiveTranscript] = useState(true)
   const scheduleRef = useRef<Schedule>({ courses: [], slots: [] })
-  const islandRef = useRef<HTMLDivElement | null>(null)
+  const closeTimer = useRef<number | null>(null)
+  const previousPhase = useRef<Phase>('recording')
 
   useEffect(() => {
     let mounted = true
@@ -106,20 +116,46 @@ export default function Island(): React.JSX.Element {
     return () => window.clearInterval(timer)
   }, [snapshot?.status])
 
-  const visibleExpanded = expanded || phase !== 'recording'
+  const showPanel = expanded || phase !== 'recording' || panelClosing
+  const panelHeight = showPanel ? PANEL_HEIGHTS[phase] : COLLAPSED_HEIGHT
 
   useEffect(() => {
-    const element = islandRef.current
-    if (!element) return
-    const update = (): void => {
-      const height = Math.ceil(element.getBoundingClientRect().height) + 6
-      void window.ezNotes.app.setIslandExpanded(visibleExpanded, height)
+    void window.ezNotes.app.setIslandExpanded(showPanel, panelHeight)
+  }, [showPanel, panelHeight])
+
+  useEffect(() => {
+    if (phase === 'recording' && previousPhase.current !== 'recording') {
+      setExpanded(false)
+      setPanelClosing(false)
     }
-    update()
-    const observer = new ResizeObserver(update)
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [visibleExpanded, phase, segments.length, outline.length])
+    previousPhase.current = phase
+  }, [phase])
+
+  useEffect(() => {
+    return () => {
+      if (closeTimer.current !== null) window.clearTimeout(closeTimer.current)
+    }
+  }, [])
+
+  function toggleExpanded(): void {
+    if (closeTimer.current !== null) {
+      window.clearTimeout(closeTimer.current)
+      closeTimer.current = null
+    }
+    if (expanded) {
+      setExpanded(false)
+      if (phase === 'recording') {
+        setPanelClosing(true)
+        closeTimer.current = window.setTimeout(() => {
+          setPanelClosing(false)
+          closeTimer.current = null
+        }, 170)
+      }
+      return
+    }
+    setPanelClosing(false)
+    setExpanded(true)
+  }
 
   function applySnapshot(next: RecordingSnapshot): void {
     setElapsed(next.elapsedSec)
@@ -150,6 +186,11 @@ export default function Island(): React.JSX.Element {
     setBusy(true)
     try {
       const result = await window.ezNotes.recording.stop()
+      if (closeTimer.current !== null) {
+        window.clearTimeout(closeTimer.current)
+        closeTimer.current = null
+      }
+      setPanelClosing(false)
       setStopped(result)
       setElapsed(result.durationSec)
       setPhase('stopped')
@@ -209,23 +250,23 @@ export default function Island(): React.JSX.Element {
 
   const isPaused = snapshot?.status === 'paused'
   const courseName = snapshot?.courseName ?? 'Lecture'
-  const recentSegments = segments.slice(-2)
+  const recentSegments = segments.slice(-1)
   const recentOutline = outline.slice(0, 3)
 
   return (
     <div className="island-root">
-      <div className={`island ${visibleExpanded ? 'expanded' : ''}`} ref={islandRef}>
+      <div className={`island ${showPanel ? 'expanded' : ''}`}>
         <div className="island-bar">
           <span className={`island-dot ${snapshot?.status ?? 'recording'}`} />
           <span className="island-course">{courseName}</span>
           <span className="island-timer">{formatTimer(elapsed)}</span>
 
           <span className="island-level" aria-hidden="true">
-            {Array.from({ length: 10 }).map((_, index) => (
+            {Array.from({ length: 8 }).map((_, index) => (
               <i
                 key={index}
                 style={{
-                  height: `${3 + level * 13 * (0.4 + Math.abs(Math.sin(index * 1.7)))}px`,
+                  height: `${3 + level * 11 * (0.4 + Math.abs(Math.sin(index * 1.7)))}px`,
                   opacity: level > 0.02 ? 0.5 + level * 0.5 : 0.25
                 }}
               />
@@ -241,7 +282,7 @@ export default function Island(): React.JSX.Element {
                 title={isPaused ? 'Resume recording' : 'Pause recording'}
                 aria-label={isPaused ? 'Resume recording' : 'Pause recording'}
               >
-                {isPaused ? <Play size={14} /> : <Pause size={14} />}
+                {isPaused ? <Play size={13} /> : <Pause size={13} />}
               </button>
               <button
                 className="island-icon-button danger"
@@ -250,52 +291,58 @@ export default function Island(): React.JSX.Element {
                 title="Stop and write notes"
                 aria-label="Stop and write notes"
               >
-                <Square size={13} />
+                <Square size={11} />
               </button>
             </>
           ) : null}
 
           {phase === 'processing' ? (
             <span className="island-phase">
-              <Loader2 size={13} className="spin" />
+              <Loader2 size={12} className="spin" />
               Writing
             </span>
           ) : null}
 
           {phase === 'done' ? (
             <span className="island-phase success">
-              <Check size={13} />
+              <Check size={12} />
               Ready
             </span>
           ) : null}
 
           {phase === 'error' ? (
             <span className="island-phase error">
-              <AlertTriangle size={13} />
+              <AlertTriangle size={12} />
               Error
             </span>
           ) : null}
 
-          <button
-            className="island-icon-button"
-            onClick={() => setExpanded((value) => !value)}
-            title={expanded ? 'Collapse' : 'Expand'}
-            aria-label={expanded ? 'Collapse' : 'Expand'}
-          >
-            {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
+          {phase === 'recording' ? (
+            <button
+              className="island-icon-button"
+              onClick={toggleExpanded}
+              title={expanded ? 'Collapse' : 'Expand'}
+              aria-label={expanded ? 'Collapse' : 'Expand'}
+              aria-expanded={expanded}
+            >
+              <ChevronDown
+                size={13}
+                className={`island-chevron ${expanded ? 'open' : ''}`}
+              />
+            </button>
+          ) : null}
           <button
             className="island-icon-button"
             onClick={openApp}
             title="Open ezNotes"
             aria-label="Open ezNotes"
           >
-            <Maximize2 size={13} />
+            <Maximize2 size={12} />
           </button>
         </div>
 
-        {visibleExpanded ? (
-          <div className="island-panel">
+        {showPanel ? (
+          <div className={`island-panel ${panelClosing ? 'closing' : ''}`}>
             {phase === 'recording' ? (
               liveTranscript ? (
                 <>

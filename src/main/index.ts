@@ -55,8 +55,9 @@ migrateUserData()
 let mainWindow: BrowserWindow | null = null
 let islandWindow: BrowserWindow | null = null
 let quitting = false
-const ISLAND_COLLAPSED = { width: 390, height: 60 }
-const ISLAND_EXPANDED = { width: 430, height: 258 }
+const ISLAND_WIDTH = 360
+const ISLAND_COLLAPSED = { width: ISLAND_WIDTH, height: 54 }
+const ISLAND_EXPANDED = { width: ISLAND_WIDTH, height: 246 }
 
 const recording = new RecordingManager((event) => {
   mainWindow?.webContents.send('recording:event', event)
@@ -229,7 +230,7 @@ function hideIsland(): void {
 
 function resizeIsland(expanded: boolean, height?: number): void {
   if (!islandWindow) return
-  const width = expanded ? ISLAND_EXPANDED.width : ISLAND_COLLAPSED.width
+  const width = ISLAND_WIDTH
   const requestedHeight = Number.isFinite(height)
     ? Math.round(height as number)
     : expanded
