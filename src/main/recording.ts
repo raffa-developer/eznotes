@@ -15,7 +15,8 @@ import type {
 import {
   getSecret,
   loadSettings,
-  recordingsDir
+  recordingsDir,
+  writeJson
 } from './store'
 import { loadSchedule, ensureNotesDir } from './schedule'
 import {
@@ -43,6 +44,8 @@ const LIVE_INTERVAL_MS = 5_000
 const LIVE_CHUNK_SECONDS = 7.5
 const OUTLINE_INTERVAL_MS = 90_000
 const ROLLING_SECONDS = 30
+const CHECKPOINT_INTERVAL_MS = 30_000
+const MANIFEST_FILE = 'session.json'
 
 interface Session {
   id: string
@@ -60,6 +63,7 @@ interface Session {
   rolling: Buffer
   pausedAt: number | null
   pausedTotalMs: number
+  headerTimer: NodeJS.Timeout | null
   liveTimer: NodeJS.Timeout | null
   outlineTimer: NodeJS.Timeout | null
   liveBusy: boolean
@@ -74,6 +78,20 @@ interface Session {
 }
 
 type EventSender = (event: RecordingEvent) => void
+
+export interface RecordingManifest {
+  id: string
+  startedAt: string
+  courseId: string | null
+  courseName: string
+  title: string
+  glossary: string[]
+  dataBytes: number
+  totalSamples: number
+  sampleRate: number
+  status: RecordingSnapshot['status']
+  updatedAt: string
+}
 
 export class RecordingManager {
   private session: Session | null = null
@@ -113,6 +131,7 @@ export class RecordingManager {
       rolling: Buffer.alloc(0),
       pausedAt: null,
       pausedTotalMs: 0,
+      headerTimer: null,
       liveTimer: null,
       outlineTimer: null,
       liveBusy: false,
@@ -128,6 +147,12 @@ export class RecordingManager {
     this.session = session
     this.processing = null
     this.emitState()
+
+    this.writeManifest(session)
+    session.headerTimer = setInterval(
+      () => this.checkpoint(session),
+      CHECKPOINT_INTERVAL_MS
+    )
 
     const liveEnabled = settings.stt.liveTranscript
     if (!liveEnabled) {
@@ -196,6 +221,7 @@ export class RecordingManager {
     if (session.status !== 'recording') return this.snapshot()
     session.status = 'paused'
     session.pausedAt = Date.now()
+    this.checkpoint(session)
     this.emitState()
     return this.snapshot()
   }
@@ -208,6 +234,7 @@ export class RecordingManager {
       session.pausedAt = null
     }
     session.status = 'recording'
+    this.checkpoint(session)
     this.emitState()
     return this.snapshot()
   }
@@ -224,11 +251,13 @@ export class RecordingManager {
 
     try {
       fs.writeSync(session.fd, wavHeader(session.dataBytes), 0, 44, 0)
+      fs.fsyncSync(session.fd)
       fs.closeSync(session.fd)
     } catch {
       // The file may already be closed after a failed finalize.
     }
 
+    this.writeManifest(session)
     this.emitState()
     return {
       id: session.id,
@@ -252,6 +281,7 @@ export class RecordingManager {
     session.status = 'processing'
     session.error = undefined
     this.processing = { step: 'Preparing the lecture', progress: 0.02 }
+    this.writeManifest(session)
     this.emitState()
     log('recording', 'finalize started', {
       id: session.id,
@@ -370,6 +400,7 @@ export class RecordingManager {
       if (!input.keepAudio) {
         fs.rmSync(session.dir, { recursive: true, force: true })
       } else {
+        fs.rmSync(path.join(session.dir, MANIFEST_FILE), { force: true })
         touch(session.dir)
       }
 
@@ -397,6 +428,7 @@ export class RecordingManager {
       session.status = 'error'
       session.error = error instanceof Error ? error.message : String(error)
       this.processing = null
+      this.writeManifest(session)
       log('recording', 'finalize failed', {
         id: session.id,
         message: session.error
@@ -613,10 +645,53 @@ export class RecordingManager {
   }
 
   private clearTimers(session: Session): void {
+    if (session.headerTimer) clearInterval(session.headerTimer)
     if (session.liveTimer) clearInterval(session.liveTimer)
     if (session.outlineTimer) clearInterval(session.outlineTimer)
+    session.headerTimer = null
     session.liveTimer = null
     session.outlineTimer = null
+  }
+
+  private checkpoint(session: Session): void {
+    if (this.session !== session) return
+    if (session.status !== 'recording' && session.status !== 'paused') return
+
+    try {
+      fs.writeSync(session.fd, wavHeader(session.dataBytes), 0, 44, 0)
+      fs.fsyncSync(session.fd)
+    } catch (error) {
+      log('recording', 'wav checkpoint failed', {
+        id: session.id,
+        message: error instanceof Error ? error.message : String(error)
+      })
+    }
+
+    this.writeManifest(session)
+  }
+
+  private writeManifest(session: Session): void {
+    const manifest: RecordingManifest = {
+      id: session.id,
+      startedAt: session.startedAt.toISOString(),
+      courseId: session.courseId,
+      courseName: session.courseName,
+      title: session.title,
+      glossary: session.glossary,
+      dataBytes: session.dataBytes,
+      totalSamples: session.totalSamples,
+      sampleRate: SAMPLE_RATE,
+      status: session.status,
+      updatedAt: new Date().toISOString()
+    }
+    try {
+      writeJson(path.join(session.dir, MANIFEST_FILE), manifest)
+    } catch (error) {
+      log('recording', 'could not write session manifest', {
+        id: session.id,
+        message: error instanceof Error ? error.message : String(error)
+      })
+    }
   }
 }
 
