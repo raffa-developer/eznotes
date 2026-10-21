@@ -161,12 +161,15 @@ export default function Live(): React.JSX.Element {
     }
   }
 
-  async function finalize(keepAudio: boolean): Promise<void> {
+  async function finalize(keepAudio: boolean, transcriptOnly = false): Promise<void> {
     if (!stopped || !recording) return
     setKeepChoice(keepAudio)
     setFinalizing(true)
     setFinalizeError(null)
-    setProcessing({ step: 'Preparing the lecture', progress: 0.02 })
+    setProcessing({
+      step: transcriptOnly ? 'Saving the transcript' : 'Preparing the lecture',
+      progress: 0.02
+    })
     try {
       const result = await window.ezNotes.recording.finalize({
         id: stopped.id,
@@ -174,7 +177,8 @@ export default function Live(): React.JSX.Element {
         courseId: recording.courseId,
         courseName: recording.courseName,
         title: recording.title,
-        glossary: course?.glossary ?? []
+        glossary: course?.glossary ?? [],
+        transcriptOnly
       })
       setProcessing(null)
       setStopped(null)
@@ -183,9 +187,11 @@ export default function Live(): React.JSX.Element {
       await refreshNotes()
       result.warnings.forEach((warning) => toast(warning, 'warn'))
       toast(
-        result.audioKept
-          ? `Notes written. Audio will be removed after ${retentionDays} days.`
-          : 'Notes written. Audio deleted.',
+        transcriptOnly
+          ? 'Transcript saved as a note.'
+          : result.audioKept
+            ? `Notes written. Audio will be removed after ${retentionDays} days.`
+            : 'Notes written. Audio deleted.',
         'success'
       )
       navigate(`/notes/${result.note.id}`)
@@ -510,8 +516,16 @@ export default function Live(): React.JSX.Element {
                 Delete recording
               </Button>
               <Button
+                variant="soft"
+                onClick={() => void finalize(keepChoice ?? false, true)}
+                disabled={finalizing}
+              >
+                Save transcript only
+              </Button>
+              <Button
                 variant="primary"
                 onClick={() => void finalize(keepChoice ?? true)}
+                disabled={finalizing}
               >
                 Retry
               </Button>

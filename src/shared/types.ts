@@ -187,6 +187,7 @@ export interface FinalizeRecordingInput {
   courseName: string
   title: string
   glossary: string[]
+  transcriptOnly?: boolean
 }
 
 export interface FinalizeRecordingResult {

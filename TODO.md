@@ -37,12 +37,18 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
   - *Verified:* synthetic crashed WAV (header length 0, stale manifest) appeared
     on the dashboard, recovered at the correct duration, and discarded cleanly.
 
-- [ ] **Guard against a half-written note**
-  `finalize()` writes the transcript before calling the model, and only saves
-  Markdown at the end. A failure leaves an orphan transcript and no way back
-  except the retry path. Keep the transcript (already done) and expose it from
-  the error state as "save transcript-only note" instead of only doing that
-  automatically when the key is missing (`src/main/recording.ts:313-348`).
+- [x] **Save a transcript-only note from the error state**
+  `finalize()` left the user stuck when transcription failed, even though live
+  segments existed in memory.
+  - Live segments are persisted to `live-transcript.json` after each chunk and
+    reloaded when an interrupted recording is recovered.
+  - `finalize({ transcriptOnly: true })` skips the Groq key check and the LLM
+    call, using the cached final transcript, then the live transcript, then
+    in-memory segments.
+  - The Live error dialog offers **Save transcript only** next to Retry and
+    Delete.
+  - *Verified:* with no Groq key, the button saved a note from the live
+    transcript, navigated to it, and kept the audio per the chosen policy.
 
 ---
 

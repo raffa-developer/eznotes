@@ -20,8 +20,10 @@ tick the box here and in `TODO.md` when it lands.
       — scans the recordings folder, skips ones already linked to a note, repairs
       the WAV header from the file size, and hands the session to the normal
       retention dialog in Live.
-- [ ] **P0-3** Allow saving a transcript-only note from the finalize error state
-      `src/main/recording.ts` (`finalize` catch block)
+- [x] **P0-3** Allow saving a transcript-only note from the finalize error state
+      `src/main/recording.ts` (`finalize`, `transcriptOnly`), `src/renderer/src/pages/Live.tsx`
+      — live segments persist to `live-transcript.json` per chunk; the error
+      dialog offers "Save transcript only" without needing Groq or the LLM.
 
 ## P1 — Product gaps
 

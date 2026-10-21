@@ -49,6 +49,7 @@ const OUTLINE_INTERVAL_MS = 90_000
 const ROLLING_SECONDS = 30
 const CHECKPOINT_INTERVAL_MS = 30_000
 const MANIFEST_FILE = 'session.json'
+const LIVE_TRANSCRIPT_FILE = 'live-transcript.json'
 
 interface Session {
   id: string
@@ -294,25 +295,36 @@ export class RecordingManager {
 
     try {
       const groqKey = getSecret('groqApiKey')
-      if (!groqKey && !demoMode) {
-        throw new Error('Add a Groq API key in Settings before generating notes.')
-      }
+      let segments = readCachedTranscript(session.dir) ?? []
 
-      let segments = readCachedTranscript(session.dir)
-      if (!segments || !segments.length) {
-        this.progress('Transcribing the lecture', 0.05)
-        const result = await transcribeAudioFile(
-          session.audioPath,
-          {
-            apiKey: groqKey ?? 'demo',
-            model: settings.stt.model,
-            language: settings.stt.language,
-            glossary: session.glossary
-          },
-          (progress, message) => this.progress(message, progress)
-        )
-        segments = result.segments
-        writeCachedTranscript(session.dir, segments)
+      if (input.transcriptOnly) {
+        this.progress('Saving the transcript', 0.2)
+        if (!segments.length) segments = readLiveTranscript(session)
+        if (!segments.length) {
+          throw new Error(
+            'There is no transcript to save yet. Try transcribing again instead.'
+          )
+        }
+      } else {
+        if (!groqKey && !demoMode) {
+          throw new Error('Add a Groq API key in Settings before generating notes.')
+        }
+
+        if (!segments.length) {
+          this.progress('Transcribing the lecture', 0.05)
+          const result = await transcribeAudioFile(
+            session.audioPath,
+            {
+              apiKey: groqKey ?? 'demo',
+              model: settings.stt.model,
+              language: settings.stt.language,
+              glossary: session.glossary
+            },
+            (progress, message) => this.progress(message, progress)
+          )
+          segments = result.segments
+          writeCachedTranscript(session.dir, segments)
+        }
       }
 
       log('recording', 'transcript ready', {
@@ -343,7 +355,15 @@ export class RecordingManager {
       const llmKey =
         settings.llm.provider === 'groq' ? groqKey ?? '' : directKey ?? ''
       const keyless = settings.llm.provider === 'ollama'
-      if (!llmKey && !keyless && !demoMode) {
+      if (input.transcriptOnly) {
+        markdown = fallbackMarkdown(
+          session,
+          segments,
+          durationSec,
+          'Guardaste apenas a transcrição desta aula.',
+          true
+        )
+      } else if (!llmKey && !keyless && !demoMode) {
         warnings.push(
           'The notes model key is missing, so a transcript-only note was saved.'
         )
@@ -511,7 +531,9 @@ export class RecordingManager {
           courseId: manifest.courseId ?? null,
           startedAt: validIsoDate(manifest.startedAt) ?? startedAtFromId(entry.name),
           durationSec: Math.round(dataBytes / 2 / SAMPLE_RATE),
-          hasTranscript: fs.existsSync(path.join(dir, 'transcript.json'))
+          hasTranscript:
+            fs.existsSync(path.join(dir, 'transcript.json')) ||
+            fs.existsSync(path.join(dir, LIVE_TRANSCRIPT_FILE))
         })
       } catch {
         // Skip folders that disappear or cannot be read.
@@ -544,6 +566,12 @@ export class RecordingManager {
     const dataBytes = repairWavHeader(audioPath)
     if (dataBytes < 2) throw new Error('The recording is empty.')
 
+    const storedLive = readJson<LiveTranscriptSegment[]>(
+      path.join(dir, LIVE_TRANSCRIPT_FILE),
+      []
+    )
+    const liveSegments = Array.isArray(storedLive) ? storedLive : []
+
     const session: Session = {
       id,
       startedAt: new Date(validIsoDate(manifest.startedAt) ?? startedAtFromId(id)),
@@ -565,9 +593,12 @@ export class RecordingManager {
       outlineTimer: null,
       liveBusy: false,
       outlineBusy: false,
-      liveSegments: [],
+      liveSegments,
       liveRawTail: '',
-      liveText: '',
+      liveText: liveSegments
+        .map((segment) => segment.text)
+        .join(' ')
+        .slice(-30_000),
       outline: [],
       lastLevelSent: 0,
       lastNoticeAt: 0
@@ -652,6 +683,7 @@ export class RecordingManager {
       }
       session.liveSegments.push(segment)
       session.liveText = `${session.liveText} ${text}`.slice(-30_000)
+      this.persistLiveTranscript(session)
       this.send({ type: 'transcript', segment })
     } catch (error) {
       this.maybeNotice(
@@ -775,6 +807,17 @@ export class RecordingManager {
     this.writeManifest(session)
   }
 
+  private persistLiveTranscript(session: Session): void {
+    try {
+      writeJson(
+        path.join(session.dir, LIVE_TRANSCRIPT_FILE),
+        session.liveSegments
+      )
+    } catch {
+      // Best effort: the final transcription pass is still authoritative.
+    }
+  }
+
   private writeManifest(session: Session): void {
     const manifest: RecordingManifest = {
       id: session.id,
@@ -804,7 +847,8 @@ function fallbackMarkdown(
   session: Session,
   segments: TranscriptSegment[],
   durationSec: number,
-  reason: string
+  reason: string,
+  transcriptOnly = false
 ): string {
   const date = new Date(session.startedAt).toLocaleString('pt-PT', {
     dateStyle: 'long',
@@ -815,14 +859,23 @@ function fallbackMarkdown(
 
 **Disciplina:** ${session.courseName}
 **Data:** ${date}
-**Duração:** ${Math.round(durationSec / 60)} minutos
+**Duração:** ${formatNoteDuration(durationSec)}
 
 ## Resumo
-Não foi possível gerar os apontamentos estruturados: ${reason}
+${
+  transcriptOnly
+    ? 'Esta nota contém apenas a transcrição da aula, sem estruturação por IA.'
+    : `Não foi possível gerar os apontamentos estruturados: ${reason}`
+}
 
 ## Transcrição
 ${transcript}
 `
+}
+
+function formatNoteDuration(durationSec: number): string {
+  if (durationSec < 60) return 'menos de 1 minuto'
+  return `${Math.round(durationSec / 60)} minutos`
 }
 
 function rmsOf(pcm: Buffer): number {
@@ -850,6 +903,21 @@ function touch(dir: string): void {
 
 function wavDataBytes(fileSize: number): number {
   return Math.max(0, Math.floor((fileSize - 44) / 2) * 2)
+}
+
+function readLiveTranscript(session: Session): TranscriptSegment[] {
+  const stored = readJson<LiveTranscriptSegment[]>(
+    path.join(session.dir, LIVE_TRANSCRIPT_FILE),
+    []
+  )
+  const source =
+    Array.isArray(stored) && stored.length ? stored : session.liveSegments
+  return source.map((segment) => ({
+    id: segment.id,
+    start: segment.start,
+    end: segment.end,
+    text: segment.text
+  }))
 }
 
 function repairWavHeader(audioPath: string): number {
