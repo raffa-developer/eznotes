@@ -627,6 +627,9 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
   ipcMain.on('recording:audio', (_event, chunk: ArrayBuffer) => {
     recording.appendAudio(chunk)
   })
+  ipcMain.on('recording:webm', (_event, id: string, data: ArrayBuffer) => {
+    recording.saveWebm(id, data)
+  })
 }
 
 function settingsStatusFor(settings: Settings) {
@@ -647,11 +650,14 @@ function registerAudioProtocol(): void {
       if (!/^rec_[A-Za-z0-9_-]+$/.test(id)) {
         return new Response('Invalid recording id', { status: 400 })
       }
-      const file = path.join(recordingsDir(), id, 'audio.wav')
+      const dir = path.join(recordingsDir(), id)
+      const webm = path.join(dir, 'audio.webm')
+      const file = fs.existsSync(webm) ? webm : path.join(dir, 'audio.wav')
       if (!fs.existsSync(file)) {
         return new Response('Recording not found', { status: 404 })
       }
 
+      const contentType = file === webm ? 'audio/webm' : 'audio/wav'
       const size = fs.statSync(file).size
       const range = request.headers.get('range')
       let start = 0
@@ -675,7 +681,7 @@ function registerAudioProtocol(): void {
       }
 
       const headers: Record<string, string> = {
-        'content-type': 'audio/wav',
+        'content-type': contentType,
         'accept-ranges': 'bytes',
         'content-length': String(end - start + 1),
         'cache-control': 'no-store'

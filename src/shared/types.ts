@@ -276,6 +276,7 @@ export interface EzNotesApi {
     recoverable: () => Promise<RecoverableRecording[]>
     recover: (id: string) => Promise<RecordingSnapshot>
     sendAudio: (chunk: ArrayBuffer) => void
+    saveWebm: (id: string, data: ArrayBuffer) => void
     onEvent: (callback: (event: RecordingEvent) => void) => () => void
   }
 }

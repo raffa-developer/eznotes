@@ -1,4 +1,6 @@
 import { useEffect, useRef } from 'react'
+import { ArrayBufferTarget, Muxer } from 'webm-muxer'
+import type { RecordingStatus } from '../../../shared/types'
 import { useApp } from '../state/AppContext'
 
 const WORKLET_SOURCE = `
@@ -28,6 +30,13 @@ class EzNotesCaptureProcessor extends AudioWorkletProcessor {
 registerProcessor('eznotes-capture', EzNotesCaptureProcessor)
 `
 
+interface AudioMuxer {
+  id: string
+  muxer: Muxer<ArrayBufferTarget>
+  encoder: AudioEncoder
+  samples: number
+}
+
 export function useAudioCapture(): void {
   const { recording, settings, toast } = useApp()
   const streamRef = useRef<MediaStream | null>(null)
@@ -36,6 +45,8 @@ export function useAudioCapture(): void {
   const activeIdRef = useRef<string | null>(null)
   const startingRef = useRef(false)
   const generationRef = useRef(0)
+  const muxerRef = useRef<AudioMuxer | null>(null)
+  const statusRef = useRef<RecordingStatus | null>(null)
   const shouldCapture =
     Boolean(recording) &&
     (recording?.status === 'recording' || recording?.status === 'paused')
@@ -65,8 +76,25 @@ export function useAudioCapture(): void {
   }, [shouldCapture, recordingId, micId, printMode, toast])
 
   useEffect(() => {
-    return () => cleanup()
+    return () => {
+      abortMuxer()
+      cleanup()
+    }
   }, [])
+
+  useEffect(() => {
+    statusRef.current = recording?.status ?? null
+  }, [recording?.status])
+
+  useEffect(() => {
+    if (!recording) {
+      abortMuxer()
+      return
+    }
+    if (recording.status === 'stopped' || recording.status === 'error') {
+      void finishMuxer()
+    }
+  }, [recording?.id, recording?.status])
 
   async function start(id: string, deviceId: string | null): Promise<void> {
     cleanup()
@@ -135,17 +163,120 @@ export function useAudioCapture(): void {
     node.port.onmessage = (event: MessageEvent<ArrayBuffer>) => {
       if (activeIdRef.current !== id) return
       const samples = new Float32Array(event.data)
-      const buffer =
-        outputRate === 16000
-          ? new Uint8Array(event.data).buffer
-          : new Uint8Array(resample(samples, outputRate, 16000)).buffer
-      window.ezNotes.recording.sendAudio(buffer)
+      const pcm =
+        outputRate === 16000 ? samples : resample(samples, outputRate, 16000)
+      window.ezNotes.recording.sendAudio(pcm.buffer as ArrayBuffer)
+      encodePcm(pcm)
     }
 
     streamRef.current = stream
     contextRef.current = context
     nodeRef.current = node
     activeIdRef.current = id
+    startMuxer(id)
+  }
+
+  function startMuxer(id: string): void {
+    abortMuxer()
+    if (typeof AudioEncoder === 'undefined') return
+
+    try {
+      const target = new ArrayBufferTarget()
+      const muxer = new Muxer({
+        target,
+        audio: {
+          codec: 'A_OPUS',
+          sampleRate: 16000,
+          numberOfChannels: 1
+        }
+      })
+      const encoder = new AudioEncoder({
+        output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+        error: (error) => {
+          toast(`Audio compression stopped: ${error.message}`, 'warn')
+        }
+      })
+      encoder.configure({
+        codec: 'opus',
+        sampleRate: 16000,
+        numberOfChannels: 1,
+        bitrate: 24000
+      })
+      muxerRef.current = { id, muxer, encoder, samples: 0 }
+    } catch (error) {
+      toast(
+        `Audio compression is unavailable: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        'warn'
+      )
+    }
+  }
+
+  function encodePcm(pcm: Float32Array): void {
+    const current = muxerRef.current
+    if (!current || statusRef.current !== 'recording') return
+
+    try {
+      const audioData = new AudioData({
+        format: 'f32',
+        sampleRate: 16000,
+        numberOfFrames: pcm.length,
+        numberOfChannels: 1,
+        timestamp: Math.round((current.samples / 16000) * 1_000_000),
+        data: new Float32Array(pcm)
+      })
+      current.samples += pcm.length
+      current.encoder.encode(audioData)
+      audioData.close()
+    } catch (error) {
+      toast(
+        `Audio compression stopped: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        'warn'
+      )
+      abortMuxer()
+    }
+  }
+
+  async function finishMuxer(): Promise<void> {
+    const current = muxerRef.current
+    if (!current) return
+    muxerRef.current = null
+
+    try {
+      await current.encoder.flush()
+      current.muxer.finalize()
+      const buffer = current.muxer.target.buffer
+      if (buffer && buffer.byteLength > 1024) {
+        window.ezNotes.recording.saveWebm(current.id, buffer)
+      }
+    } catch (error) {
+      toast(
+        `Could not finish the compressed audio: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        'warn'
+      )
+    } finally {
+      try {
+        current.encoder.close()
+      } catch {
+        // Already closed.
+      }
+    }
+  }
+
+  function abortMuxer(): void {
+    const current = muxerRef.current
+    if (!current) return
+    muxerRef.current = null
+    try {
+      current.encoder.close()
+    } catch {
+      // Already closed.
+    }
   }
 
   function cleanup(): void {

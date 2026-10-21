@@ -191,7 +191,6 @@ export class RecordingManager {
   appendAudio(arrayBuffer: ArrayBuffer): void {
     const session = this.session
     if (!session || session.status !== 'recording') return
-
     const input = Buffer.from(arrayBuffer)
     if (input.length < 4) return
     const sampleCount = Math.floor(input.length / 4)
@@ -222,6 +221,23 @@ export class RecordingManager {
       session.lastLevelSent = now
       const rms = Math.sqrt(sum / Math.max(1, sampleCount))
       this.send({ type: 'level', level: Math.min(1, rms * 6) })
+    }
+  }
+
+  saveWebm(id: string, data: ArrayBuffer): void {
+    const session = this.session
+    if (!session || session.id !== id) return
+
+    try {
+      const target = path.join(session.dir, 'audio.webm')
+      const temp = `${target}.tmp`
+      fs.writeFileSync(temp, Buffer.from(data))
+      fs.renameSync(temp, target)
+      log('recording', 'compressed audio saved', { bytes: data.byteLength })
+    } catch (error) {
+      log('recording', 'could not save compressed audio', {
+        message: error instanceof Error ? error.message : String(error)
+      })
     }
   }
 
@@ -456,6 +472,7 @@ export class RecordingManager {
       if (!input.keepAudio) {
         fs.rmSync(session.dir, { recursive: true, force: true })
       } else {
+        await keepBestAudio(session.dir)
         fs.rmSync(path.join(session.dir, MANIFEST_FILE), { force: true })
         touch(session.dir)
       }
@@ -657,7 +674,10 @@ export class RecordingManager {
       const dir = path.join(root, entry.name)
       try {
         const stat = fs.statSync(dir)
-        if (stat.mtimeMs < cutoff && fs.existsSync(path.join(dir, 'audio.wav'))) {
+        const hasAudio =
+          fs.existsSync(path.join(dir, 'audio.webm')) ||
+          fs.existsSync(path.join(dir, 'audio.wav'))
+        if (stat.mtimeMs < cutoff && hasAudio) {
           fs.rmSync(dir, { recursive: true, force: true })
           removed.push(entry.name)
         }
@@ -923,6 +943,18 @@ function rmsOf(pcm: Buffer): number {
     count += 1
   }
   return Math.sqrt(sum / Math.max(1, count))
+}
+
+async function keepBestAudio(dir: string): Promise<void> {
+  const webm = path.join(dir, 'audio.webm')
+  if (!fs.existsSync(webm)) {
+    for (let attempt = 0; attempt < 20 && !fs.existsSync(webm); attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+  }
+  if (fs.existsSync(webm) && fs.statSync(webm).size > 1024) {
+    fs.rmSync(path.join(dir, 'audio.wav'), { force: true })
+  }
 }
 
 function touch(dir: string): void {

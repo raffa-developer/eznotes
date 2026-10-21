@@ -74,6 +74,8 @@ const api: EzNotesApi = {
     recoverable: () => ipcRenderer.invoke('recording:recoverable'),
     recover: (id: string) => ipcRenderer.invoke('recording:recover', id),
     sendAudio: (chunk: ArrayBuffer) => ipcRenderer.send('recording:audio', chunk),
+    saveWebm: (id: string, data: ArrayBuffer) =>
+      ipcRenderer.send('recording:webm', id, data),
     onEvent: (callback: (event: RecordingEvent) => void) => {
       const listener = (_event: Electron.IpcRendererEvent, payload: RecordingEvent) =>
         callback(payload)

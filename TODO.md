@@ -78,14 +78,15 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
   - *Verified:* a class scheduled one minute after launch started recording
     automatically at 16:09:17 with the toggle on.
 
-- [ ] **Compress audio (Opus) instead of WAV**
-  WAV at 16 kHz mono is ~115 MB/hour (`src/main/wav.ts`). Electron has no
-  built-in encoder, so this needs `ffmpeg` (bundled binary) or an Opus binding.
-  - Keep WAV as the recording format, transcode in `finalize()` before the
-    retention decision.
-  - Update the `eznotes://audio/` protocol to serve `.opus` with the right MIME
-    type (`src/main/index.ts:617`).
-  - *Done when:* a kept lecture is <10 MB/hour and still plays in `NotePage`.
+- [x] **Compact retained audio (Opus/WebM)**
+  WAV at 16 kHz mono is ~115 MB/hour. The renderer encodes Opus with WebCodecs
+  and muxes it to WebM, so kept audio is ~11 MB/hour.
+  - WAV is still written for transcription and speaker detection, then replaced
+    by `audio.webm` when the user keeps the audio (with a short grace period for
+    the encoder to flush). If encoding is unavailable, WAV is kept as a fallback.
+  - The `eznotes://audio/` protocol serves WebM or WAV with range support.
+  - *Verified:* a 13-second fake-microphone recording produced a 51 KB WebM, the
+    WAV was removed on keep, and the note played it back with a 12.8 s duration.
 
 - [x] **Tray icon + configurable global hotkey**
   - Tray menu: open, start quick recording, pause/resume, stop, quit; reflects

@@ -20,6 +20,12 @@ the following third-party components.
 - License: Apache-2.0. See [licenses/Apache-2.0.txt](licenses/Apache-2.0.txt).
 - <https://github.com/k2-fsa/sherpa-onnx>
 
+### webm-muxer
+
+- Purpose: WebM container for retained Opus audio.
+- License: MIT, Copyright © 2022 Vanilagy.
+- <https://github.com/Vanilagy/webm-muxer>
+
 ## Downloaded on first use
 
 These models are downloaded by the app into

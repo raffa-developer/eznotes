@@ -36,6 +36,8 @@ source for now.
 - **Markdown you own** — one plain file per lecture, organised by course and date.
 - **Audio retention is a choice** — keep the recording for replay or delete it
   immediately. The transcript and note are kept either way.
+- **Compact retained audio** — kept lectures are Opus in WebM (~11 MB/hour);
+  WAV is used only while processing.
 - **Crash recovery** — if the app dies mid-lecture, ezNotes finds the audio on the
   next launch and can finish the note.
 - **Transcript-only fallback** — if transcription or the model fails, save the
@@ -174,6 +176,9 @@ Microphone
 - Live outlines refresh about every 90 seconds to keep token use low.
 - Audio retention is decided after every class. Kept audio is deleted after 30
   days by default (configurable), while transcripts and notes remain.
+- Kept audio is Opus in WebM (about 11 MB/hour). WAV is used for transcription
+  and speaker detection, then removed once the note is saved. If Opus encoding
+  is unavailable, the WAV is kept.
 
 ## Speaker labels (optional)
 
@@ -202,7 +207,7 @@ transcript is then diarized on your PC before the note is written.
 | --- | --- |
 | Notes | `Documents\ezNotes\<Course>\YYYY-MM-DD - <title>.md` |
 | Note index and transcripts | `Documents\ezNotes\.eznotes\` |
-| Audio | `%APPDATA%\ezNotes\recordings\rec_*\audio.wav` |
+| Audio | `%APPDATA%\ezNotes\recordings\rec_*\audio.webm` (or `audio.wav` if Opus encoding was unavailable) |
 | Settings, schedule, encrypted keys | `%APPDATA%\ezNotes\` |
 | Speaker models | `%APPDATA%\ezNotes\models\sherpa\` |
 | Diagnostics log | `%APPDATA%\ezNotes\eznotes.log` |
@@ -334,14 +339,13 @@ it, the diarization worker, and the sherpa native modules into
 
 The detailed, tickable list lives in [`TODO.md`](TODO.md). Highlights:
 
-- Opus audio instead of WAV to save disk
 - Native adapters for non-Chat-Completions providers
 - Portuguese (pt-PT) interface localization
 - More UI refinements and cross-monitor island behaviour
 
 Recently shipped: crash-safe recordings, recovery of interrupted lectures,
-transcript-only notes, optional local speaker labels, opt-in auto-start, and the
-tray icon with a configurable global hotkey.
+transcript-only notes, optional local speaker labels, opt-in auto-start, the
+tray icon with a configurable global hotkey, and compact Opus audio.
 
 ## Contributing
 

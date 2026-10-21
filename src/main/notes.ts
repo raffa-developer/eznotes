@@ -66,8 +66,12 @@ export function readNoteTranscript(
 
 export function noteAudioPath(recordingId: string | null): string | null {
   if (!recordingId) return null
-  const file = path.join(noteRecordingDir(recordingId), 'audio.wav')
-  return fs.existsSync(file) ? file : null
+  const dir = noteRecordingDir(recordingId)
+  for (const name of ['audio.webm', 'audio.wav']) {
+    const file = path.join(dir, name)
+    if (fs.existsSync(file)) return file
+  }
+  return null
 }
 
 export function listNotes(notesDir: string): NoteMeta[] {

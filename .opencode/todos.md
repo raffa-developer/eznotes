@@ -34,9 +34,9 @@ tick the box here and in `TODO.md` when it lands.
       `notifyBeforeMinutes` and `autoStartRecording` (off by default)
       `src/main/autoStart.ts`, `src/main/index.ts`, `src/renderer/src/pages/SettingsPage.tsx`
       — 20 s scheduler, two-minute grace, launch guard, once per class.
-- [ ] **P1-3** Opus compression in `finalize()`; serve `.opus` from the
-      `eznotes://audio/` protocol
-      `src/main/recording.ts`, `src/main/index.ts`
+- [x] **P1-3** Opus/WebM encoding in the renderer; WAV kept only for
+      transcription and speaker detection; protocol serves both
+      `src/renderer/src/hooks/useAudioCapture.ts`, `src/main/recording.ts`
 - [x] **P1-4** Tray icon (record/pause/stop, state) and configurable global
       hotkey with conflict warning
       `src/main/index.ts`, `src/shared/hotkeys.ts`, `src/renderer/src/pages/SettingsPage.tsx`
