@@ -7,7 +7,7 @@ over the code. Ordered by what actually blocks using ezNotes for a real semester
 > This file keeps the detail, file references, and acceptance criteria.
 
 Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
-**P2** = polish.
+**P2** = refinement.
 
 ---
 
@@ -104,7 +104,7 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
 
 ---
 
-## P2 — Polish
+## P2 — Refinements
 
 - [ ] Make the live-outline cadence configurable (currently fixed at 90 s,
   `src/main/recording.ts:44`) and skip the call when the lecture is silent.

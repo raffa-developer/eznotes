@@ -44,7 +44,7 @@ tick the box here and in `TODO.md` when it lands.
 - [ ] **P1-6** Wire up `Settings.uiLanguage` with a small dictionary module
       `src/shared/types.ts`, `src/renderer/src/pages/*`
 
-## P2 — Polish
+## P2 — Refinements
 
 - [ ] **P2-1** Configurable live-outline cadence (fixed 90 s today)
       `src/main/recording.ts`
