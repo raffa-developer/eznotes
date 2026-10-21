@@ -3,7 +3,7 @@
   "version": "0.5.2",
   "description": "Lecture notes that listen, filter, and structure themselves.",
   "main": "./out/main/index.js",
-  "author": "Rafal",
+  "author": "Rafael",
   "license": "MIT",
   "private": true,
   "scripts": {
