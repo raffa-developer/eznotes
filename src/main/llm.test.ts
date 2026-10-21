@@ -3,6 +3,7 @@ import {
   detectCues,
   extractSummary,
   extractTitle,
+  isTransientLlmError,
   textFromAnthropic,
   textFromGemini,
   textFromResponses
@@ -126,5 +127,25 @@ describe('textFromResponses', () => {
         output: [{ content: [{ type: 'reasoning', text: 'x' }] }]
       })
     ).toBe('')
+  })
+})
+
+describe('isTransientLlmError', () => {
+  it('retries network failures and provider overload', () => {
+    expect(isTransientLlmError(new Error('fetch failed'))).toBe(true)
+    expect(isTransientLlmError(new Error('Notes model failed (503): busy'))).toBe(
+      true
+    )
+    expect(isTransientLlmError(new Error('The notes model timed out.'))).toBe(true)
+    expect(isTransientLlmError(new Error('socket hang up'))).toBe(true)
+  })
+
+  it('does not retry authentication or bad-request errors', () => {
+    expect(isTransientLlmError(new Error('Notes model failed (401): invalid key'))).toBe(
+      false
+    )
+    expect(isTransientLlmError(new Error('Notes model failed (400): bad request'))).toBe(
+      false
+    )
   })
 })

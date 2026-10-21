@@ -51,7 +51,7 @@ import {
 import { RecordingManager } from './recording'
 import { generateNotes, testLlm } from './llm'
 import { testGroqKey } from './stt'
-import { downloadDiarizationModels } from './diarization'
+import { downloadDiarizationModels, cancelDiarization } from './diarization'
 import { demoMode } from './mock'
 import { migrateUserData } from './migrate'
 import { dueClass, dueSoonClass, currentClass } from './autoStart'
@@ -1075,6 +1075,7 @@ if (!gotLock) {
   })
 
   app.on('will-quit', () => {
+    cancelDiarization()
     globalShortcut.unregisterAll()
     tray?.destroy()
     tray = null

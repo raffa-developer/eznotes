@@ -494,7 +494,7 @@ export default function SettingsPage(): React.JSX.Element {
               <strong>{t('Detect speakers after class (offline)')}</strong>
               <small>
                 {t(
-                  'Labels the lecturer and students in the final transcript. Runs on this PC and adds a few minutes to processing. Needs a one-time {size} MB model download.',
+                  'Labels the lecturer and students in the transcript after the note is saved. Runs in the background on this PC; press Regenerate to include the labels. Needs a one-time {size} MB model download.',
                   { size: settings.diarization.modelsSizeMb }
                 )}
               </small>

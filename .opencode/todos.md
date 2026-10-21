@@ -69,13 +69,17 @@ tick the box here and in `TODO.md` when it lands.
 - [x] **P2-5** Live-transcript quality: 12 s windows every 8 s, silence
       trimming (`analyzeSpeech`), and Groq confidence filtering
       `src/main/stt.ts`, `src/main/recording.ts`
+- [x] **P2-6** Speaker detection no longer blocks notes: runs after the note is
+      saved, capped at 10 min, logged, and killed on quit. Notes-model network
+      failures get one retry.
+      `src/main/recording.ts`, `src/main/diarization.ts`, `src/main/llm.ts`
 
 ## Engineering hygiene
 
 - [x] **H-1** Add `vitest` + `npm test`; cover `trimOverlap`, `dedupeSegments`,
       `analyzeSpeech`, `isLikelyHallucination`, `splitFrontmatter`,
-      `sanitizeFilename`, `upcomingClasses`, `detectCues`
-      — 76 tests in 9 files; `electron` is aliased to `tests/electron-stub.ts`.
+      `sanitizeFilename`, `upcomingClasses`, `detectCues`, `isTransientLlmError`
+      — 78 tests in 9 files; `electron` is aliased to `tests/electron-stub.ts`.
 - [x] **H-2** Add CI: `typecheck` + `test` + `build`
       — `.github/workflows/ci.yml`, Node 24, Electron binary download skipped.
 - [x] **H-3** Replace hardcoded `User-Agent: ezNotes/0.5.2` with

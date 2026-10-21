@@ -39,8 +39,8 @@ export const settings: Record<string, string> = {
   'Uses Groq audio minutes while the lecture runs. Turn it off to stay inside the Groq free tier; the final transcription and notes still run after class.':
     'Consome minutos de áudio do Groq enquanto a aula decorre. Desative-o para se manter dentro do plano gratuito do Groq; a transcrição final e as notas continuam a ser geradas após a aula.',
   'Detect speakers after class (offline)': 'Detetar oradores após a aula (offline)',
-  'Labels the lecturer and students in the final transcript. Runs on this PC and adds a few minutes to processing. Needs a one-time {size} MB model download.':
-    'Identifica o docente e os estudantes na transcrição final. É executado neste PC e acrescenta alguns minutos ao processamento. Requer uma transferência única de modelos de {size} MB.',
+  'Labels the lecturer and students in the transcript after the note is saved. Runs in the background on this PC; press Regenerate to include the labels. Needs a one-time {size} MB model download.':
+    'Identifica o docente e os estudantes na transcrição depois de a nota ser guardada. É executado em segundo plano neste PC; use Regenerar para incluir as etiquetas. Requer uma transferência única de modelos de {size} MB.',
   'The offline speaker runtime is missing. In development, run':
     'O componente de execução offline de identificação de oradores está em falta. Em desenvolvimento, execute',
   'Speaker models are ready. Detection runs entirely on this PC.':

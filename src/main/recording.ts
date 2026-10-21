@@ -365,34 +365,6 @@ export class RecordingManager {
         throw new Error('No speech was detected in the recording.')
       }
 
-      if (
-        !input.transcriptOnly &&
-        settings.stt.speakerLabels &&
-        !segments.some((segment) => segment.speaker)
-      ) {
-        const status = diarizationStatus()
-        if (status.runtimeReady && status.modelsReady) {
-          this.progress('Detecting speakers', 0.85)
-          try {
-            const turns = await runDiarization(session.audioPath)
-            segments = assignSpeakers(segments, turns)
-            writeCachedTranscript(session.dir, segments)
-            log('recording', 'speakers assigned', {
-              segments: segments.length,
-              turns: turns.length
-            })
-          } catch (error) {
-            warnings.push(
-              `Speaker detection failed, so the note has no speaker labels: ${errorMessage(error)}`
-            )
-          }
-        } else {
-          warnings.push(
-            'Speaker detection is on, but its models are not downloaded. Continuing without speaker labels.'
-          )
-        }
-      }
-
       ensureNotesDir(settings.notesDir)
       const noteId = `note_${Date.now()}_${randomUUID().slice(0, 8)}`
       writeNoteTranscript(settings.notesDir, noteId, segments)
@@ -478,12 +450,23 @@ export class RecordingManager {
         notesDir: settings.notesDir
       })
 
-      if (!input.keepAudio) {
-        fs.rmSync(session.dir, { recursive: true, force: true })
-      } else {
-        await keepBestAudio(session.dir)
-        fs.rmSync(path.join(session.dir, MANIFEST_FILE), { force: true })
-        touch(session.dir)
+      let speakersInBackground = false
+      if (
+        !input.transcriptOnly &&
+        settings.stt.speakerLabels &&
+        !segments.some((segment) => segment.speaker)
+      ) {
+        const status = diarizationStatus()
+        if (status.runtimeReady && status.modelsReady) {
+          speakersInBackground = true
+          warnings.push(
+            'Speaker labels are being added in the background. Press Regenerate on the note after they finish to include them.'
+          )
+        } else {
+          warnings.push(
+            'Speaker detection is on, but its models are not downloaded. Continuing without speaker labels.'
+          )
+        }
       }
 
       session.status = 'done'
@@ -500,6 +483,19 @@ export class RecordingManager {
 
       this.processing = null
       this.session = null
+
+      if (speakersInBackground) {
+        void this.detectSpeakersInBackground(
+          session.dir,
+          session.audioPath,
+          meta.id,
+          settings.notesDir,
+          segments,
+          input.keepAudio
+        )
+      } else {
+        await this.finishAudio(session.dir, input.keepAudio)
+      }
 
       return {
         note,
@@ -833,6 +829,77 @@ export class RecordingManager {
     this.send({ type: 'state', snapshot: this.snapshot() })
   }
 
+  /**
+   * Speaker labels are useful but expensive. Never make the note wait for
+   * them: save the note first, then enrich the transcript in the background.
+   */
+  private async detectSpeakersInBackground(
+    dir: string,
+    audioPath: string,
+    noteId: string,
+    notesDir: string,
+    segments: TranscriptSegment[],
+    keepAudio: boolean
+  ): Promise<void> {
+    const started = Date.now()
+    try {
+      const turns = await runDiarization(audioPath)
+      const labeled = assignSpeakers(segments, turns)
+
+      if (!turns.length || !labeled.some((segment) => segment.speaker)) {
+        log('diarization', 'no speakers found', {
+          turns: turns.length,
+          elapsedMs: Date.now() - started
+        })
+        this.notice(
+          'Speaker detection found no speakers in this recording. The note keeps the transcript without labels.',
+          'warn'
+        )
+        return
+      }
+
+      writeCachedTranscript(dir, labeled)
+      writeNoteTranscript(notesDir, noteId, labeled)
+      log('recording', 'speakers assigned in background', {
+        segments: labeled.length,
+        turns: turns.length,
+        elapsedMs: Date.now() - started
+      })
+      this.notice(
+        'Speaker labels added to the transcript. Open the note and press Regenerate to include them.',
+        'info'
+      )
+    } catch (error) {
+      log('diarization', 'failed', {
+        message: errorMessage(error),
+        elapsedMs: Date.now() - started
+      })
+      this.notice(
+        `Speaker detection failed, so the note has no speaker labels: ${errorMessage(error)}`,
+        'warn'
+      )
+    } finally {
+      await this.finishAudio(dir, keepAudio)
+    }
+  }
+
+  private async finishAudio(dir: string, keepAudio: boolean): Promise<void> {
+    try {
+      if (!keepAudio) {
+        fs.rmSync(dir, { recursive: true, force: true })
+        return
+      }
+      await keepBestAudio(dir)
+      fs.rmSync(path.join(dir, MANIFEST_FILE), { force: true })
+      touch(dir)
+    } catch (error) {
+      log('recording', 'audio cleanup failed', {
+        dir,
+        message: errorMessage(error)
+      })
+    }
+  }
+
   private progress(step: string, progress: number): void {
     const next = {
       step,
@@ -843,7 +910,11 @@ export class RecordingManager {
   }
 
   private notice(message: string, level: 'info' | 'warn' | 'error'): void {
-    this.send({ type: 'notice', message, level })
+    try {
+      this.send({ type: 'notice', message, level })
+    } catch {
+      // The window may already be closing, e.g. while a background task ends.
+    }
   }
 
   private maybeNotice(message: string, level: 'info' | 'warn' | 'error'): void {
@@ -944,7 +1015,9 @@ function fallbackMarkdown(
 ${
   transcriptOnly
     ? 'Esta nota contém apenas a transcrição da aula, sem estruturação por IA.'
-    : `Não foi possível gerar os apontamentos estruturados: ${reason}`
+    : `Não foi possível gerar os apontamentos estruturados: ${reason}
+
+Usa **Regenerar** no topo da nota para tentar outra vez.`
 }
 
 ## Transcrição

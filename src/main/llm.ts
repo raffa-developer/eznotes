@@ -74,6 +74,7 @@ async function chatCompletions(
   const endpoint = `${baseURL}/chat/completions`
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 180_000)
+  const started = Date.now()
 
   try {
     const response = await fetch(endpoint, {
@@ -121,8 +122,17 @@ async function chatCompletions(
     throw new EmptyModelResponseError(choice?.finish_reason)
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
+      log('llm', 'request timed out', {
+        model: options.model,
+        elapsedMs: Date.now() - started
+      })
       throw new Error('The notes model timed out. Try again or use a faster model.')
     }
+    log('llm', 'request failed', {
+      model: options.model,
+      elapsedMs: Date.now() - started,
+      message: errorMessage(error)
+    })
     throw error
   } finally {
     clearTimeout(timeout)
@@ -474,11 +484,17 @@ Produz os apontamentos em Markdown, seguindo exatamente a estrutura pedida.`
       length: first.trim().length
     })
   } catch (error) {
-    if (!(error instanceof EmptyModelResponseError)) throw error
-    log('llm', 'notes output was empty; retrying', {
+    if (
+      !(error instanceof EmptyModelResponseError) &&
+      !isTransientLlmError(error)
+    ) {
+      throw error
+    }
+    log('llm', 'notes attempt failed; retrying', {
       model: options.model,
-      finishReason: error.finishReason
+      message: errorMessage(error)
     })
+    await delay(1_500)
   }
 
   const retry = await chat(
@@ -692,6 +708,26 @@ export function extractSummary(markdown: string): string {
     .map((line) => line.replace(/^\s*[-*]\s*/, '').trim())
     .filter(Boolean)
   return bullets.slice(0, 3).join(' ').slice(0, 320)
+}
+
+/**
+ * Network blips and provider-side 429/5xx errors are worth one retry. Auth and
+ * request errors are not: retrying them only makes the user wait longer.
+ */
+export function isTransientLlmError(error: unknown): boolean {
+  const message = errorMessage(error)
+  if (/\((?:400|401|403|404|422)\)/.test(message)) return false
+  return /fetch failed|econnreset|etimedout|enotfound|eai_again|socket hang up|network|timed out|timeout|aborted|429|5\d\d/i.test(
+    message
+  )
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
 
 function extractError(raw: string): string {

@@ -62,8 +62,13 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
     labels numbered by first appearance).
   - Settings → Listening toggle; models (~45 MB) download on demand into
     `%APPDATA%\ezNotes\models\sherpa\`.
+  - Runs after the note is saved, in the background, so speaker detection can
+    never delay notes. It updates the transcript sidecar; pressing Regenerate
+    applies the labels to the note.
   - The note prompt treats the most active speaker as the lecturer and marks
     student questions; the note transcript shows speaker badges.
+  - The worker has a 10-minute cap and is killed when the app quits, so a
+    restart cannot leave an orphaned diarization process behind.
   - *Verified:* a seeded 57-second lecture diarized and produced a note in
     3.3 s; the packaged worker also runs from `resources/`.
 

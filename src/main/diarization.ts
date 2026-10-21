@@ -1,5 +1,5 @@
 import { app } from 'electron'
-import { spawn } from 'node:child_process'
+import { spawn, type ChildProcess } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -17,8 +17,10 @@ const EMBEDDING_URL =
 const SEGMENTATION_DIR = 'sherpa-onnx-pyannote-segmentation-3-0'
 const THRESHOLD = 0.8
 const MODELS_SIZE_MB = 45
-const RUN_TIMEOUT_MS = 30 * 60 * 1000
+const RUN_TIMEOUT_MS = 10 * 60 * 1000
 const DOWNLOAD_TIMEOUT_MS = 10 * 60 * 1000
+
+const activeProcesses = new Set<ChildProcess>()
 
 export interface DiarizationTurn {
   start: number
@@ -52,6 +54,24 @@ export function diarizationModelsReady(): boolean {
   return (
     fs.existsSync(segmentationPath()) && fs.existsSync(embeddingPath())
   )
+}
+
+/**
+ * Stop any diarization worker that is still running. Without this, quitting the
+ * app leaves the native worker behind, and the next launch starts a second one.
+ */
+export function cancelDiarization(): void {
+  if (!activeProcesses.size) return
+  const count = activeProcesses.size
+  for (const child of activeProcesses) {
+    try {
+      child.kill()
+    } catch {
+      // The process may already be gone.
+    }
+  }
+  activeProcesses.clear()
+  log('diarization', 'cancelled', { processes: count })
 }
 
 export function downloadDiarizationModels(): Promise<TestResult> {
@@ -149,6 +169,10 @@ export async function runDiarization(audioPath: string): Promise<DiarizationTurn
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'eznotes-diarize-'))
   const output = path.join(temp, 'turns.json')
   const started = Date.now()
+  log('diarization', 'started', {
+    audioPath,
+    bytes: fs.existsSync(audioPath) ? fs.statSync(audioPath).size : 0
+  })
 
   try {
     await runProcess(
@@ -257,6 +281,7 @@ function runProcess(
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { windowsHide: true })
+    activeProcesses.add(child)
     let stderr = ''
     let settled = false
 
@@ -264,6 +289,7 @@ function runProcess(
       if (settled) return
       settled = true
       clearTimeout(timer)
+      activeProcesses.delete(child)
       if (error) reject(error)
       else resolve()
     }

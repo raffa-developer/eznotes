@@ -31,8 +31,8 @@ source for now.
 - **Structured notes** — concepts, definitions, examples, exam hints, open
   questions, and a glossary, grouped by topic rather than chronology.
 - **Speaker labels** (optional) — an offline diarization pass separates the
-  lecturer from students in the final transcript. No extra API key; the models
-  download once.
+  lecturer from students in the saved transcript, after the note is written. No
+  extra API key; the models download once.
 - **Markdown you own** — one plain file per lecture, organised by course and date.
 - **Audio retention is a choice** — keep the recording for replay or delete it
   immediately. The transcript and note are kept either way.
@@ -171,9 +171,9 @@ Microphone
   → WAV on disk
   → Groq Whisper (live chunks + final full pass)
   → timestamped transcript
-  → optional local speaker diarization
   → notes model
   → importance filter + structured Markdown
+  → optional local speaker diarization (background; Regenerate to apply)
   → Documents\ezNotes\<Course>\<date> <title>.md
 ```
 
@@ -194,8 +194,9 @@ Microphone
 
 ## Speaker labels (optional)
 
-Turn on **Settings → Listening → Detect speakers after class**. The final
-transcript is then diarized on your PC before the note is written.
+Turn on **Settings → Listening → Detect speakers after class**. The note is
+written first; the saved transcript is then diarized on your PC in the
+background, so speaker detection can never delay the notes.
 
 - This step runs entirely on your machine: no extra API key, and no additional
   audio leaves the PC.
@@ -204,14 +205,15 @@ transcript is then diarized on your PC before the note is written.
 - A small Node runtime is bundled for the diarizer, which adds about 90 MB to
   the installer.
 - Expect a few minutes of CPU time for a long lecture — roughly 4 minutes for a
-  90-minute lecture on a modern 4-core laptop. The processing screen shows
-  **Detecting speakers**. Memory use grows with the lecture; a 90-minute
-  recording needs roughly 350 MB while it runs.
+  90-minute lecture on a modern 4-core laptop. Memory use grows with the
+  lecture; a 90-minute recording needs roughly 350 MB while it runs.
 - Labels are `Speaker 1`, `Speaker 2`, … in order of first appearance. The note
   prompt treats the most active speaker as the lecturer and marks student
-  questions.
+  questions. Once labels are ready, open the note and press **Regenerate** to
+  apply them to the notes.
 - If diarization fails or the models are missing, the note is still written,
-  with a warning.
+  with a warning. The worker is stopped when the app quits, so it cannot keep
+  running in the background after a restart.
 
 ## Data and privacy
 
