@@ -120,12 +120,14 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
 
 ## Engineering hygiene
 
-- [ ] **Tests and CI**
-  No test files and no test script exist. Highest-value first targets are pure
-  functions: `trimOverlap`/`dedupeSegments`, `splitFrontmatter`,
-  `sanitizeFilename`, `upcomingClasses`, `detectCues`.
-  - Add `vitest` + `npm test`, then a GitHub Actions job running
-    `typecheck` + `test` + `build`.
+- [x] **Tests and CI**
+  `vitest` + `npm test` now cover `trimOverlap`/`dedupeSegments`,
+  `splitFrontmatter`, `sanitizeFilename`, `upcomingClasses`, and `detectCues`,
+  plus title/summary extraction — 29 tests across 4 files.
+  - `electron` is aliased to `tests/electron-stub.ts` so main-process modules
+    import cleanly under Node.
+  - `.github/workflows/ci.yml` runs `npm ci`, `typecheck`, `test`, and `build`
+    on Node 24, with the Electron binary download skipped.
 
 - [ ] **Stop hardcoding the version in HTTP clients**
   `'User-Agent': 'ezNotes/0.5.1'` appears in `src/main/stt.ts:64` and

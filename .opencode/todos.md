@@ -24,7 +24,6 @@ tick the box here and in `TODO.md` when it lands.
       `src/main/recording.ts` (`finalize`, `transcriptOnly`), `src/renderer/src/pages/Live.tsx`
       — live segments persist to `live-transcript.json` per chunk; the error
       dialog offers "Save transcript only" without needing Groq or the LLM.
-
 ## P1 — Product gaps
 
 - [ ] **P1-1** Speaker diarization: add `speaker?: string` to
@@ -58,9 +57,11 @@ tick the box here and in `TODO.md` when it lands.
 
 ## Engineering hygiene
 
-- [ ] **H-1** Add `vitest` + `npm test`; cover `trimOverlap`, `dedupeSegments`,
+- [x] **H-1** Add `vitest` + `npm test`; cover `trimOverlap`, `dedupeSegments`,
       `splitFrontmatter`, `sanitizeFilename`, `upcomingClasses`, `detectCues`
-- [ ] **H-2** Add CI: `typecheck` + `test` + `build`
+      — 29 tests in 4 files; `electron` is aliased to `tests/electron-stub.ts`.
+- [x] **H-2** Add CI: `typecheck` + `test` + `build`
+      — `.github/workflows/ci.yml`, Node 24, Electron binary download skipped.
 - [ ] **H-3** Replace hardcoded `User-Agent: ezNotes/0.5.1` with
       `app.getVersion()`
       `src/main/stt.ts`, `src/main/llm.ts`
