@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useApp } from '../state/AppContext'
 import { Badge, Button, Card, EmptyState } from '../components/ui'
+import { t, uiLocale } from '../i18n'
 import { formatDate, formatDuration } from '../lib/format'
 
 export default function Library(): React.JSX.Element {
@@ -91,24 +92,27 @@ export default function Library(): React.JSX.Element {
     <div className="page">
       <header className="page-head">
         <div>
-          <p className="eyebrow">Your archive</p>
-          <h1>Library</h1>
+          <p className="eyebrow">{t('Your archive')}</p>
+          <h1>{t('Library')}</h1>
           <p className="page-sub">
             {notes.length
-              ? `${notes.length} ${notes.length === 1 ? 'note' : 'notes'} across ${
-                  coursesWithNotes.length
-                } ${coursesWithNotes.length === 1 ? 'course' : 'courses'}, all as Markdown.`
-              : 'Every lecture becomes a file you own.'}
+              ? t(
+                  notes.length === 1
+                    ? '{notes} note across {courses} course, all as Markdown.'
+                    : '{notes} notes across {courses} courses, all as Markdown.',
+                  { notes: notes.length, courses: coursesWithNotes.length }
+                )
+              : t('Every lecture becomes a file you own.')}
           </p>
         </div>
         <div className="page-actions">
           <Button variant="ghost" onClick={() => void openFolder()}>
             <FolderOpen size={16} />
-            Open folder
+            {t('Open folder')}
           </Button>
           <Button variant="primary" onClick={() => navigate('/')}>
             <BookOpen size={16} />
-            Record lecture
+            {t('Record lecture')}
           </Button>
         </div>
       </header>
@@ -121,27 +125,27 @@ export default function Library(): React.JSX.Element {
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search titles, courses, summaries…"
+                placeholder={t('Search titles, courses, summaries…')}
               />
               {query ? (
                 <button
                   className="search-clear"
                   onClick={() => setQuery('')}
-                  aria-label="Clear search"
+                  aria-label={t('Clear search')}
                 >
                   <X size={14} />
                 </button>
               ) : null}
             </div>
             <label className="sort-control">
-              <span>Sort</span>
+              <span>{t('Sort')}</span>
               <select
                 value={sort}
                 onChange={(event) => setSort(event.target.value as typeof sort)}
               >
-                <option value="newest">Newest first</option>
-                <option value="oldest">Oldest first</option>
-                <option value="longest">Longest first</option>
+                <option value="newest">{t('Newest first')}</option>
+                <option value="oldest">{t('Oldest first')}</option>
+                <option value="longest">{t('Longest first')}</option>
               </select>
             </label>
           </div>
@@ -149,7 +153,7 @@ export default function Library(): React.JSX.Element {
           <div className="library-filter-row">
             <span className="filter-label">
               <SlidersHorizontal size={14} />
-              Filter
+              {t('Filter')}
             </span>
             <div className="filter-chips">
               <button
@@ -157,7 +161,7 @@ export default function Library(): React.JSX.Element {
                 onClick={() => setCourseId('all')}
                 aria-pressed={courseId === 'all'}
               >
-                All notes
+                {t('All notes')}
                 <span className="filter-count">{notes.length}</span>
               </button>
               {coursesWithNotes.map(({ course, count }) => (
@@ -183,7 +187,7 @@ export default function Library(): React.JSX.Element {
                 aria-pressed={onlyAudio}
               >
                 <AudioLines size={13} />
-                Has audio
+                {t('Has audio')}
                 <span className="filter-count">{audioCount}</span>
               </button>
             </div>
@@ -192,14 +196,20 @@ export default function Library(): React.JSX.Element {
           <div className="library-filter-meta">
             <span>
               {activeFilters
-                ? `Showing ${filtered.length} of ${notes.length} notes`
-                : `${notes.length} ${notes.length === 1 ? 'note' : 'notes'} across ${
-                    coursesWithNotes.length
-                  } ${coursesWithNotes.length === 1 ? 'course' : 'courses'}`}
+                ? t('Showing {shown} of {total} notes', {
+                    shown: filtered.length,
+                    total: notes.length
+                  })
+                : t(
+                    notes.length === 1
+                      ? '{notes} note across {courses} course'
+                      : '{notes} notes across {courses} courses',
+                    { notes: notes.length, courses: coursesWithNotes.length }
+                  )}
             </span>
             {activeFilters ? (
               <button className="text-link" onClick={clearFilters}>
-                Clear all
+                {t('Clear all')}
               </button>
             ) : null}
           </div>
@@ -230,12 +240,12 @@ export default function Library(): React.JSX.Element {
               >
                 <div className="note-date">
                   <strong>
-                    {new Intl.DateTimeFormat('en-GB', { day: '2-digit' }).format(
+                    {new Intl.DateTimeFormat(uiLocale(), { day: '2-digit' }).format(
                       new Date(note.date)
                     )}
                   </strong>
                   <span>
-                    {new Intl.DateTimeFormat('en-GB', { month: 'short' }).format(
+                    {new Intl.DateTimeFormat(uiLocale(), { month: 'short' }).format(
                       new Date(note.date)
                     )}
                   </span>
@@ -248,7 +258,7 @@ export default function Library(): React.JSX.Element {
                 <div className="note-main">
                   <div className="note-title-line">
                     <h3>{note.title}</h3>
-                    {note.hasAudio ? <Badge tone="info">audio</Badge> : null}
+                    {note.hasAudio ? <Badge tone="info">{t('audio')}</Badge> : null}
                   </div>
                   <p className="note-meta">
                     {note.courseName}
@@ -257,10 +267,14 @@ export default function Library(): React.JSX.Element {
                     <span>·</span>
                     <Clock size={13} /> {formatDuration(note.durationSec)}
                     <span>·</span>
-                    <FileText size={13} /> {note.wordCount.toLocaleString()}{' '}
-                    {note.wordCount === 1 ? 'word' : 'words'}
+                    <FileText size={13} />{' '}
+                    {t(note.wordCount === 1 ? '{count} word' : '{count} words', {
+                      count: note.wordCount.toLocaleString()
+                    })}
                     <span>·</span>
-                    {Math.max(1, Math.ceil(note.wordCount / 200))} min read
+                    {t('{minutes} min read', {
+                      minutes: Math.max(1, Math.ceil(note.wordCount / 200))
+                    })}
                   </p>
                   {note.summary ? <p className="note-summary">{note.summary}</p> : null}
                   {note.tags.length ? (
@@ -279,12 +293,12 @@ export default function Library(): React.JSX.Element {
                     event.stopPropagation()
                     void copyNote(note.id)
                   }}
-                  aria-label="Copy note"
-                  title="Copy note to clipboard"
+                  aria-label={t('Copy note')}
+                  title={t('Copy note to clipboard')}
                 >
                   {copyingId === note.id ? <Check size={15} /> : <Copy size={15} />}
                 </button>
-                <span className="note-open">Open →</span>
+                <span className="note-open">{t('Open')} →</span>
               </div>
             )
           })}
@@ -292,21 +306,21 @@ export default function Library(): React.JSX.Element {
       ) : (
         <EmptyState
           icon={<Search size={24} />}
-          title={notes.length ? 'No notes match these filters' : 'No notes yet'}
-          body={
+          title={t(notes.length ? 'No notes match these filters' : 'No notes yet')}
+          body={t(
             notes.length
               ? 'Try a different course, keyword, or turn off the audio filter.'
               : 'Record your first lecture and ezNotes will write the structured note here.'
-          }
+          )}
           action={
             notes.length ? (
               <Button variant="outline" onClick={clearFilters}>
-                Clear filters
+                {t('Clear filters')}
               </Button>
             ) : (
               <Button variant="primary" onClick={() => navigate('/')}>
                 <BookOpen size={16} />
-                Go to home
+                {t('Go to home')}
               </Button>
             )
           }

@@ -6,6 +6,7 @@ import {
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import type { Toast } from '../state/AppContext'
+import { t } from '../i18n'
 
 export function Button({
   variant = 'soft',
@@ -117,7 +118,7 @@ export function Modal({
             <h2>{title}</h2>
             {subtitle ? <p>{subtitle}</p> : null}
           </div>
-          <button className="icon-button" onClick={onClose} aria-label="Close">
+          <button className="icon-button" onClick={onClose} aria-label={t('Close')}>
             <X size={18} />
           </button>
         </div>
@@ -187,7 +188,7 @@ export function ToastStack({
       {toasts.map((toast) => (
         <div key={toast.id} className={`toast toast-${toast.tone}`}>
           <span>{toast.message}</span>
-          <button onClick={() => dismiss(toast.id)} aria-label="Dismiss">
+          <button onClick={() => dismiss(toast.id)} aria-label={t('Dismiss')}>
             <X size={14} />
           </button>
         </div>

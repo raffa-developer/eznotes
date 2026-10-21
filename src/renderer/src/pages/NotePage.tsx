@@ -25,6 +25,7 @@ import type { NoteDetail, NoteExportFormat } from '../../../shared/types'
 import { useApp } from '../state/AppContext'
 import { Badge, Button, Card, EmptyState, Modal } from '../components/ui'
 import ExportMenu from '../components/ExportMenu'
+import { t } from '../i18n'
 import { formatDate, formatDuration, formatTimestamp } from '../lib/format'
 
 export default function NotePage(): React.JSX.Element {
@@ -64,7 +65,7 @@ export default function NotePage(): React.JSX.Element {
       const updated = await window.ezNotes.notes.regenerate(note.id)
       setNote(updated)
       await refreshNotes()
-      toast('Notes regenerated from the same transcript.', 'success')
+      toast(t('Notes regenerated from the same transcript.'), 'success')
     } catch (error) {
       toast(error instanceof Error ? error.message : String(error), 'error')
     } finally {
@@ -78,7 +79,7 @@ export default function NotePage(): React.JSX.Element {
     try {
       await window.ezNotes.notes.delete(note.id)
       await refreshNotes()
-      toast('Note deleted.', 'success')
+      toast(t('Note deleted.'), 'success')
       navigate('/library')
     } catch (error) {
       toast(error instanceof Error ? error.message : String(error), 'error')
@@ -94,7 +95,7 @@ export default function NotePage(): React.JSX.Element {
       setNote(updated)
       await refreshNotes()
       setAudioOpen(false)
-      toast('Audio deleted. The transcript and note are untouched.', 'success')
+      toast(t('Audio deleted. The transcript and note are untouched.'), 'success')
     } catch (error) {
       toast(error instanceof Error ? error.message : String(error), 'error')
     } finally {
@@ -182,11 +183,11 @@ export default function NotePage(): React.JSX.Element {
       <div className="page">
         <EmptyState
           icon={<FileText size={24} />}
-          title="Note not found"
-          body="It may have been moved or deleted outside ezNotes."
+          title={t('Note not found')}
+          body={t('It may have been moved or deleted outside ezNotes.')}
           action={
             <Button variant="outline" onClick={() => navigate('/library')}>
-              Back to library
+              {t('Back to library')}
             </Button>
           }
         />
@@ -199,12 +200,12 @@ export default function NotePage(): React.JSX.Element {
       <header className="note-head">
         <div className="note-head-top">
           <Link to="/library" className="back-link">
-            <ArrowLeft size={15} /> Library
+            <ArrowLeft size={15} /> {t('Library')}
           </Link>
           <div className="note-actions">
             <Button variant="primary" size="sm" onClick={() => void copyNote()}>
               {copied ? <Check size={15} /> : <Copy size={15} />}
-              {copied ? 'Copied' : 'Copy note'}
+              {copied ? t('Copied') : t('Copy note')}
             </Button>
             <ExportMenu onExport={exportNote} busy={exporting} />
             <Button
@@ -214,21 +215,21 @@ export default function NotePage(): React.JSX.Element {
               disabled={regenerating || !note.transcript.length}
             >
               <RefreshCw size={15} className={regenerating ? 'spin' : ''} />
-              {regenerating ? 'Rewriting…' : 'Regenerate'}
+              {regenerating ? t('Rewriting…') : t('Regenerate')}
             </Button>
             <button
               className="icon-button"
               onClick={() => void window.ezNotes.notes.reveal(note.id)}
-              aria-label="Reveal note file"
-              title="Reveal note file"
+              aria-label={t('Reveal note file')}
+              title={t('Reveal note file')}
             >
               <FolderOpen size={16} />
             </button>
             <button
               className="icon-button danger"
               onClick={() => setDeleteOpen(true)}
-              aria-label="Delete note"
-              title="Delete note"
+              aria-label={t('Delete note')}
+              title={t('Delete note')}
             >
               <Trash2 size={16} />
             </button>
@@ -257,17 +258,18 @@ export default function NotePage(): React.JSX.Element {
           </span>
           <span>
             <FileText size={14} />
-            {note.wordCount.toLocaleString()}{' '}
-            {note.wordCount === 1 ? 'word' : 'words'}
+            {t(note.wordCount === 1 ? '{count} word' : '{count} words', {
+              count: note.wordCount.toLocaleString()
+            })}
           </span>
           <span>
             <Clock size={14} />
-            {readMinutes} min read
+            {t('{minutes} min read', { minutes: readMinutes })}
           </span>
           {note.hasAudio ? (
             <span>
               <Mic size={14} />
-              Audio available
+              {t('Audio available')}
             </span>
           ) : null}
         </div>
@@ -277,15 +279,15 @@ export default function NotePage(): React.JSX.Element {
         <div className="banner banner-error" style={{ marginBottom: 18 }}>
           <FileText size={17} />
           <span>
-            This note has no content yet. The transcript is safe; use{' '}
+            {t('This note has no content yet. The transcript is safe; use')}{' '}
             <button
               className="inline-link"
               onClick={() => void regenerate()}
               disabled={regenerating}
             >
-              Regenerate
+              {t('Regenerate')}
             </button>{' '}
-            to write it again.
+            {t('to write it again.')}
           </span>
         </div>
       ) : null}
@@ -321,7 +323,7 @@ export default function NotePage(): React.JSX.Element {
           {toc.length > 2 ? (
             <Card className="toc-card">
               <h3>
-                <List size={14} /> Contents
+                <List size={14} /> {t('Contents')}
               </h3>
               <nav>
                 {toc.map((item) => (
@@ -348,8 +350,12 @@ export default function NotePage(): React.JSX.Element {
                   <Music size={17} />
                 </span>
                 <div>
-                  <strong>Lecture audio</strong>
-                  <small>Kept for {settings?.settings.retentionDays ?? 30} days</small>
+                  <strong>{t('Lecture audio')}</strong>
+                  <small>
+                    {t('Kept for {days} days', {
+                      days: settings?.settings.retentionDays ?? 30
+                    })}
+                  </small>
                 </div>
               </div>
               <audio
@@ -366,35 +372,35 @@ export default function NotePage(): React.JSX.Element {
                   onClick={() => setAudioOpen(true)}
                 >
                   <Trash2 size={14} />
-                  Delete audio early
+                  {t('Delete audio early')}
                 </Button>
               </div>
             </Card>
           ) : null}
 
           <Card className="detail-card">
-            <h3>Details</h3>
+            <h3>{t('Details')}</h3>
             <dl>
               <div>
-                <dt>Course</dt>
+                <dt>{t('Course')}</dt>
                 <dd>{note.courseName}</dd>
               </div>
               {course?.lecturer ? (
                 <div>
-                  <dt>Lecturer</dt>
+                  <dt>{t('Lecturer')}</dt>
                   <dd>{course.lecturer}</dd>
                 </div>
               ) : null}
               <div>
-                <dt>Date</dt>
+                <dt>{t('Date')}</dt>
                 <dd>{formatDate(note.date)}</dd>
               </div>
               <div>
-                <dt>Duration</dt>
+                <dt>{t('Duration')}</dt>
                 <dd>{formatDuration(note.durationSec)}</dd>
               </div>
               <div>
-                <dt>File</dt>
+                <dt>{t('File')}</dt>
                 <dd className="detail-path">{note.path.split(/[\\/]/).slice(-2).join('/')}</dd>
               </div>
             </dl>
@@ -415,10 +421,12 @@ export default function NotePage(): React.JSX.Element {
               <details>
                 <summary>
                   <span>
-                    <strong>Transcript</strong>
-                    <small>{note.transcript.length} segments</small>
+                    <strong>{t('Transcript')}</strong>
+                    <small>
+                      {t('{count} segments', { count: note.transcript.length })}
+                    </small>
                   </span>
-                  <span className="summary-hint">Show</span>
+                  <span className="summary-hint">{t('Show')}</span>
                 </summary>
                 <div className="transcript-side-scroll">
                   {note.transcript.map((segment) => (
@@ -449,48 +457,49 @@ export default function NotePage(): React.JSX.Element {
 
       <Modal
         open={deleteOpen}
-        title="Delete this note?"
-        subtitle="The Markdown file and its transcript will be removed."
+        title={t('Delete this note?')}
+        subtitle={t('The Markdown file and its transcript will be removed.')}
         onClose={() => setDeleteOpen(false)}
         footer={
           <>
             <Button variant="ghost" onClick={() => setDeleteOpen(false)} disabled={deleting}>
-              Cancel
+              {t('Cancel')}
             </Button>
             <Button variant="danger" onClick={() => void remove()} disabled={deleting}>
               <Trash2 size={15} />
-              {deleting ? 'Deleting…' : 'Delete note'}
+              {deleting ? t('Deleting…') : t('Delete note')}
             </Button>
           </>
         }
       >
         <p className="modal-text">
-          <strong>{note.title}</strong> will be deleted from your notes folder. This
-          cannot be undone.
-          {note.hasAudio ? ' The lecture audio will also be deleted.' : ''}
+          <strong>{note.title}</strong>{' '}
+          {t('will be deleted from your notes folder. This cannot be undone.')}
+          {note.hasAudio ? ` ${t('The lecture audio will also be deleted.')}` : ''}
         </p>
       </Modal>
 
       <Modal
         open={audioOpen}
-        title="Delete the audio?"
-        subtitle="The note and transcript stay in your library."
+        title={t('Delete the audio?')}
+        subtitle={t('The note and transcript stay in your library.')}
         onClose={() => setAudioOpen(false)}
         footer={
           <>
             <Button variant="ghost" onClick={() => setAudioOpen(false)} disabled={deletingAudio}>
-              Cancel
+              {t('Cancel')}
             </Button>
             <Button variant="danger" onClick={() => void removeAudio()} disabled={deletingAudio}>
               <Trash2 size={15} />
-              {deletingAudio ? 'Deleting…' : 'Delete audio'}
+              {deletingAudio ? t('Deleting…') : t('Delete audio')}
             </Button>
           </>
         }
       >
         <p className="modal-text">
-          You will no longer be able to replay this lecture or jump to its timestamps.
-          The written notes are kept.
+          {t(
+            'You will no longer be able to replay this lecture or jump to its timestamps. The written notes are kept.'
+          )}
         </p>
       </Modal>
     </div>

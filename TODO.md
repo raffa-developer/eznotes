@@ -107,11 +107,16 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
   - *Verified:* mock HTTP/SSE tests cover request shapes, auth headers, system
     prompts, and response parsing; 61 tests pass.
 
-- [ ] **Wire up the UI language setting**
-  `Settings.uiLanguage` (`'en' | 'pt'`) is persisted and validated but never
-  read; UI strings are hardcoded English while note content is Portuguese.
-  - Add a tiny dictionary module and replace literals in `renderer/src/pages/*`.
-  - *Done when:* switching the setting changes the interface without a reload.
+- [x] **Wire up the UI language setting**
+  - `t('English source', vars?)` in `src/renderer/src/i18n.ts` with English as
+    the fallback; pt-PT dictionaries live in `src/renderer/src/locales/`.
+  - Language selector in **Settings → Appearance**; switching updates the UI
+    without a reload and also re-localizes dates, greetings, and durations.
+  - The tray menu, native dialogs, and export messages are localized in the main
+    process via `src/main/uiText.ts`.
+  - *Verified:* an isolated build with `uiLanguage: pt` rendered Portuguese on
+    every page; switching to English and back worked live. 64 tests pass.
+  - Provider/backend error details remain in English as diagnostic text.
 
 ---
 
@@ -135,7 +140,7 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
   `vitest` + `npm test` now cover `trimOverlap`/`dedupeSegments`,
   `splitFrontmatter`, `sanitizeFilename`, `upcomingClasses`, `detectCues`, log
   rotation, speaker assignment, auto-start scheduling, and title/summary
-  extraction — 61 tests across 8 files.
+  extraction — 64 tests across 9 files.
   - `electron` is aliased to `tests/electron-stub.ts` so main-process modules
     import cleanly under Node.
   - `.github/workflows/ci.yml` runs `npm ci`, `typecheck`, `test`, and `build`

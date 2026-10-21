@@ -56,6 +56,7 @@ import { demoMode } from './mock'
 import { migrateUserData } from './migrate'
 import { dueClass, dueSoonClass, currentClass } from './autoStart'
 import { log } from './log'
+import { mainText } from './uiText'
 
 migrateUserData()
 
@@ -142,13 +143,16 @@ function createWindow(): void {
     const state = recording.state()
     if (!state) return
     event.preventDefault()
+    const language = loadSettings().uiLanguage
     void dialog.showMessageBox(mainWindow!, {
       type: 'info',
-      title: 'Finish this recording first',
-      message: 'ezNotes still has a recording open.',
-      detail:
-        'Stop the recording and choose what happens to the audio before closing the window.',
-      buttons: ['OK']
+      title: mainText(language, 'Finish this recording first'),
+      message: mainText(language, 'ezNotes still has a recording open.'),
+      detail: mainText(
+        language,
+        'Stop the recording and choose what happens to the audio before closing the window.'
+      ),
+      buttons: [mainText(language, 'OK')]
     })
   })
 
@@ -319,7 +323,12 @@ async function exportNotePdf(noteId: string, target: string): Promise<void> {
       await new Promise((resolve) => setTimeout(resolve, 200))
     }
     if (!ready) {
-      throw new Error('The note view did not finish loading for PDF export.')
+      throw new Error(
+        mainText(
+          loadSettings().uiLanguage,
+          'The note view did not finish loading for PDF export.'
+        )
+      )
     }
 
     await printWindow.webContents.executeJavaScript(
@@ -367,6 +376,7 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
   ipcMain.handle('settings:update', (_event, patch: Partial<Settings>) => {
     const next = updateSettings(patch)
     syncGlobalHotkey()
+    updateTrayMenu()
     return settingsStatusFor(next)
   })
   ipcMain.handle('settings:setSecret', (_event, key: SecretKey, value: string) => {
@@ -380,7 +390,10 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
   ipcMain.handle('settings:chooseNotesDir', async () => {
     const current = loadSettings()
     const options: OpenDialogOptions = {
-      title: 'Choose where ezNotes saves your notes',
+      title: mainText(
+        current.uiLanguage,
+        'Choose where ezNotes saves your notes'
+      ),
       defaultPath: current.notesDir,
       properties: ['openDirectory', 'createDirectory']
     }
@@ -396,7 +409,7 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
   ipcMain.handle('settings:chooseObsidianVault', async () => {
     const current = loadSettings()
     const options: OpenDialogOptions = {
-      title: 'Choose your Obsidian vault folder',
+      title: mainText(current.uiLanguage, 'Choose your Obsidian vault folder'),
       defaultPath: current.obsidianVault || app.getPath('documents'),
       properties: ['openDirectory', 'createDirectory']
     }
@@ -467,7 +480,10 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
     clipboard.writeText(note.markdown)
     return {
       canceled: false,
-      message: 'Note copied to the clipboard.'
+      message: mainText(
+        loadSettings().uiLanguage,
+        'Note copied to the clipboard.'
+      )
     }
   })
 
@@ -476,6 +492,7 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
     async (_event, id: string, format: NoteExportFormat): Promise<NoteExportResult> => {
       const settings = loadSettings()
       const notesDir = settings.notesDir
+      const language = settings.uiLanguage
       const note = getNote(notesDir, id)
       if (!note) throw new Error('Note not found.')
 
@@ -485,8 +502,11 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
           canceled: false,
           message:
             format === 'notion'
-              ? 'Markdown copied. Paste it into a Notion page.'
-              : 'Note copied to the clipboard.'
+              ? mainText(
+                  language,
+                  'Markdown copied. Paste it into a Notion page.'
+                )
+              : mainText(language, 'Note copied to the clipboard.')
         }
       }
 
@@ -502,7 +522,10 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
             ? await dialog.showOpenDialog(mainWindow, options)
             : await dialog.showOpenDialog(options)
           if (result.canceled || !result.filePaths[0]) {
-            return { canceled: true, message: 'Export canceled.' }
+            return {
+              canceled: true,
+              message: mainText(language, 'Export canceled.')
+            }
           }
           vault = result.filePaths[0]
           updateSettings({ obsidianVault: vault })
@@ -515,7 +538,9 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
         return {
           canceled: false,
           path: target,
-          message: `Saved to Obsidian: ${target}`
+          message: mainText(language, 'Saved to Obsidian: {path}', {
+            path: target
+          })
         }
       }
 
@@ -525,12 +550,16 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
           'md',
           'Markdown'
         )
-        if (!target) return { canceled: true, message: 'Export canceled.' }
+        if (!target) {
+          return { canceled: true, message: mainText(language, 'Export canceled.') }
+        }
         fs.writeFileSync(target, fs.readFileSync(note.path, 'utf8'))
         return {
           canceled: false,
           path: target,
-          message: `Markdown exported: ${target}`
+          message: mainText(language, 'Markdown exported: {path}', {
+            path: target
+          })
         }
       }
 
@@ -540,12 +569,16 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
           'pdf',
           'PDF'
         )
-        if (!target) return { canceled: true, message: 'Export canceled.' }
+        if (!target) {
+          return { canceled: true, message: mainText(language, 'Export canceled.') }
+        }
         await exportNotePdf(id, target)
         return {
           canceled: false,
           path: target,
-          message: `PDF exported: ${target}`
+          message: mainText(language, 'PDF exported: {path}', {
+            path: target
+          })
         }
       }
 
@@ -728,52 +761,61 @@ function createTray(): void {
 function updateTrayMenu(): void {
   if (!tray) return
 
+  const language = loadSettings().uiLanguage
   const state = recording.state()
   const template: MenuItemConstructorOptions[] = [
-    { label: 'Open ezNotes', click: () => restoreMainWindow() },
+    {
+      label: mainText(language, 'Open ezNotes'),
+      click: () => restoreMainWindow()
+    },
     { type: 'separator' }
   ]
 
   if (!state) {
     template.push({
-      label: 'Start quick recording',
+      label: mainText(language, 'Start quick recording'),
       click: () => void startQuickRecording()
     })
   } else if (state.status === 'recording') {
     template.push({
-      label: 'Pause recording',
+      label: mainText(language, 'Pause recording'),
       click: () => void recording.pause()
     })
     template.push({
-      label: 'Stop and write notes',
+      label: mainText(language, 'Stop and write notes'),
       click: () => void stopRecordingFromTray()
     })
   } else if (state.status === 'paused') {
     template.push({
-      label: 'Resume recording',
+      label: mainText(language, 'Resume recording'),
       click: () => void recording.resume()
     })
     template.push({
-      label: 'Stop and write notes',
+      label: mainText(language, 'Stop and write notes'),
       click: () => void stopRecordingFromTray()
     })
   } else if (state.status === 'processing') {
-    template.push({ label: 'Writing notes…', enabled: false })
+    template.push({
+      label: mainText(language, 'Writing notes…'),
+      enabled: false
+    })
   } else {
     template.push({
-      label: 'Open live lecture',
+      label: mainText(language, 'Open live lecture'),
       click: () => openLive()
     })
   }
 
   template.push(
     { type: 'separator' },
-    { label: 'Quit ezNotes', click: () => app.quit() }
+    { label: mainText(language, 'Quit ezNotes'), click: () => app.quit() }
   )
 
   tray.setContextMenu(Menu.buildFromTemplate(template))
   tray.setToolTip(
-    state ? `ezNotes — ${state.courseName} (${state.status})` : 'ezNotes — ready'
+    state
+      ? `ezNotes — ${state.courseName} (${mainText(language, state.status)})`
+      : `ezNotes — ${mainText(language, 'ready')}`
   )
 }
 
@@ -784,11 +826,12 @@ async function startQuickRecording(): Promise<void> {
   }
 
   const current = currentClass(loadSchedule(), new Date())
+  const language = loadSettings().uiLanguage
   try {
     await recording.start({
       courseId: current?.course.id ?? null,
       courseName: current?.course.name ?? 'Geral',
-      title: current ? undefined : 'Quick recording',
+      title: current ? undefined : mainText(language, 'Quick recording'),
       glossary: current?.course.glossary ?? []
     })
     log('tray', 'quick recording started', {
@@ -796,22 +839,23 @@ async function startQuickRecording(): Promise<void> {
     })
   } catch (error) {
     notifyError(
-      `Could not start the quick recording: ${
-        error instanceof Error ? error.message : String(error)
-      }`
+      mainText(language, 'Could not start the quick recording: {message}', {
+        message: error instanceof Error ? error.message : String(error)
+      })
     )
   }
 }
 
 async function stopRecordingFromTray(): Promise<void> {
+  const language = loadSettings().uiLanguage
   try {
     await recording.stop()
     openLive()
   } catch (error) {
     notifyError(
-      `Could not stop the recording: ${
-        error instanceof Error ? error.message : String(error)
-      }`
+      mainText(language, 'Could not stop the recording: {message}', {
+        message: error instanceof Error ? error.message : String(error)
+      })
     )
   }
 }
@@ -860,7 +904,11 @@ function syncGlobalHotkey(): void {
       })
       mainWindow?.webContents.send('recording:event', {
         type: 'notice',
-        message: `The global hotkey ${settings.globalHotkeyKey} is already in use by another app.`,
+        message: mainText(
+          settings.uiLanguage,
+          'The global hotkey {key} is already in use by another app.',
+          { key: settings.globalHotkeyKey }
+        ),
         level: 'warn'
       })
     }
@@ -885,6 +933,7 @@ function checkAutoStart(appStartedAt: number): void {
 
   const now = new Date()
   const schedule = loadSchedule()
+  const language = settings.uiLanguage
 
   if (settings.notifyBeforeMinutes > 0) {
     const soon = dueSoonClass(schedule, now, settings.notifyBeforeMinutes)
@@ -893,8 +942,12 @@ function checkAutoStart(appStartedAt: number): void {
       if (!autoNotifiedKeys.has(key)) {
         autoNotifiedKeys.add(key)
         notify(
-          'Class starting soon',
-          `${soon.course.name} starts soon. ezNotes will start recording automatically.`
+          mainText(language, 'Class starting soon'),
+          mainText(
+            language,
+            '{course} starts soon. ezNotes will start recording automatically.',
+            { course: soon.course.name }
+          )
         )
       }
     }
@@ -922,8 +975,10 @@ function checkAutoStart(appStartedAt: number): void {
     .then(() => {
       log('autoStart', 'recording started', { courseId: due.course.id })
       notify(
-        'ezNotes is recording',
-        `Started automatically for ${due.course.name}.`
+        mainText(language, 'ezNotes is recording'),
+        mainText(language, 'Started automatically for {course}.', {
+          course: due.course.name
+        })
       )
     })
     .catch((error) => {
@@ -931,7 +986,11 @@ function checkAutoStart(appStartedAt: number): void {
       log('autoStart', 'could not start recording', { message })
       mainWindow?.webContents.send('recording:event', {
         type: 'notice',
-        message: `Could not start recording automatically: ${message}`,
+        message: mainText(
+          language,
+          'Could not start recording automatically: {message}',
+          { message }
+        ),
         level: 'error'
       })
     })
@@ -1009,13 +1068,19 @@ if (!gotLock) {
     if (!state || !['recording', 'paused', 'processing'].includes(state.status)) return
 
     event.preventDefault()
+    const language = loadSettings().uiLanguage
     const options = {
       type: 'warning' as const,
-      title: 'ezNotes is still recording',
-      message: 'A lecture is in progress.',
-      detail:
-        'If you quit now, the current audio stays on disk but will not be turned into a note.',
-      buttons: ['Keep running', 'Quit anyway'],
+      title: mainText(language, 'ezNotes is still recording'),
+      message: mainText(language, 'A lecture is in progress.'),
+      detail: mainText(
+        language,
+        'If you quit now, the current audio stays on disk but will not be turned into a note.'
+      ),
+      buttons: [
+        mainText(language, 'Keep running'),
+        mainText(language, 'Quit anyway')
+      ],
       defaultId: 0,
       cancelId: 0
     }

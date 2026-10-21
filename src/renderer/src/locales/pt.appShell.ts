@@ -1,0 +1,22 @@
+export const appShell: Record<string, string> = {
+  Home: 'Início',
+  Library: 'Biblioteca',
+  Schedule: 'Horário',
+  Settings: 'Definições',
+  'ezNotes home': 'Início do ezNotes',
+  notes: 'notas',
+  'Expand sidebar': 'Expandir barra lateral',
+  'Collapse sidebar': 'Recolher barra lateral',
+  Expand: 'Expandir',
+  Collapse: 'Recolher',
+  'Open live lecture': 'Abrir aula em direto',
+  'Writing notes': 'A escrever notas',
+  Paused: 'Em pausa',
+  'Needs attention': 'Requer atenção',
+  Recording: 'A gravar',
+  'Happening now': 'A acontecer agora',
+  'No room': 'Sem sala',
+  'Open notes folder': 'Abrir pasta de notas',
+  'Notes folder': 'Pasta de notas',
+  'local-first': 'prioridade local'
+}

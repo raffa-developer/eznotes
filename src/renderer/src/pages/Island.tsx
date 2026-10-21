@@ -18,6 +18,7 @@ import type {
   StoppedRecording
 } from '../../../shared/types'
 import { formatTimer, formatTimestamp } from '../lib/format'
+import { setUiLanguage, t } from '../i18n'
 
 type Phase = 'recording' | 'stopped' | 'processing' | 'done' | 'error'
 
@@ -62,6 +63,7 @@ export default function Island(): React.JSX.Element {
     ])
       .then(([live, settings, schedule]) => {
         if (!mounted) return
+        setUiLanguage(settings.settings.uiLanguage)
         setSnapshot(live.snapshot)
         setSegments(live.segments)
         setOutline(live.outline)
@@ -162,7 +164,7 @@ export default function Island(): React.JSX.Element {
     if (next.status === 'stopped') setPhase('stopped')
     else if (next.status === 'processing') setPhase('processing')
     else if (next.status === 'error') {
-      setError(next.error ?? 'The last processing step failed.')
+      setError(next.error ?? t('The last processing step failed.'))
       setPhase('error')
     } else if (next.status === 'done') setPhase('done')
     else setPhase('recording')
@@ -209,7 +211,7 @@ export default function Island(): React.JSX.Element {
 
     setBusy(true)
     setPhase('processing')
-    setProcessing({ step: 'Preparing the lecture', progress: 0.02 })
+    setProcessing({ step: t('Preparing the lecture'), progress: 0.02 })
     setError(null)
 
     try {
@@ -249,7 +251,7 @@ export default function Island(): React.JSX.Element {
   }
 
   const isPaused = snapshot?.status === 'paused'
-  const courseName = snapshot?.courseName ?? 'Lecture'
+  const courseName = snapshot?.courseName ?? t('Lecture')
   const recentSegments = segments.slice(-1)
   const recentOutline = outline.slice(0, 3)
 
@@ -279,8 +281,8 @@ export default function Island(): React.JSX.Element {
                 className="island-icon-button"
                 onClick={() => void pauseOrResume()}
                 disabled={busy}
-                title={isPaused ? 'Resume recording' : 'Pause recording'}
-                aria-label={isPaused ? 'Resume recording' : 'Pause recording'}
+                title={isPaused ? t('Resume recording') : t('Pause recording')}
+                aria-label={isPaused ? t('Resume recording') : t('Pause recording')}
               >
                 {isPaused ? <Play size={13} /> : <Pause size={13} />}
               </button>
@@ -288,8 +290,8 @@ export default function Island(): React.JSX.Element {
                 className="island-icon-button danger"
                 onClick={() => void stop()}
                 disabled={busy}
-                title="Stop and write notes"
-                aria-label="Stop and write notes"
+                title={t('Stop and write notes')}
+                aria-label={t('Stop and write notes')}
               >
                 <Square size={11} />
               </button>
@@ -299,21 +301,21 @@ export default function Island(): React.JSX.Element {
           {phase === 'processing' ? (
             <span className="island-phase">
               <Loader2 size={12} className="spin" />
-              Writing
+              {t('Writing')}
             </span>
           ) : null}
 
           {phase === 'done' ? (
             <span className="island-phase success">
               <Check size={12} />
-              Ready
+              {t('Ready')}
             </span>
           ) : null}
 
           {phase === 'error' ? (
             <span className="island-phase error">
               <AlertTriangle size={12} />
-              Error
+              {t('Error')}
             </span>
           ) : null}
 
@@ -321,8 +323,8 @@ export default function Island(): React.JSX.Element {
             <button
               className="island-icon-button"
               onClick={toggleExpanded}
-              title={expanded ? 'Collapse' : 'Expand'}
-              aria-label={expanded ? 'Collapse' : 'Expand'}
+              title={expanded ? t('Collapse') : t('Expand')}
+              aria-label={expanded ? t('Collapse') : t('Expand')}
               aria-expanded={expanded}
             >
               <ChevronDown
@@ -334,8 +336,8 @@ export default function Island(): React.JSX.Element {
           <button
             className="island-icon-button"
             onClick={openApp}
-            title="Open ezNotes"
-            aria-label="Open ezNotes"
+            title={t('Open ezNotes')}
+            aria-label={t('Open ezNotes')}
           >
             <Maximize2 size={12} />
           </button>
@@ -356,7 +358,7 @@ export default function Island(): React.JSX.Element {
                       ))}
                     </div>
                   ) : (
-                    <p className="island-muted">Listening for the first words…</p>
+                    <p className="island-muted">{t('Listening for the first words…')}</p>
                   )}
                   {recentOutline.length ? (
                     <div className="island-outline">
@@ -368,14 +370,14 @@ export default function Island(): React.JSX.Element {
                 </>
               ) : (
                 <p className="island-muted">
-                  Live transcript is off. Final notes will be written after class.
+                  {t('Live transcript is off. Final notes will be written after class.')}
                 </p>
               )
             ) : null}
 
             {phase === 'stopped' ? (
               <div className="island-decision">
-                <p>Keep the lecture audio?</p>
+                <p>{t('Keep the lecture audio?')}</p>
                 <div className="island-actions">
                   <button
                     className="island-action danger"
@@ -383,7 +385,7 @@ export default function Island(): React.JSX.Element {
                     disabled={busy}
                   >
                     <Trash2 size={14} />
-                    Delete audio
+                    {t('Delete audio')}
                   </button>
                   <button
                     className="island-action primary"
@@ -391,7 +393,7 @@ export default function Island(): React.JSX.Element {
                     disabled={busy}
                   >
                     <Check size={14} />
-                    Keep {retentionDays} days
+                    {t('Keep {days} days', { days: retentionDays })}
                   </button>
                 </div>
               </div>
@@ -399,7 +401,7 @@ export default function Island(): React.JSX.Element {
 
             {phase === 'processing' ? (
               <div className="island-progress">
-                <p>{processing?.step ?? 'Writing notes…'}</p>
+                <p>{processing?.step ?? t('Writing notes…')}</p>
                 <div className="island-progress-track">
                   <div
                     style={{
@@ -414,16 +416,16 @@ export default function Island(): React.JSX.Element {
             {phase === 'done' ? (
               <div className="island-decision">
                 <p className="island-ready">
-                  <Check size={15} /> Notes ready.
+                  <Check size={15} /> {t('Notes ready.')}
                 </p>
                 <div className="island-actions">
                   <button className="island-action soft" onClick={() => void window.ezNotes.app.hideIsland()}>
                     <X size={14} />
-                    Close
+                    {t('Close')}
                   </button>
                   <button className="island-action primary" onClick={openNote}>
                     <Maximize2 size={14} />
-                    Open note
+                    {t('Open note')}
                   </button>
                 </div>
               </div>
@@ -433,7 +435,7 @@ export default function Island(): React.JSX.Element {
               <div className="island-decision">
                 <p className="island-error">
                   <AlertTriangle size={14} />
-                  {error ?? 'The recording needs attention.'}
+                  {error ?? t('The recording needs attention.')}
                 </p>
                 <div className="island-actions">
                   <button
@@ -441,11 +443,11 @@ export default function Island(): React.JSX.Element {
                     onClick={() => void window.ezNotes.app.hideIsland()}
                   >
                     <X size={14} />
-                    Close
+                    {t('Close')}
                   </button>
                   <button className="island-action primary" onClick={openApp}>
                     <Maximize2 size={14} />
-                    Open app
+                    {t('Open app')}
                   </button>
                 </div>
               </div>

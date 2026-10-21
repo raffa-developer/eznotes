@@ -14,17 +14,17 @@ import { useApp } from '../state/AppContext'
 import { ToastStack } from './ui'
 import { AudioCapture } from '../hooks/useAudioCapture'
 import { countdown, formatTime } from '../lib/format'
-
-const NAV = [
-  { to: '/', label: 'Home', icon: Home, end: true },
-  { to: '/library', label: 'Library', icon: Library },
-  { to: '/schedule', label: 'Schedule', icon: CalendarDays },
-  { to: '/settings', label: 'Settings', icon: SettingsIcon }
-]
+import { t } from '../i18n'
 
 export default function AppShell(): React.JSX.Element {
   const { nextClass, recording, toasts, dismissToast, settings } = useApp()
   const navigate = useNavigate()
+  const nav = [
+    { to: '/', label: t('Home'), icon: Home, end: true },
+    { to: '/library', label: t('Library'), icon: Library },
+    { to: '/schedule', label: t('Schedule'), icon: CalendarDays },
+    { to: '/settings', label: t('Settings'), icon: SettingsIcon }
+  ]
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem('eznotes.sidebar') === 'collapsed'
   )
@@ -49,24 +49,24 @@ export default function AppShell(): React.JSX.Element {
   return (
     <div className={`app-shell ${collapsed ? 'sidebar-collapsed' : ''}`}>
       <aside className="sidebar">
-        <button className="brand" onClick={() => navigate('/')} aria-label="ezNotes home">
+        <button className="brand" onClick={() => navigate('/')} aria-label={t('ezNotes home')}>
           <span className="brand-mark" />
           <span className="brand-name">ezNotes</span>
-          <span className="brand-tag">notes</span>
+          <span className="brand-tag">{t('notes')}</span>
         </button>
 
         <button
           className="sidebar-toggle"
           onClick={() => setCollapsed((value) => !value)}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? t('Expand sidebar') : t('Collapse sidebar')}
+          aria-label={collapsed ? t('Expand sidebar') : t('Collapse sidebar')}
         >
           {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-          <span>{collapsed ? 'Expand' : 'Collapse'}</span>
+          <span>{collapsed ? t('Expand') : t('Collapse')}</span>
         </button>
 
         <nav className="nav">
-          {NAV.map(({ to, label, icon: Icon, end }) => (
+          {nav.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
@@ -86,18 +86,18 @@ export default function AppShell(): React.JSX.Element {
           <button
             className="sidebar-recording"
             onClick={() => navigate('/live')}
-            title="Open live lecture"
+            title={t('Open live lecture')}
           >
             <span className={`rec-dot ${recording.status}`} />
             <span>
               <strong>
                 {recording.status === 'processing'
-                  ? 'Writing notes'
+                  ? t('Writing notes')
                   : recording.status === 'paused'
-                    ? 'Paused'
+                    ? t('Paused')
                     : recording.status === 'error'
-                      ? 'Needs attention'
-                      : 'Recording'}
+                      ? t('Needs attention')
+                      : t('Recording')}
               </strong>
               <small>{recording.courseName}</small>
             </span>
@@ -115,11 +115,11 @@ export default function AppShell(): React.JSX.Element {
             />
             <span>
               <small>
-                {nextClass.isNow ? 'Happening now' : countdown(nextClass.startsAt)}
+                {nextClass.isNow ? t('Happening now') : countdown(nextClass.startsAt)}
               </small>
               <strong>{nextClass.course.name}</strong>
               <small>
-                {formatTime(nextClass.slot.startTime)} · {nextClass.slot.room || 'No room'}
+                {formatTime(nextClass.slot.startTime)} · {nextClass.slot.room || t('No room')}
               </small>
             </span>
           </button>
@@ -128,16 +128,16 @@ export default function AppShell(): React.JSX.Element {
         <button
           className="sidebar-folder"
           onClick={() => void window.ezNotes.notes.openFolder()}
-          title="Open notes folder"
+          title={t('Open notes folder')}
         >
           <FolderOpen size={15} />
-          <span>Notes folder</span>
+          <span>{t('Notes folder')}</span>
         </button>
 
         <div className="sidebar-foot">
           <span>ezNotes {settings?.appVersion ?? ''}</span>
           <span className="sidebar-foot-dot" />
-          <span>local-first</span>
+          <span>{t('local-first')}</span>
         </div>
       </aside>
 

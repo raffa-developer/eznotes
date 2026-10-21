@@ -27,6 +27,7 @@ import {
   isSameDay,
   weekdayLong
 } from '../lib/format'
+import { t, uiLocale } from '../i18n'
 
 export default function Dashboard(): React.JSX.Element {
   const {
@@ -116,7 +117,7 @@ export default function Dashboard(): React.JSX.Element {
       <header className="page-head">
         <div>
           <p className="eyebrow">
-            {new Intl.DateTimeFormat('en-GB', {
+            {new Intl.DateTimeFormat(uiLocale(), {
               weekday: 'long',
               day: 'numeric',
               month: 'long'
@@ -126,23 +127,23 @@ export default function Dashboard(): React.JSX.Element {
           <p className="page-sub">
             {nextClass
               ? `${nextClass.course.name} ${countdown(nextClass.startsAt, now)}.`
-              : 'Nothing on the timetable right now. Ready when you are.'}
+              : t('Nothing on the timetable right now. Ready when you are.')}
           </p>
         </div>
         <div className="page-actions">
           <Button variant="ghost" onClick={() => navigate('/library')}>
             <BookOpen size={16} />
-            Library
+            {t('Library')}
           </Button>
           {activeRecording ? (
             <Button variant="primary" onClick={() => navigate('/live')}>
               <Mic size={16} />
-              Open live lecture
+              {t('Open live lecture')}
             </Button>
           ) : (
             <Button variant="primary" onClick={() => setStartOpen(true)}>
               <Mic size={16} />
-              Record lecture
+              {t('Record lecture')}
             </Button>
           )}
         </div>
@@ -154,10 +155,10 @@ export default function Dashboard(): React.JSX.Element {
             <div>
               <h2>
                 {recoverable.length === 1
-                  ? 'Interrupted lecture'
-                  : `${recoverable.length} interrupted lectures`}
+                  ? t('Interrupted lecture')
+                  : t('{count} interrupted lectures', { count: recoverable.length })}
               </h2>
-              <p>Audio is on disk, but no note was written yet.</p>
+              <p>{t('Audio is on disk, but no note was written yet.')}</p>
             </div>
             <AlertTriangle size={20} />
           </div>
@@ -167,18 +168,18 @@ export default function Dashboard(): React.JSX.Element {
                 <span className="recovery-main">
                   <strong>{item.courseName}</strong>
                   <small>
-                    {new Intl.DateTimeFormat('en-GB', {
+                    {new Intl.DateTimeFormat(uiLocale(), {
                       dateStyle: 'medium',
                       timeStyle: 'short'
                     }).format(new Date(item.startedAt))}
                     {' · '}
                     {formatDuration(item.durationSec)}
-                    {item.hasTranscript ? ' · transcript ready' : ''}
+                    {item.hasTranscript ? ` · ${t('transcript ready')}` : ''}
                   </small>
                 </span>
                 <Button variant="soft" onClick={() => void recoverLecture(item)}>
                   <Check size={15} />
-                  Recover
+                  {t('Recover')}
                 </Button>
               </div>
             ))}
@@ -190,8 +191,7 @@ export default function Dashboard(): React.JSX.Element {
         <div className="banner banner-warn" style={{ marginBottom: 22 }}>
           <AlertTriangle size={17} />
           <span>
-            Demo mode is on. Transcription and note writing return canned Portuguese
-            content, so you can test the full flow without API keys.
+            {t('Demo mode is on. Transcription and note writing return canned Portuguese content, so you can test the full flow without API keys.')}
           </span>
         </div>
       ) : null}
@@ -201,17 +201,17 @@ export default function Dashboard(): React.JSX.Element {
           <div className="setup-copy">
             <Badge tone="accent">
               <Sparkles size={13} />
-              Setup
+              {t('Setup')}
             </Badge>
             <h2>
               {settings?.demoMode
-                ? 'One small step before the first lecture.'
-                : 'Three small steps before the first lecture.'}
+                ? t('One small step before the first lecture.')
+                : t('Three small steps before the first lecture.')}
             </h2>
             <p>
               {settings?.demoMode
-                ? 'Demo mode is on, so the two API steps are simulated. Add your timetable to try a full lecture.'
-                : 'Keys stay on this PC, encrypted with Windows DPAPI. Notes are plain Markdown files.'}
+                ? t('Demo mode is on, so the two API steps are simulated. Add your timetable to try a full lecture.')
+                : t('Keys stay on this PC, encrypted with Windows DPAPI. Notes are plain Markdown files.')}
             </p>
           </div>
           <div className="setup-steps">
@@ -223,8 +223,8 @@ export default function Dashboard(): React.JSX.Element {
                 {needsCourses ? <CalendarDays size={18} /> : <CheckCircle2 size={18} />}
               </span>
               <span>
-                <strong>Add your timetable</strong>
-                <small>{needsCourses ? 'Courses and weekly slots' : 'Timetable ready'}</small>
+                <strong>{t('Add your timetable')}</strong>
+                <small>{needsCourses ? t('Courses and weekly slots') : t('Timetable ready')}</small>
               </span>
               <ArrowRight size={15} />
             </button>
@@ -238,8 +238,8 @@ export default function Dashboard(): React.JSX.Element {
                     {needsGroq ? <KeyRound size={18} /> : <CheckCircle2 size={18} />}
                   </span>
                   <span>
-                    <strong>Groq key for listening</strong>
-                    <small>{needsGroq ? 'Whisper transcription' : 'Connected'}</small>
+                    <strong>{t('Groq key for listening')}</strong>
+                    <small>{needsGroq ? t('Whisper transcription') : t('Connected')}</small>
                   </span>
                   <ArrowRight size={15} />
                 </button>
@@ -251,8 +251,8 @@ export default function Dashboard(): React.JSX.Element {
                     {needsLlm ? <KeyRound size={18} /> : <CheckCircle2 size={18} />}
                   </span>
                   <span>
-                    <strong>OpenCode key for notes</strong>
-                    <small>{needsLlm ? 'Live outline and structure' : 'Connected'}</small>
+                    <strong>{t('OpenCode key for notes')}</strong>
+                    <small>{needsLlm ? t('Live outline and structure') : t('Connected')}</small>
                   </span>
                   <ArrowRight size={15} />
                 </button>
@@ -277,7 +277,7 @@ export default function Dashboard(): React.JSX.Element {
                 <span className="course-line" style={{ background: nextClass.course.color }} />
                 <div>
                   <p className="eyebrow">
-                    {nextClass.isNow ? 'In progress' : 'Next lecture'}
+                    {nextClass.isNow ? t('In progress') : t('Next lecture')}
                   </p>
                   <h2>{nextClass.course.name}</h2>
                   <p className="next-class-meta">
@@ -288,7 +288,7 @@ export default function Dashboard(): React.JSX.Element {
                   </p>
                 </div>
                 <Badge tone={nextClass.isNow ? 'accent' : 'neutral'}>
-                  {nextClass.isNow ? 'Live now' : countdown(nextClass.startsAt, now)}
+                  {nextClass.isNow ? t('Live now') : countdown(nextClass.startsAt, now)}
                 </Badge>
               </div>
 
@@ -311,8 +311,13 @@ export default function Dashboard(): React.JSX.Element {
                   {nextClass.course.glossary.length ? (
                     <span>
                       <BookOpen size={14} />
-                      {nextClass.course.glossary.length}{' '}
-                      {nextClass.course.glossary.length === 1 ? 'glossary term' : 'glossary terms'}
+                      {nextClass.course.glossary.length === 1
+                        ? t('{count} glossary term', {
+                            count: nextClass.course.glossary.length
+                          })
+                        : t('{count} glossary terms', {
+                            count: nextClass.course.glossary.length
+                          })}
                     </span>
                   ) : null}
                 </div>
@@ -323,18 +328,18 @@ export default function Dashboard(): React.JSX.Element {
                   }
                 >
                   <Mic size={16} />
-                  {activeRecording ? 'Open live lecture' : 'Record this class'}
+                  {activeRecording ? t('Open live lecture') : t('Record this class')}
                 </Button>
               </div>
             </>
           ) : (
             <EmptyState
               icon={<CalendarDays size={24} />}
-              title="No upcoming classes"
-              body="Add your weekly timetable and ezNotes will always show the next lecture here."
+              title={t('No upcoming classes')}
+              body={t('Add your weekly timetable and ezNotes will always show the next lecture here.')}
               action={
                 <Button variant="outline" onClick={() => navigate('/schedule')}>
-                  Open schedule
+                  {t('Open schedule')}
                 </Button>
               }
             />
@@ -348,7 +353,7 @@ export default function Dashboard(): React.JSX.Element {
             </span>
             <div>
               <strong>{notes.length}</strong>
-              <small>notes written</small>
+              <small>{t('notes written')}</small>
             </div>
           </div>
           <div className="stat-card">
@@ -357,7 +362,7 @@ export default function Dashboard(): React.JSX.Element {
             </span>
             <div>
               <strong>{formatDuration(totalHours)}</strong>
-              <small>lectures captured</small>
+              <small>{t('lectures captured')}</small>
             </div>
           </div>
           <div className="stat-card">
@@ -366,7 +371,7 @@ export default function Dashboard(): React.JSX.Element {
             </span>
             <div>
               <strong>{schedule.courses.length}</strong>
-              <small>courses this term</small>
+              <small>{t('courses this term')}</small>
             </div>
           </div>
         </Card>
@@ -375,9 +380,9 @@ export default function Dashboard(): React.JSX.Element {
       <div className="two-col">
         <section>
           <div className="section-head">
-            <h2>Today</h2>
+            <h2>{t('Today')}</h2>
             <Link to="/schedule" className="text-link">
-              Full week <ArrowRight size={14} />
+              {t('Full week')} <ArrowRight size={14} />
             </Link>
           </div>
           {todayClasses.length ? (
@@ -395,28 +400,28 @@ export default function Dashboard(): React.JSX.Element {
                   <span className="today-main">
                     <strong>{item.course.name}</strong>
                     <small>
-                      {item.slot.room || 'No room'}
+                      {item.slot.room || t('No room')}
                       {item.course.lecturer ? ` · ${item.course.lecturer}` : ''}
                     </small>
                   </span>
                   <Badge tone={item.isNow ? 'accent' : 'neutral'}>
-                    {item.isNow ? 'Now' : countdown(item.startsAt, now)}
+                    {item.isNow ? t('Now') : countdown(item.startsAt, now)}
                   </Badge>
                 </div>
               ))}
             </Card>
           ) : (
             <Card className="quiet-card">
-              <p>No classes today. A good day to revisit your notes.</p>
+              <p>{t('No classes today. A good day to revisit your notes.')}</p>
             </Card>
           )}
         </section>
 
         <section>
           <div className="section-head">
-            <h2>Recent notes</h2>
+            <h2>{t('Recent notes')}</h2>
             <Link to="/library" className="text-link">
-              All notes <ArrowRight size={14} />
+              {t('All notes')} <ArrowRight size={14} />
             </Link>
           </div>
           {recent.length ? (
@@ -443,12 +448,12 @@ export default function Dashboard(): React.JSX.Element {
                   >
                     <span className="recent-date">
                       <strong>
-                        {new Intl.DateTimeFormat('en-GB', {
+                        {new Intl.DateTimeFormat(uiLocale(), {
                           day: '2-digit'
                         }).format(new Date(note.date))}
                       </strong>
                       <small>
-                        {new Intl.DateTimeFormat('en-GB', {
+                        {new Intl.DateTimeFormat(uiLocale(), {
                           month: 'short'
                         }).format(new Date(note.date))}
                       </small>
@@ -460,11 +465,11 @@ export default function Dashboard(): React.JSX.Element {
                     <span className="recent-main">
                       <span className="recent-title-line">
                         <strong>{note.title}</strong>
-                        {note.hasAudio ? <Badge tone="info">audio</Badge> : null}
+                        {note.hasAudio ? <Badge tone="info">{t('audio')}</Badge> : null}
                       </span>
                       <small>
                         {note.courseName} · {formatDuration(note.durationSec)} ·{' '}
-                        {readMinutes} min read
+                        {t('{minutes} min read', { minutes: readMinutes })}
                       </small>
                       {note.summary ? <em>{note.summary}</em> : null}
                     </span>
@@ -475,8 +480,8 @@ export default function Dashboard(): React.JSX.Element {
                           event.stopPropagation()
                           void copyRecent(note.id)
                         }}
-                        aria-label="Copy note"
-                        title="Copy note to clipboard"
+                        aria-label={t('Copy note')}
+                        title={t('Copy note to clipboard')}
                       >
                         {copiedNote === note.id ? (
                           <Check size={15} />
@@ -492,15 +497,14 @@ export default function Dashboard(): React.JSX.Element {
             </Card>
           ) : (
             <Card className="quiet-card">
-              <p>Your first structured note will appear here after a lecture.</p>
+              <p>{t('Your first structured note will appear here after a lecture.')}</p>
             </Card>
           )}
         </section>
       </div>
 
       <p className="footnote">
-        Recording a lecture may require permission. ezNotes shows a recording indicator;
-        you are responsible for informing the lecturer and following your institution's rules.
+        {t('Recording a lecture may require permission. ezNotes shows a recording indicator; you are responsible for informing the lecturer and following your institution\'s rules.')}
       </p>
 
       <StartRecordingDialog

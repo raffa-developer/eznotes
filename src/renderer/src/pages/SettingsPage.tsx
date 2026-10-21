@@ -18,49 +18,43 @@ import {
   Trash2,
   XCircle
 } from 'lucide-react'
-import type { LlmProvider, Theme } from '../../../shared/types'
+import type { LlmProvider, Theme, UiLanguage } from '../../../shared/types'
 import { DEFAULT_HOTKEY, HOTKEY_OPTIONS } from '../../../shared/hotkeys'
 import { useApp } from '../state/AppContext'
 import { Badge, Button, Card, Field, Segmented } from '../components/ui'
+import { t } from '../i18n'
 
 const PROVIDER_PRESETS: Record<
   Exclude<LlmProvider, 'custom'>,
-  { baseURL: string; model: string; label: string }
+  { baseURL: string; model: string }
 > = {
   'opencode-go': {
     baseURL: 'https://opencode.ai/inference/go/openai/v1',
-    model: 'deepseek-v4.1-flash',
-    label: 'OpenCode Go'
+    model: 'deepseek-v4.1-flash'
   },
   'opencode-console': {
     baseURL: 'https://opencode.ai/inference/openai/v1',
-    model: 'deepseek-v4.1-flash',
-    label: 'OpenCode Console'
+    model: 'deepseek-v4.1-flash'
   },
   groq: {
     baseURL: 'https://api.groq.com/openai/v1',
-    model: 'openai/gpt-oss-120b',
-    label: 'Groq (free tier)'
+    model: 'openai/gpt-oss-120b'
   },
   ollama: {
     baseURL: 'http://localhost:11434/v1',
-    model: 'qwen2.5:7b',
-    label: 'Ollama (local)'
+    model: 'qwen2.5:7b'
   },
   anthropic: {
     baseURL: 'https://api.anthropic.com',
-    model: 'claude-opus-5-5',
-    label: 'Anthropic (Claude)'
+    model: 'claude-opus-5-5'
   },
   gemini: {
     baseURL: 'https://generativelanguage.googleapis.com/v1beta',
-    model: 'gemini-3.8-flash',
-    label: 'Google Gemini'
+    model: 'gemini-3.8-flash'
   },
   'openai-responses': {
     baseURL: 'https://api.openai.com/v1',
-    model: 'gpt-6-astra',
-    label: 'OpenAI (Responses)'
+    model: 'gpt-6-astra'
   }
 }
 
@@ -116,6 +110,7 @@ export default function SettingsPage(): React.JSX.Element {
   const [model, setModel] = useState(PROVIDER_PRESETS['opencode-go'].model)
   const [retention, setRetention] = useState(30)
   const [theme, setTheme] = useState<Theme>('dark')
+  const [uiLanguage, setUiLanguageState] = useState<UiLanguage>('en')
   const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([])
   const [micId, setMicId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -140,6 +135,7 @@ export default function SettingsPage(): React.JSX.Element {
     setModel(settings.settings.llm.model)
     setRetention(settings.settings.retentionDays)
     setTheme(settings.settings.theme)
+    setUiLanguageState(settings.settings.uiLanguage)
     setMicId(settings.settings.microphoneId)
   }, [settings])
 
@@ -157,7 +153,9 @@ export default function SettingsPage(): React.JSX.Element {
       setMicrophones(devices.filter((device) => device.kind === 'audioinput'))
     } catch (error) {
       toast(
-        `Could not list microphones: ${error instanceof Error ? error.message : String(error)}`,
+        t('Could not list microphones: {error}', {
+          error: error instanceof Error ? error.message : String(error)
+        }),
         'error'
       )
     }
@@ -184,7 +182,7 @@ export default function SettingsPage(): React.JSX.Element {
         globalHotkeyKey
       })
       await refreshSettings()
-      toast('Settings saved.', 'success')
+      toast(t('Settings saved.'), 'success')
     } catch (error) {
       toast(error instanceof Error ? error.message : String(error), 'error')
     } finally {
@@ -205,12 +203,22 @@ export default function SettingsPage(): React.JSX.Element {
     }
   }
 
+  async function changeInterfaceLanguage(next: UiLanguage): Promise<void> {
+    setUiLanguageState(next)
+    try {
+      await window.ezNotes.settings.update({ uiLanguage: next })
+      await refreshSettings()
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'error')
+    }
+  }
+
   async function saveSecret(
     key: 'groqApiKey' | 'llmApiKey',
     value: string
   ): Promise<void> {
     if (!value.trim()) {
-      toast('Paste a key first.', 'warn')
+      toast(t('Paste a key first.'), 'warn')
       return
     }
     try {
@@ -218,7 +226,7 @@ export default function SettingsPage(): React.JSX.Element {
       setGroqKey('')
       setLlmKey('')
       await refreshSettings()
-      toast('Key saved and encrypted.', 'success')
+      toast(t('Key saved and encrypted.'), 'success')
     } catch (error) {
       toast(error instanceof Error ? error.message : String(error), 'error')
     }
@@ -228,7 +236,7 @@ export default function SettingsPage(): React.JSX.Element {
     try {
       await window.ezNotes.settings.clearSecret(key)
       await refreshSettings()
-      toast('Key removed.', 'success')
+      toast(t('Key removed.'), 'success')
     } catch (error) {
       toast(error instanceof Error ? error.message : String(error), 'error')
     }
@@ -251,21 +259,21 @@ export default function SettingsPage(): React.JSX.Element {
   async function chooseFolder(): Promise<void> {
     const next = await window.ezNotes.settings.chooseNotesDir()
     await refreshSettings()
-    toast(`Notes folder: ${next.notesDir}`, 'success')
+    toast(t('Notes folder: {path}', { path: next.notesDir }), 'success')
   }
 
   async function chooseObsidianVault(): Promise<void> {
     const next = await window.ezNotes.settings.chooseObsidianVault()
     await refreshSettings()
     if (next.settings.obsidianVault) {
-      toast(`Obsidian vault: ${next.settings.obsidianVault}`, 'success')
+      toast(t('Obsidian vault: {path}', { path: next.settings.obsidianVault }), 'success')
     }
   }
 
   async function clearObsidianVault(): Promise<void> {
     await window.ezNotes.settings.update({ obsidianVault: '' })
     await refreshSettings()
-    toast('Obsidian vault cleared. Exports will ask for a folder.', 'success')
+    toast(t('Obsidian vault cleared. Exports will ask for a folder.'), 'success')
   }
 
   async function changeTheme(next: Theme): Promise<void> {
@@ -307,22 +315,22 @@ export default function SettingsPage(): React.JSX.Element {
         : provider === 'openai-responses'
           ? 'OpenAI'
           : provider === 'custom'
-            ? 'your endpoint'
+            ? t('your endpoint')
             : 'OpenCode'
 
   return (
     <div className="page settings-page">
       <header className="page-head">
         <div>
-          <p className="eyebrow">Preferences</p>
-          <h1>Settings</h1>
+          <p className="eyebrow">{t('Preferences')}</p>
+          <h1>{t('Settings')}</h1>
           <p className="page-sub">
-            Two keys, one microphone, and a folder. Nothing else leaves your PC.
+            {t('Two keys, one microphone, and a folder. Nothing else leaves your PC.')}
           </p>
         </div>
         <Button variant="primary" onClick={() => void saveSettings()} disabled={saving}>
           <Save size={16} />
-          {saving ? 'Saving…' : 'Save changes'}
+          {saving ? t('Saving…') : t('Save changes')}
         </Button>
       </header>
 
@@ -330,8 +338,9 @@ export default function SettingsPage(): React.JSX.Element {
         <div className="banner banner-warn" style={{ marginBottom: 24 }}>
           <FlaskConical size={17} />
           <span>
-            Demo mode is on. The app uses canned Portuguese transcripts and notes
-            instead of calling Groq or OpenCode.
+            {t(
+              'Demo mode is on. The app uses canned Portuguese transcripts and notes instead of calling Groq or OpenCode.'
+            )}
           </span>
         </div>
       ) : null}
@@ -342,20 +351,20 @@ export default function SettingsPage(): React.JSX.Element {
             <Mic size={19} />
           </span>
           <div>
-            <h2>Listening</h2>
-            <p>Groq Whisper turns the microphone audio into a Portuguese transcript.</p>
+            <h2>{t('Listening')}</h2>
+            <p>{t('Groq Whisper turns the microphone audio into a Portuguese transcript.')}</p>
           </div>
           <Badge tone={hasGroq || settings.demoMode ? 'accent' : 'warn'}>
-            {settings.demoMode ? 'Simulated' : hasGroq ? 'Connected' : 'Key needed'}
+            {settings.demoMode ? t('Simulated') : hasGroq ? t('Connected') : t('Key needed')}
           </Badge>
         </div>
 
         <Card className="settings-card">
           <Field
-            label="Groq API key"
+            label={t('Groq API key')}
             hint={
               <>
-                Encrypted with Windows DPAPI. Get a key at{' '}
+                {t('Encrypted with Windows DPAPI. Get a key at')}{' '}
                 <button
                   className="inline-link"
                   onClick={() => void window.ezNotes.app.openExternal('https://console.groq.com/keys')}
@@ -373,7 +382,7 @@ export default function SettingsPage(): React.JSX.Element {
                   type="password"
                   value={groqKey}
                   onChange={(event) => setGroqKey(event.target.value)}
-                  placeholder={hasGroq ? '•••••••••••••••• saved' : 'gsk_…'}
+                  placeholder={hasGroq ? t('•••••••••••••••• saved') : 'gsk_…'}
                   autoComplete="off"
                 />
               </div>
@@ -381,7 +390,7 @@ export default function SettingsPage(): React.JSX.Element {
                 variant="outline"
                 onClick={() => void saveSecret('groqApiKey', groqKey)}
               >
-                Save key
+                {t('Save key')}
               </Button>
               {hasGroq ? (
                 <>
@@ -391,12 +400,12 @@ export default function SettingsPage(): React.JSX.Element {
                     disabled={testing === 'stt'}
                   >
                     {testing === 'stt' ? <Loader2 size={15} className="spin" /> : null}
-                    Test
+                    {t('Test')}
                   </Button>
                   <button
                     className="icon-button danger"
                     onClick={() => void clearKey('groqApiKey')}
-                    aria-label="Remove Groq key"
+                    aria-label={t('Remove Groq key')}
                   >
                     <Trash2 size={15} />
                   </button>
@@ -410,7 +419,7 @@ export default function SettingsPage(): React.JSX.Element {
           ) : null}
 
           <div className="form-row">
-            <Field label="Whisper model">
+            <Field label={t('Whisper model')}>
               <select value={sttModel} onChange={(event) => setSttModel(event.target.value)}>
                 {STT_MODELS.map((item) => (
                   <option key={item} value={item}>
@@ -419,11 +428,11 @@ export default function SettingsPage(): React.JSX.Element {
                 ))}
               </select>
             </Field>
-            <Field label="Lecture language">
+            <Field label={t('Lecture language')}>
               <select value={language} onChange={(event) => setLanguage(event.target.value)}>
                 {LANGUAGES.map((item) => (
                   <option key={item.value} value={item.value}>
-                    {item.label}
+                    {t(item.label)}
                   </option>
                 ))}
               </select>
@@ -437,11 +446,11 @@ export default function SettingsPage(): React.JSX.Element {
               onChange={(event) => setLiveTranscript(event.target.checked)}
             />
             <span>
-              <strong>Live transcript and outline during class</strong>
+              <strong>{t('Live transcript and outline during class')}</strong>
               <small>
-                Uses Groq audio minutes while the lecture runs. Turn it off to stay
-                inside the Groq free tier; the final transcription and notes still run
-                after class.
+                {t(
+                  'Uses Groq audio minutes while the lecture runs. Turn it off to stay inside the Groq free tier; the final transcription and notes still run after class.'
+                )}
               </small>
             </span>
           </label>
@@ -453,11 +462,12 @@ export default function SettingsPage(): React.JSX.Element {
               onChange={(event) => setSpeakerLabels(event.target.checked)}
             />
             <span>
-              <strong>Detect speakers after class (offline)</strong>
+              <strong>{t('Detect speakers after class (offline)')}</strong>
               <small>
-                Labels the lecturer and students in the final transcript. Runs on this
-                PC and adds a few minutes to processing. Needs a one-time{' '}
-                {settings.diarization.modelsSizeMb} MB model download.
+                {t(
+                  'Labels the lecturer and students in the final transcript. Runs on this PC and adds a few minutes to processing. Needs a one-time {size} MB model download.',
+                  { size: settings.diarization.modelsSizeMb }
+                )}
               </small>
             </span>
           </label>
@@ -466,16 +476,19 @@ export default function SettingsPage(): React.JSX.Element {
             <div className="speaker-models">
               {!settings.diarization.runtimeReady ? (
                 <span>
-                  The offline speaker runtime is missing. In development, run{' '}
+                  {t('The offline speaker runtime is missing. In development, run')}{' '}
                   <code>npm run fetch:node</code>.
                 </span>
               ) : settings.diarization.modelsReady ? (
-                <span>Speaker models are ready. Detection runs entirely on this PC.</span>
+                <span>
+                  {t('Speaker models are ready. Detection runs entirely on this PC.')}
+                </span>
               ) : (
                 <>
                   <span>
-                    Speaker models are not downloaded yet (
-                    {settings.diarization.modelsSizeMb} MB).
+                    {t('Speaker models are not downloaded yet ({size} MB).', {
+                      size: settings.diarization.modelsSizeMb
+                    })}
                   </span>
                   <Button
                     variant="outline"
@@ -487,7 +500,7 @@ export default function SettingsPage(): React.JSX.Element {
                     ) : (
                       <Download size={15} />
                     )}
-                    {downloadingModels ? 'Downloading…' : 'Download models'}
+                    {downloadingModels ? t('Downloading…') : t('Download models')}
                   </Button>
                 </>
               )}
@@ -496,8 +509,12 @@ export default function SettingsPage(): React.JSX.Element {
 
           <p className="settings-note">
             {liveTranscript
-              ? 'Audio is uploaded to Groq for live and final transcription. Live chunks are billed more heavily than the final pass.'
-              : 'Live transcription is off. Only the final lecture audio is sent to Groq, which is much cheaper and fits the free tier better.'}
+              ? t(
+                  'Audio is uploaded to Groq for live and final transcription. Live chunks are billed more heavily than the final pass.'
+                )
+              : t(
+                  'Live transcription is off. Only the final lecture audio is sent to Groq, which is much cheaper and fits the free tier better.'
+                )}
           </p>
         </Card>
       </section>
@@ -508,11 +525,11 @@ export default function SettingsPage(): React.JSX.Element {
             <Clock size={19} />
           </span>
           <div>
-            <h2>Automation</h2>
-            <p>Let ezNotes start on its own when a scheduled class begins.</p>
+            <h2>{t('Automation')}</h2>
+            <p>{t('Let ezNotes start on its own when a scheduled class begins.')}</p>
           </div>
           <Badge tone={autoStartRecording ? 'accent' : 'neutral'}>
-            {autoStartRecording ? 'On' : 'Off'}
+            {autoStartRecording ? t('On') : t('Off')}
           </Badge>
         </div>
 
@@ -524,26 +541,26 @@ export default function SettingsPage(): React.JSX.Element {
               onChange={(event) => setAutoStartRecording(event.target.checked)}
             />
             <span>
-              <strong>Start recording automatically when a class begins</strong>
+              <strong>{t('Start recording automatically when a class begins')}</strong>
               <small>
-                ezNotes must be running. It uses your weekly schedule and shows a
-                notification before the lecture starts. You can stop or discard the
-                recording as usual.
+                {t(
+                  'ezNotes must be running. It uses your weekly schedule and shows a notification before the lecture starts. You can stop or discard the recording as usual.'
+                )}
               </small>
             </span>
           </label>
           <Field
-            label="Heads-up notification"
-            hint="Only used while auto-start is on. Choose Off to start silently."
+            label={t('Heads-up notification')}
+            hint={t('Only used while auto-start is on. Choose Off to start silently.')}
           >
             <select
               value={notifyBefore}
               onChange={(event) => setNotifyBefore(Number(event.target.value))}
             >
-              <option value={0}>Off</option>
-              <option value={5}>5 minutes before</option>
-              <option value={10}>10 minutes before</option>
-              <option value={15}>15 minutes before</option>
+              <option value={0}>{t('Off')}</option>
+              <option value={5}>{t('5 minutes before')}</option>
+              <option value={10}>{t('10 minutes before')}</option>
+              <option value={15}>{t('15 minutes before')}</option>
             </select>
           </Field>
           <label className="toggle-row">
@@ -553,16 +570,18 @@ export default function SettingsPage(): React.JSX.Element {
               onChange={(event) => setGlobalHotkey(event.target.checked)}
             />
             <span>
-              <strong>Global recording hotkey</strong>
+              <strong>{t('Global recording hotkey')}</strong>
               <small>
-                Start or stop a quick recording from any app. Off by default.
+                {t('Start or stop a quick recording from any app. Off by default.')}
               </small>
             </span>
           </label>
           {globalHotkey ? (
             <Field
-              label="Shortcut"
-              hint="Pick a combination that is free on your machine. If it is taken, ezNotes warns you after saving."
+              label={t('Shortcut')}
+              hint={t(
+                'Pick a combination that is free on your machine. If it is taken, ezNotes warns you after saving.'
+              )}
             >
               <select
                 value={globalHotkeyKey}
@@ -577,8 +596,9 @@ export default function SettingsPage(): React.JSX.Element {
             </Field>
           ) : null}
           <p className="settings-note">
-            Off by default. Auto-start only applies to classes that begin after
-            ezNotes is running, and only once per class.
+            {t(
+              'Off by default. Auto-start only applies to classes that begin after ezNotes is running, and only once per class.'
+            )}
           </p>
         </Card>
       </section>
@@ -589,47 +609,51 @@ export default function SettingsPage(): React.JSX.Element {
             <KeyRound size={19} />
           </span>
           <div>
-            <h2>Writing</h2>
-            <p>Choose a cloud or local model to turn the transcript into notes.</p>
+            <h2>{t('Writing')}</h2>
+            <p>{t('Choose a cloud or local model to turn the transcript into notes.')}</p>
           </div>
           <Badge tone={llmReady || settings.demoMode ? 'accent' : 'warn'}>
             {settings.demoMode
-              ? 'Simulated'
+              ? t('Simulated')
               : localLlm
-                ? 'Local / free'
+                ? t('Local / free')
                 : groqLlm
-                  ? 'Groq free tier'
+                  ? t('Groq free tier')
                   : hasLlm
-                    ? 'Connected'
-                    : 'Key needed'}
+                    ? t('Connected')
+                    : t('Key needed')}
           </Badge>
         </div>
 
         <Card className="settings-card">
           <div className="form-row">
-            <Field label="Provider">
+            <Field label={t('Provider')}>
               <select
                 value={provider}
                 onChange={(event) => changeProvider(event.target.value as LlmProvider)}
               >
                 <option value="opencode-go">OpenCode Go</option>
                 <option value="opencode-console">OpenCode Console</option>
-                <option value="groq">Groq (free tier)</option>
-                <option value="ollama">Ollama (local, free)</option>
+                <option value="groq">{t('Groq (free tier)')}</option>
+                <option value="ollama">{t('Ollama (local, free)')}</option>
                 <option value="anthropic">Anthropic (Claude)</option>
                 <option value="gemini">Google Gemini</option>
                 <option value="openai-responses">OpenAI (Responses)</option>
-                <option value="custom">Custom OpenAI-compatible</option>
+                <option value="custom">{t('Custom OpenAI-compatible')}</option>
               </select>
             </Field>
             <Field
-              label="Model"
+              label={t('Model')}
               hint={
                 provider === 'anthropic' ||
                 provider === 'gemini' ||
                 provider === 'openai-responses'
-                  ? 'Use the provider model ID, for example claude-opus-5-5, gemini-3.8-flash, or gpt-6-astra.'
-                  : 'Use a Chat Completions model such as DeepSeek, GLM, or Kimi. Native adapters exist for Anthropic, Gemini, and OpenAI Responses.'
+                  ? t(
+                      'Use the provider model ID, for example claude-opus-5-5, gemini-3.8-flash, or gpt-6-astra.'
+                    )
+                  : t(
+                      'Use a Chat Completions model such as DeepSeek, GLM, or Kimi. Native adapters exist for Anthropic, Gemini, and OpenAI Responses.'
+                    )
               }
             >
               <input
@@ -647,15 +671,21 @@ export default function SettingsPage(): React.JSX.Element {
           </div>
 
           <Field
-            label="Base URL"
+            label={t('Base URL')}
             hint={
               provider === 'anthropic'
-                ? 'Anthropic base URL; the app calls /v1/messages. Use https://api.anthropic.com (without /v1).'
+                ? t(
+                    'Anthropic base URL; the app calls /v1/messages. Use https://api.anthropic.com (without /v1).'
+                  )
                 : provider === 'gemini'
-                  ? 'Generative Language base URL; the app calls /models/<model>:generateContent.'
+                  ? t(
+                      'Generative Language base URL; the app calls /models/<model>:generateContent.'
+                    )
                   : provider === 'openai-responses'
-                    ? 'OpenAI base URL; the app calls /responses.'
-                    : 'The app calls /chat/completions on this URL. No trailing slash needed.'
+                    ? t('OpenAI base URL; the app calls /responses.')
+                    : t(
+                        'The app calls /chat/completions on this URL. No trailing slash needed.'
+                      )
             }
           >
             <input
@@ -667,9 +697,10 @@ export default function SettingsPage(): React.JSX.Element {
 
           {provider === 'ollama' ? (
             <div className="provider-note">
-              <strong>No API key needed.</strong> Install Ollama on this PC and run{' '}
-              <code>ollama pull qwen2.5:7b</code>. Keep Ollama running while notes are
-              written. Everything stays local.
+              <strong>{t('No API key needed.')}</strong>{' '}
+              {t('Install Ollama on this PC and run')}{' '}
+              <code>ollama pull qwen2.5:7b</code>.{' '}
+              {t('Keep Ollama running while notes are written. Everything stays local.')}
               <div className="free-provider-actions">
                 <Button
                   variant="outline"
@@ -677,15 +708,16 @@ export default function SettingsPage(): React.JSX.Element {
                   disabled={testing === 'llm'}
                 >
                   {testing === 'llm' ? <Loader2 size={15} className="spin" /> : null}
-                  Test local model
+                  {t('Test local model')}
                 </Button>
               </div>
             </div>
           ) : provider === 'groq' ? (
             <div className="provider-note">
-              <strong>Uses your Groq key.</strong> No separate notes key is needed.
-              The free tier has daily token limits; shorter lectures work best. For
-              long lectures, Ollama or a paid provider is more reliable.
+              <strong>{t('Uses your Groq key.')}</strong>{' '}
+              {t(
+                'No separate notes key is needed. The free tier has daily token limits; shorter lectures work best. For long lectures, Ollama or a paid provider is more reliable.'
+              )}
               <div className="free-provider-actions">
                 <Button
                   variant="outline"
@@ -693,28 +725,30 @@ export default function SettingsPage(): React.JSX.Element {
                   disabled={testing === 'llm' || !hasGroq}
                 >
                   {testing === 'llm' ? <Loader2 size={15} className="spin" /> : null}
-                  Test Groq model
+                  {t('Test Groq model')}
                 </Button>
                 {!hasGroq ? (
-                  <small>Add a Groq key under Listening first.</small>
+                  <small>{t('Add a Groq key under Listening first.')}</small>
                 ) : null}
               </div>
             </div>
           ) : (
             <Field
-              label="Notes model key"
+              label={t('Notes model key')}
               hint={
                 provider === 'opencode-go'
-                  ? 'Uses your Go subscription. Go is intended for coding-agent traffic, so the Console API is safer for a general app.'
+                  ? t(
+                      'Uses your Go subscription. Go is intended for coding-agent traffic, so the Console API is safer for a general app.'
+                    )
                   : provider === 'opencode-console'
-                    ? 'Create a service-account key in the OpenCode Console.'
+                    ? t('Create a service-account key in the OpenCode Console.')
                     : provider === 'anthropic'
-                      ? 'Create a key at console.anthropic.com.'
+                      ? t('Create a key at console.anthropic.com.')
                       : provider === 'gemini'
-                        ? 'Create a key in Google AI Studio (aistudio.google.com).'
+                        ? t('Create a key in Google AI Studio (aistudio.google.com).')
                         : provider === 'openai-responses'
-                          ? 'Create a key at platform.openai.com.'
-                          : 'Any key accepted by your OpenAI-compatible endpoint.'
+                          ? t('Create a key at platform.openai.com.')
+                          : t('Any key accepted by your OpenAI-compatible endpoint.')
               }
             >
               <div className="secret-row">
@@ -724,12 +758,12 @@ export default function SettingsPage(): React.JSX.Element {
                     type="password"
                     value={llmKey}
                     onChange={(event) => setLlmKey(event.target.value)}
-                    placeholder={hasLlm ? '•••••••••••••••• saved' : 'sk_…'}
+                    placeholder={hasLlm ? t('•••••••••••••••• saved') : 'sk_…'}
                     autoComplete="off"
                   />
                 </div>
                 <Button variant="outline" onClick={() => void saveSecret('llmApiKey', llmKey)}>
-                  Save key
+                  {t('Save key')}
                 </Button>
                 {hasLlm ? (
                   <>
@@ -739,12 +773,12 @@ export default function SettingsPage(): React.JSX.Element {
                       disabled={testing === 'llm'}
                     >
                       {testing === 'llm' ? <Loader2 size={15} className="spin" /> : null}
-                      Test
+                      {t('Test')}
                     </Button>
                     <button
                       className="icon-button danger"
                       onClick={() => void clearKey('llmApiKey')}
-                      aria-label="Remove notes model key"
+                      aria-label={t('Remove notes model key')}
                     >
                       <Trash2 size={15} />
                     </button>
@@ -758,10 +792,17 @@ export default function SettingsPage(): React.JSX.Element {
 
           <p className="settings-note">
             {provider === 'ollama'
-              ? 'The transcript never leaves this PC when using Ollama. A 7B model is a good fit for a 6 GB GPU.'
+              ? t(
+                  'The transcript never leaves this PC when using Ollama. A 7B model is a good fit for a 6 GB GPU.'
+                )
               : provider === 'groq'
-                ? 'The transcript is sent to Groq to write the note. Groq free-tier token limits apply.'
-                : `The transcript is sent to ${providerName} to write the note. Check that provider's retention policy.`}
+                ? t(
+                    'The transcript is sent to Groq to write the note. Groq free-tier token limits apply.'
+                  )
+                : t(
+                    "The transcript is sent to {provider} to write the note. Check that provider's retention policy.",
+                    { provider: providerName }
+                  )}
           </p>
         </Card>
       </section>
@@ -772,32 +813,32 @@ export default function SettingsPage(): React.JSX.Element {
             <FolderOpen size={19} />
           </span>
           <div>
-            <h2>Storage</h2>
-            <p>Notes are plain Markdown. Audio is kept separately and expires.</p>
+            <h2>{t('Storage')}</h2>
+            <p>{t('Notes are plain Markdown. Audio is kept separately and expires.')}</p>
           </div>
         </div>
 
         <Card className="settings-card">
-          <Field label="Notes folder" hint={settings.notesDir}>
+          <Field label={t('Notes folder')} hint={settings.notesDir}>
             <div className="secret-row">
               <input value={settings.notesDir} readOnly />
               <Button variant="outline" onClick={() => void chooseFolder()}>
                 <FolderOpen size={15} />
-                Choose
+                {t('Choose')}
               </Button>
               <Button
                 variant="ghost"
                 onClick={() => void window.ezNotes.notes.openFolder()}
               >
-                Open
+                {t('Open')}
               </Button>
             </div>
           </Field>
 
           <div className="form-row">
             <Field
-              label="Delete kept audio after"
-              hint="Transcripts and notes are never deleted by retention."
+              label={t('Delete kept audio after')}
+              hint={t('Transcripts and notes are never deleted by retention.')}
             >
               <div className="input-suffix">
                 <input
@@ -807,36 +848,38 @@ export default function SettingsPage(): React.JSX.Element {
                   value={retention}
                   onChange={(event) => setRetention(Number(event.target.value))}
                 />
-                <span>days</span>
+                <span>{t('days')}</span>
               </div>
             </Field>
-            <Field label="Microphone">
+            <Field label={t('Microphone')}>
               <div className="secret-row">
                 <select
                   value={micId ?? ''}
                   onChange={(event) => setMicId(event.target.value || null)}
                 >
-                  <option value="">System default</option>
+                  <option value="">{t('System default')}</option>
                   {microphones.map((device, index) => (
                     <option key={device.deviceId || index} value={device.deviceId}>
-                      {device.label || `Microphone ${index + 1}`}
+                      {device.label || t('Microphone {number}', { number: index + 1 })}
                     </option>
                   ))}
                 </select>
                 <Button
                   variant="ghost"
                   onClick={() => void loadMicrophones(true)}
-                  title="Request permission and refresh devices"
+                  title={t('Request permission and refresh devices')}
                 >
-                  Refresh
+                  {t('Refresh')}
                 </Button>
               </div>
             </Field>
           </div>
 
           <p className="settings-note">
-            Audio files live in the app's private data folder, not in the notes folder.
-            If you keep a recording, it is removed automatically after {retention} days.
+            {t(
+              "Audio files live in the app's private data folder, not in the notes folder. If you keep a recording, it is removed automatically after {days} days.",
+              { days: retention }
+            )}
           </p>
         </Card>
       </section>
@@ -847,39 +890,42 @@ export default function SettingsPage(): React.JSX.Element {
             <BookOpen size={19} />
           </span>
           <div>
-            <h2>Exports</h2>
-            <p>Choose where your Obsidian notes should land.</p>
+            <h2>{t('Exports')}</h2>
+            <p>{t('Choose where your Obsidian notes should land.')}</p>
           </div>
         </div>
         <Card className="settings-card">
           <Field
-            label="Obsidian vault"
+            label={t('Obsidian vault')}
             hint={
               settings.settings.obsidianVault ||
-              'Not set. The first Obsidian export will ask for a folder.'
+              t('Not set. The first Obsidian export will ask for a folder.')
             }
           >
             <div className="secret-row">
               <input
                 value={settings.settings.obsidianVault}
                 readOnly
-                placeholder="Choose your vault folder"
+                placeholder={t('Choose your vault folder')}
               />
               <Button variant="outline" onClick={() => void chooseObsidianVault()}>
                 <FolderOpen size={15} />
-                Choose vault
+                {t('Choose vault')}
               </Button>
               {settings.settings.obsidianVault ? (
                 <Button variant="ghost" onClick={() => void clearObsidianVault()}>
                   <Trash2 size={15} />
-                  Clear
+                  {t('Clear')}
                 </Button>
               ) : null}
             </div>
           </Field>
           <p className="settings-note">
-            Notes are written to <code>&lt;vault&gt;/ezNotes/&lt;Course&gt;/</code> with
-            their frontmatter and tags. The path is saved for future exports.
+            {t('Notes are written to')}{' '}
+            <code>&lt;vault&gt;/ezNotes/&lt;Course&gt;/</code>{' '}
+            {t(
+              'with their frontmatter and tags. The path is saved for future exports.'
+            )}
           </p>
         </Card>
       </section>
@@ -890,8 +936,8 @@ export default function SettingsPage(): React.JSX.Element {
             {theme === 'light' ? <Sun size={19} /> : theme === 'dark' ? <Moon size={19} /> : <Monitor size={19} />}
           </span>
           <div>
-            <h2>Appearance</h2>
-            <p>Dark is the default. System follows Windows.</p>
+            <h2>{t('Appearance')}</h2>
+            <p>{t('Dark is the default. System follows Windows.')}</p>
           </div>
         </div>
         <Card className="settings-card inline-card">
@@ -899,11 +945,30 @@ export default function SettingsPage(): React.JSX.Element {
             value={theme}
             onChange={(value) => void changeTheme(value)}
             options={[
-              { value: 'dark', label: 'Dark' },
-              { value: 'light', label: 'Light' },
-              { value: 'system', label: 'System' }
+              { value: 'dark', label: t('Dark') },
+              { value: 'light', label: t('Light') },
+              { value: 'system', label: t('System') }
             ]}
           />
+          <div style={{ marginTop: 16 }}>
+            <Field
+              label={t('Interface language')}
+              hint={t(
+                'Changes the app interface. Transcripts and notes remain in European Portuguese.'
+              )}
+            >
+              <Segmented
+                value={uiLanguage}
+                onChange={(value) =>
+                  void changeInterfaceLanguage(value as UiLanguage)
+                }
+                options={[
+                  { value: 'en', label: t('English') },
+                  { value: 'pt', label: t('Português') }
+                ]}
+              />
+            </Field>
+          </div>
         </Card>
       </section>
 
@@ -913,34 +978,35 @@ export default function SettingsPage(): React.JSX.Element {
             <ShieldCheck size={19} />
           </span>
           <div>
-            <h2>Privacy & consent</h2>
-            <p>What stays local, what leaves, and what you should tell people.</p>
+            <h2>{t('Privacy & consent')}</h2>
+            <p>{t('What stays local, what leaves, and what you should tell people.')}</p>
           </div>
         </div>
         <Card className="settings-card privacy-card">
           <div className="privacy-grid">
             <div>
-              <strong>Stays on this PC</strong>
+              <strong>{t('Stays on this PC')}</strong>
               <ul>
-                <li>Audio recordings and transcripts</li>
-                <li>Notes and the searchable library</li>
-                <li>API keys, encrypted with Windows DPAPI</li>
+                <li>{t('Audio recordings and transcripts')}</li>
+                <li>{t('Notes and the searchable library')}</li>
+                <li>{t('API keys, encrypted with Windows DPAPI')}</li>
               </ul>
             </div>
             <div>
-              <strong>Leaves this PC</strong>
+              <strong>{t('Leaves this PC')}</strong>
               <ul>
-                <li>Audio chunks go to Groq for transcription</li>
-                <li>The transcript goes to OpenCode for note writing</li>
-                <li>No analytics or telemetry from ezNotes</li>
+                <li>{t('Audio chunks go to Groq for transcription')}</li>
+                <li>{t('The transcript goes to OpenCode for note writing')}</li>
+                <li>{t('No analytics or telemetry from ezNotes')}</li>
               </ul>
             </div>
           </div>
           <div className="banner banner-warn">
             <ShieldCheck size={16} />
             <span>
-              Recording a lecture may require consent. Inform the lecturer and follow
-              your institution's rules. ezNotes shows a visible recording indicator.
+              {t(
+                "Recording a lecture may require consent. Inform the lecturer and follow your institution's rules. ezNotes shows a visible recording indicator."
+              )}
             </span>
           </div>
           <div className="privacy-foot">

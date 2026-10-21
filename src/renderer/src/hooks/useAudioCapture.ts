@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { ArrayBufferTarget, Muxer } from 'webm-muxer'
 import type { RecordingStatus } from '../../../shared/types'
 import { useApp } from '../state/AppContext'
+import { t } from '../i18n'
 
 const WORKLET_SOURCE = `
 class EzNotesCaptureProcessor extends AudioWorkletProcessor {
@@ -66,7 +67,9 @@ export function useAudioCapture(): void {
     void start(recordingId, micId)
       .catch((error) => {
         toast(
-          `Microphone unavailable: ${error instanceof Error ? error.message : String(error)}`,
+          t('Microphone unavailable: {message}', {
+            message: error instanceof Error ? error.message : String(error)
+          }),
           'error'
         )
       })
@@ -116,7 +119,7 @@ export function useAudioCapture(): void {
     } catch (error) {
       if (!deviceId) throw error
       stream = await navigator.mediaDevices.getUserMedia({ audio: baseConstraints })
-      toast('Saved microphone was unavailable. Using the default device.', 'warn')
+      toast(t('Saved microphone was unavailable. Using the default device.'), 'warn')
     }
 
     if (activeIdRef.current !== null) {
@@ -193,7 +196,10 @@ export function useAudioCapture(): void {
       const encoder = new AudioEncoder({
         output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
         error: (error) => {
-          toast(`Audio compression stopped: ${error.message}`, 'warn')
+          toast(
+            t('Audio compression stopped: {message}', { message: error.message }),
+            'warn'
+          )
         }
       })
       encoder.configure({
@@ -205,9 +211,9 @@ export function useAudioCapture(): void {
       muxerRef.current = { id, muxer, encoder, samples: 0 }
     } catch (error) {
       toast(
-        `Audio compression is unavailable: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        t('Audio compression is unavailable: {message}', {
+          message: error instanceof Error ? error.message : String(error)
+        }),
         'warn'
       )
     }
@@ -231,9 +237,9 @@ export function useAudioCapture(): void {
       audioData.close()
     } catch (error) {
       toast(
-        `Audio compression stopped: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        t('Audio compression stopped: {message}', {
+          message: error instanceof Error ? error.message : String(error)
+        }),
         'warn'
       )
       abortMuxer()
@@ -254,9 +260,9 @@ export function useAudioCapture(): void {
       }
     } catch (error) {
       toast(
-        `Could not finish the compressed audio: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        t('Could not finish the compressed audio: {message}', {
+          message: error instanceof Error ? error.message : String(error)
+        }),
         'warn'
       )
     } finally {

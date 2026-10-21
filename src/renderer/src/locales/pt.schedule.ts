@@ -1,0 +1,67 @@
+export const schedule: Record<string, string> = {
+  'Give the course a name.': 'Dê um nome à disciplina.',
+  'Course updated.': 'Disciplina atualizada.',
+  'Course added.': 'Disciplina adicionada.',
+  'Choose a course.': 'Escolha uma disciplina.',
+  'The end time must be after the start time.':
+    'A hora de fim tem de ser posterior à hora de início.',
+  'Class updated.': 'Aula atualizada.',
+  'Class added.': 'Aula adicionada.',
+  'Course removed.': 'Disciplina removida.',
+  'Add a course first, then place it on the timetable.':
+    'Adicione primeiro uma disciplina e depois coloque-a no horário.',
+  Timetable: 'Horário',
+  'Your week': 'A sua semana',
+  'ezNotes uses this to know which course a lecture belongs to and what to put in the note header.':
+    'O ezNotes usa isto para saber a que disciplina pertence uma aula e o que incluir no cabeçalho da nota.',
+  'New course': 'Nova disciplina',
+  'Add class': 'Adicionar aula',
+  'Start with a course': 'Comece por uma disciplina',
+  'Add the course name, lecturer, and any technical terms the transcription should recognise.':
+    'Adicione o nome da disciplina, o docente e quaisquer termos técnicos que a transcrição deve reconhecer.',
+  'Add your first course': 'Adicionar a primeira disciplina',
+  'Weekly timetable': 'Horário semanal',
+  '{count} class scheduled': '{count} aula agendada',
+  '{count} classes scheduled': '{count} aulas agendadas',
+  'Jump to {day}': 'Ir para {day}',
+  'Add class on {day}': 'Adicionar aula: {day}',
+  'No room': 'Sem sala',
+  'No classes — add one': 'Sem aulas — adicione uma',
+  Courses: 'Disciplinas',
+  Add: 'Adicionar',
+  'Edit course': 'Editar disciplina',
+  'Delete course': 'Apagar disciplina',
+  '{count} class / week': '{count} aula / semana',
+  '{count} classes / week': '{count} aulas / semana',
+  'No glossary terms yet.': 'Ainda não há termos no glossário.',
+  'The glossary helps Whisper spell names and technical terms correctly.':
+    'O glossário ajuda o Whisper a escrever corretamente nomes e termos técnicos.',
+  Cancel: 'Cancelar',
+  'Saving…': 'A guardar…',
+  'Save course': 'Guardar disciplina',
+  'Course name': 'Nome da disciplina',
+  'e.g. Cálculo I': 'ex.: Cálculo I',
+  Code: 'Código',
+  Optional: 'Opcional',
+  Lecturer: 'Docente',
+  Colour: 'Cor',
+  Glossary: 'Glossário',
+  'Comma-separated names, acronyms, or terms the lecturer uses.':
+    'Nomes, siglas ou termos usados pelo docente, separados por vírgulas.',
+  'Edit class': 'Editar aula',
+  'Pick a course and a weekly time slot.':
+    'Escolha uma disciplina e um horário semanal.',
+  'Save class': 'Guardar aula',
+  Course: 'Disciplina',
+  Day: 'Dia',
+  Room: 'Sala',
+  Starts: 'Início',
+  Ends: 'Fim',
+  'Remove this course?': 'Remover esta disciplina?',
+  'Its weekly classes will also be removed from the timetable.':
+    'As suas aulas semanais também serão removidas do horário.',
+  'Removing…': 'A remover…',
+  'Remove course': 'Remover disciplina',
+  'will be removed. Existing notes are not affected.':
+    'será removida. As notas existentes não são afetadas.'
+}

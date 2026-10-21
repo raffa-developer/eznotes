@@ -1,0 +1,26 @@
+export const island: Record<string, string> = {
+  'The last processing step failed.': 'O último passo de processamento falhou.',
+  'Preparing the lecture': 'A preparar a aula',
+  Lecture: 'Aula',
+  'Resume recording': 'Retomar gravação',
+  'Pause recording': 'Pausar gravação',
+  'Stop and write notes': 'Parar e escrever notas',
+  Writing: 'A escrever',
+  Ready: 'Pronto',
+  Error: 'Erro',
+  Collapse: 'Recolher',
+  Expand: 'Expandir',
+  'Open ezNotes': 'Abrir o ezNotes',
+  'Listening for the first words…': 'À espera das primeiras palavras…',
+  'Live transcript is off. Final notes will be written after class.':
+    'A transcrição em direto está desativada. As notas finais serão escritas após a aula.',
+  'Keep the lecture audio?': 'Guardar o áudio da aula?',
+  'Delete audio': 'Apagar áudio',
+  'Keep {days} days': 'Guardar {days} dias',
+  'Writing notes…': 'A escrever notas…',
+  'Notes ready.': 'Notas prontas.',
+  Close: 'Fechar',
+  'Open note': 'Abrir nota',
+  'The recording needs attention.': 'A gravação precisa de atenção.',
+  'Open app': 'Abrir aplicação'
+}

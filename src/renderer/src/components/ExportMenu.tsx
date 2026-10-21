@@ -10,44 +10,7 @@ import {
 } from 'lucide-react'
 import type { NoteExportFormat } from '../../../shared/types'
 import { Button } from './ui'
-
-const ITEMS: Array<{
-  format: NoteExportFormat
-  label: string
-  hint: string
-  icon: typeof Clipboard
-}> = [
-  {
-    format: 'clipboard',
-    label: 'Copy Markdown',
-    hint: 'Paste into any Markdown editor',
-    icon: Clipboard
-  },
-  {
-    format: 'markdown',
-    label: 'Save as Markdown',
-    hint: 'A portable .md file',
-    icon: FileText
-  },
-  {
-    format: 'pdf',
-    label: 'Save as PDF',
-    hint: 'A4, ready to print or share',
-    icon: Printer
-  },
-  {
-    format: 'obsidian',
-    label: 'Send to Obsidian',
-    hint: 'Choose your vault folder',
-    icon: BookOpen
-  },
-  {
-    format: 'notion',
-    label: 'Copy for Notion',
-    hint: 'Paste into a Notion page',
-    icon: Send
-  }
-]
+import { t } from '../i18n'
 
 export default function ExportMenu({
   onExport,
@@ -58,6 +21,43 @@ export default function ExportMenu({
 }): React.JSX.Element {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement | null>(null)
+  const items: Array<{
+    format: NoteExportFormat
+    label: string
+    hint: string
+    icon: typeof Clipboard
+  }> = [
+    {
+      format: 'clipboard',
+      label: t('Copy Markdown'),
+      hint: t('Paste into any Markdown editor'),
+      icon: Clipboard
+    },
+    {
+      format: 'markdown',
+      label: t('Save as Markdown'),
+      hint: t('A portable .md file'),
+      icon: FileText
+    },
+    {
+      format: 'pdf',
+      label: t('Save as PDF'),
+      hint: t('A4, ready to print or share'),
+      icon: Printer
+    },
+    {
+      format: 'obsidian',
+      label: t('Send to Obsidian'),
+      hint: t('Choose your vault folder'),
+      icon: BookOpen
+    },
+    {
+      format: 'notion',
+      label: t('Copy for Notion'),
+      hint: t('Paste into a Notion page'),
+      icon: Send
+    }
+  ]
 
   useEffect(() => {
     if (!open) return
@@ -90,14 +90,14 @@ export default function ExportMenu({
         aria-expanded={open}
       >
         <Download size={16} />
-        {busy ? 'Exporting…' : 'Export'}
+        {busy ? t('Exporting…') : t('Export')}
         <ChevronDown size={14} className={open ? 'chevron up' : 'chevron'} />
       </Button>
 
       {open ? (
         <div className="export-popover" role="menu">
-          <p className="export-title">Take this note with you</p>
-          {ITEMS.map(({ format, label, hint, icon: Icon }) => (
+          <p className="export-title">{t('Take this note with you')}</p>
+          {items.map(({ format, label, hint, icon: Icon }) => (
             <button
               key={format}
               className="export-item"

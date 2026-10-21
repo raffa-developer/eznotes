@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Mic } from 'lucide-react'
 import { useApp } from '../state/AppContext'
 import { Button, Field, Modal } from './ui'
+import { t } from '../i18n'
 
 export default function StartRecordingDialog({
   open,
@@ -28,7 +29,7 @@ export default function StartRecordingDialog({
 
   async function start(): Promise<void> {
     if (!course) {
-      toast('Add a course to your schedule first.', 'warn')
+      toast(t('Add a course to your schedule first.'), 'warn')
       return
     }
     setStarting(true)
@@ -52,31 +53,31 @@ export default function StartRecordingDialog({
   return (
     <Modal
       open={open}
-      title="Start a lecture"
-      subtitle="ezNotes will listen, transcribe, and write the notes."
+      title={t('Start a lecture')}
+      subtitle={t('ezNotes will listen, transcribe, and write the notes.')}
       onClose={onClose}
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={starting}>
-            Cancel
+            {t('Cancel')}
           </Button>
           <Button variant="primary" onClick={() => void start()} disabled={starting || !course}>
             <Mic size={16} />
-            {starting ? 'Starting…' : 'Start recording'}
+            {starting ? t('Starting…') : t('Start recording')}
           </Button>
         </>
       }
     >
       {schedule.courses.length === 0 ? (
         <div className="inline-empty">
-          <p>You need at least one course before recording.</p>
+          <p>{t('You need at least one course before recording.')}</p>
           <Button variant="outline" onClick={() => navigate('/schedule')}>
-            Set up your schedule
+            {t('Set up your schedule')}
           </Button>
         </div>
       ) : (
         <div className="form-grid">
-          <Field label="Course">
+          <Field label={t('Course')}>
             <select
               value={courseId}
               onChange={(event) => setCourseId(event.target.value)}
@@ -90,13 +91,13 @@ export default function StartRecordingDialog({
             </select>
           </Field>
           <Field
-            label="Lecture title"
-            hint="Optional. The model will write a better title from the content."
+            label={t('Lecture title')}
+            hint={t('Optional. The model will write a better title from the content.')}
           >
             <input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              placeholder="e.g. Introdução às derivadas"
+              placeholder={t('e.g. Introdução às derivadas')}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') void start()
               }}
@@ -104,7 +105,7 @@ export default function StartRecordingDialog({
           </Field>
           <div className="dialog-note">
             <span className="pulse-dot" />
-            Recording uses your microphone. ezNotes asks about keeping the audio after class.
+            {t('Recording uses your microphone. ezNotes asks about keeping the audio after class.')}
           </div>
         </div>
       )}

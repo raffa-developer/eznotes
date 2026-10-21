@@ -13,8 +13,8 @@ It is local-first. Audio, transcripts, notes, and API keys stay on your PC; the
 only outbound requests are the ones you configure.
 
 > **Language:** transcription and every generated note are in European Portuguese
-> (`pt-PT`). The interface is currently in English — UI localization is on the
-> [roadmap](TODO.md).
+> (`pt-PT`). The interface can be switched between English and European Portuguese
+> in **Settings → Appearance**.
 
 ## Status
 
@@ -49,6 +49,8 @@ source for now.
   recording when a scheduled class begins.
 - **Tray and hotkey** — start, pause, or stop from the tray or an optional,
   configurable global shortcut.
+- **Bilingual interface** — English and European Portuguese (pt-PT), switchable
+  without a restart.
 - **Local-first keys** — API keys are encrypted with Windows DPAPI through
   Electron `safeStorage`.
 
@@ -296,9 +298,9 @@ The library also has a quick copy button on every note.
 Unit tests cover transcript overlap trimming and deduplication, frontmatter
 parsing, filename sanitising, upcoming-class calculation, auto-start scheduling,
 quick-recording class lookup, cue detection, log rotation, speaker assignment,
-provider response parsing, and title/summary extraction. The main-process
-modules are imported under Node with `electron` aliased to
-`tests/electron-stub.ts`.
+provider response parsing, translation lookup/interpolation, and title/summary
+extraction. The main-process modules are imported under Node with `electron`
+aliased to `tests/electron-stub.ts`.
 
 `.github/workflows/ci.yml` runs `npm ci`, `typecheck`, `test`, and `build` on
 Node 24 for every push to `main` and every pull request.
@@ -345,13 +347,12 @@ it, the diarization worker, and the sherpa native modules into
 
 The detailed, tickable list lives in [`TODO.md`](TODO.md). Highlights:
 
-- Portuguese (pt-PT) interface localization
 - More UI refinements and cross-monitor island behaviour
 
 Recently shipped: crash-safe recordings, recovery of interrupted lectures,
 transcript-only notes, optional local speaker labels, opt-in auto-start, the
-tray icon with a configurable global hotkey, compact Opus audio, and native
-Anthropic/Gemini/OpenAI adapters.
+tray icon with a configurable global hotkey, compact Opus audio, native
+Anthropic/Gemini/OpenAI adapters, and a bilingual English/pt-PT interface.
 
 ## Contributing
 
@@ -363,8 +364,9 @@ Contributions are welcome — bug reports, feature ideas, docs, and pull request
 4. Keep generated note prompts and output in European Portuguese (`pt-PT`).
 5. Never commit API keys, personal notes, or recordings.
 
-The interface strings are currently English. If you want to help localize the
-app, see the `uiLanguage` setting and P1-6 in the roadmap.
+The interface is available in English and European Portuguese. When adding UI
+strings, use `t('English source')` and add the pt-PT entry under
+`src/renderer/src/locales/`.
 
 ## License
 

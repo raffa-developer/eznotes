@@ -15,6 +15,7 @@ import type {
   SettingsStatus,
   UpcomingClass
 } from '../../../shared/types'
+import { setUiLanguage } from '../i18n'
 
 export type ToastTone = 'info' | 'success' | 'warn' | 'error'
 
@@ -55,6 +56,8 @@ export function AppProvider({ children }: { children: ReactNode }): React.JSX.El
   const [loading, setLoading] = useState(true)
   const [toasts, setToasts] = useState<Toast[]>([])
   const toastId = useRef(1)
+
+  setUiLanguage(settings?.settings.uiLanguage ?? 'en')
 
   const refreshSettings = useCallback(async () => {
     const next = await window.ezNotes.settings.get()

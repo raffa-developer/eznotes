@@ -45,8 +45,9 @@ tick the box here and in `TODO.md` when it lands.
       Chat Completions stays for the other providers
       `src/main/llm.ts`, `src/shared/types.ts`, `src/renderer/src/pages/SettingsPage.tsx`
       — Anthropic uses the official SDK with streaming; 61 tests.
-- [ ] **P1-6** Wire up `Settings.uiLanguage` with a small dictionary module
-      `src/shared/types.ts`, `src/renderer/src/pages/*`
+- [x] **P1-6** Wire up `Settings.uiLanguage` with a dictionary module
+      `src/renderer/src/i18n.ts`, `src/renderer/src/locales/`, `src/main/uiText.ts`
+      — English/pt-PT, live switching, locale-aware dates, tray/dialogs; 64 tests.
 
 ## P2 — Refinements
 
@@ -63,7 +64,7 @@ tick the box here and in `TODO.md` when it lands.
 
 - [x] **H-1** Add `vitest` + `npm test`; cover `trimOverlap`, `dedupeSegments`,
       `splitFrontmatter`, `sanitizeFilename`, `upcomingClasses`, `detectCues`
-      — 61 tests in 8 files; `electron` is aliased to `tests/electron-stub.ts`.
+      — 64 tests in 9 files; `electron` is aliased to `tests/electron-stub.ts`.
 - [x] **H-2** Add CI: `typecheck` + `test` + `build`
       — `.github/workflows/ci.yml`, Node 24, Electron binary download skipped.
 - [x] **H-3** Replace hardcoded `User-Agent: ezNotes/0.5.2` with

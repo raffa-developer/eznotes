@@ -11,7 +11,8 @@ import {
 import type { ClassSlot, Course } from '../../../shared/types'
 import { useApp } from '../state/AppContext'
 import { Badge, Button, Card, EmptyState, Field, Modal } from '../components/ui'
-import { uid, weekdayLong, WEEKDAYS } from '../lib/format'
+import { t } from '../i18n'
+import { uid, weekdayLong, weekdayShort, WEEKDAYS } from '../lib/format'
 import { COURSE_COLORS } from '../lib/colors'
 
 interface CourseForm {
@@ -81,7 +82,7 @@ export default function SchedulePage(): React.JSX.Element {
   async function saveCourse(): Promise<void> {
     if (!courseForm) return
     if (!courseForm.name.trim()) {
-      toast('Give the course a name.', 'warn')
+      toast(t('Give the course a name.'), 'warn')
       return
     }
     const course: Course = {
@@ -104,17 +105,17 @@ export default function SchedulePage(): React.JSX.Element {
     }
     await persist(next)
     setCourseForm(null)
-    toast(exists ? 'Course updated.' : 'Course added.', 'success')
+    toast(t(exists ? 'Course updated.' : 'Course added.'), 'success')
   }
 
   async function saveSlot(): Promise<void> {
     if (!slotForm) return
     if (!slotForm.courseId) {
-      toast('Choose a course.', 'warn')
+      toast(t('Choose a course.'), 'warn')
       return
     }
     if (slotForm.endTime <= slotForm.startTime) {
-      toast('The end time must be after the start time.', 'warn')
+      toast(t('The end time must be after the start time.'), 'warn')
       return
     }
     const slot: ClassSlot = {
@@ -134,7 +135,7 @@ export default function SchedulePage(): React.JSX.Element {
     }
     await persist(next)
     setSlotForm(null)
-    toast(exists ? 'Class updated.' : 'Class added.', 'success')
+    toast(t(exists ? 'Class updated.' : 'Class added.'), 'success')
   }
 
   async function removeCourse(): Promise<void> {
@@ -145,7 +146,7 @@ export default function SchedulePage(): React.JSX.Element {
     }
     await persist(next)
     setDeleteCourse(null)
-    toast('Course removed.', 'success')
+    toast(t('Course removed.'), 'success')
   }
 
   function editCourse(course: Course): void {
@@ -176,7 +177,7 @@ export default function SchedulePage(): React.JSX.Element {
 
   function newSlot(weekday: number): void {
     if (!schedule.courses.length) {
-      toast('Add a course first, then place it on the timetable.', 'warn')
+      toast(t('Add a course first, then place it on the timetable.'), 'warn')
       newCourse()
       return
     }
@@ -194,17 +195,18 @@ export default function SchedulePage(): React.JSX.Element {
     <div className="page">
       <header className="page-head">
         <div>
-          <p className="eyebrow">Timetable</p>
-          <h1>Your week</h1>
+          <p className="eyebrow">{t('Timetable')}</p>
+          <h1>{t('Your week')}</h1>
           <p className="page-sub">
-            ezNotes uses this to know which course a lecture belongs to and what to put
-            in the note header.
+            {t(
+              'ezNotes uses this to know which course a lecture belongs to and what to put in the note header.'
+            )}
           </p>
         </div>
         <div className="page-actions">
           <Button variant="ghost" onClick={newCourse} disabled={saving}>
             <Plus size={16} />
-            New course
+            {t('New course')}
           </Button>
           <Button
             variant="primary"
@@ -212,7 +214,7 @@ export default function SchedulePage(): React.JSX.Element {
             disabled={saving}
           >
             <CalendarDays size={16} />
-            Add class
+            {t('Add class')}
           </Button>
         </div>
       </header>
@@ -221,12 +223,14 @@ export default function SchedulePage(): React.JSX.Element {
         <Card>
           <EmptyState
             icon={<CalendarDays size={24} />}
-            title="Start with a course"
-            body="Add the course name, lecturer, and any technical terms the transcription should recognise."
+            title={t('Start with a course')}
+            body={t(
+              'Add the course name, lecturer, and any technical terms the transcription should recognise.'
+            )}
             action={
               <Button variant="primary" onClick={newCourse}>
                 <Plus size={16} />
-                Add your first course
+                {t('Add your first course')}
               </Button>
             }
           />
@@ -236,8 +240,15 @@ export default function SchedulePage(): React.JSX.Element {
           <Card className="week-card">
             <div className="panel-head">
               <div>
-                <h2>Weekly timetable</h2>
-                <p>{schedule.slots.length} classes scheduled</p>
+                <h2>{t('Weekly timetable')}</h2>
+                <p>
+                  {t(
+                    schedule.slots.length === 1
+                      ? '{count} class scheduled'
+                      : '{count} classes scheduled',
+                    { count: schedule.slots.length }
+                  )}
+                </p>
               </div>
               <CalendarDays size={20} className="panel-icon" />
             </div>
@@ -245,18 +256,19 @@ export default function SchedulePage(): React.JSX.Element {
             <div className="week-overview">
               {WEEKDAYS.map((day) => {
                 const count = slotsByDay.get(day.value)?.length ?? 0
+                const dayLong = weekdayLong(day.value)
                 return (
                   <button
                     key={day.value}
                     className={day.value === todayWeekday ? 'today' : ''}
-                    aria-label={`Jump to ${day.long}`}
+                    aria-label={t('Jump to {day}', { day: dayLong })}
                     onClick={() =>
                       document
                         .getElementById(`week-day-${day.value}`)
                         ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                     }
                   >
-                    <span>{day.short}</span>
+                    <span>{weekdayShort(day.value)}</span>
                     <strong>{count || '–'}</strong>
                   </button>
                 )
@@ -266,14 +278,15 @@ export default function SchedulePage(): React.JSX.Element {
             <div className="week-list">
               {WEEKDAYS.map((day) => {
                 const slots = slotsByDay.get(day.value) ?? []
+                const dayLong = weekdayLong(day.value)
                 return (
                   <div key={day.value} className="week-day" id={`week-day-${day.value}`}>
                     <div className="week-day-head">
-                      <span>{day.long}</span>
+                      <span>{dayLong}</span>
                       <button
                         className="week-add"
                         onClick={() => newSlot(day.value)}
-                        aria-label={`Add class on ${day.long}`}
+                        aria-label={t('Add class on {day}', { day: dayLong })}
                       >
                         <Plus size={14} />
                       </button>
@@ -300,7 +313,7 @@ export default function SchedulePage(): React.JSX.Element {
                               <strong>{course.name}</strong>
                               <small>
                                 {slot.room ? <MapPin size={12} /> : null}
-                                {slot.room || 'No room'}
+                                {slot.room || t('No room')}
                               </small>
                             </span>
                             <Pencil size={14} className="slot-edit" />
@@ -309,7 +322,7 @@ export default function SchedulePage(): React.JSX.Element {
                       })
                     ) : (
                       <button className="slot-empty" onClick={() => newSlot(day.value)}>
-                        No classes — add one
+                        {t('No classes — add one')}
                       </button>
                     )}
                   </div>
@@ -320,9 +333,9 @@ export default function SchedulePage(): React.JSX.Element {
 
           <div className="course-column">
             <div className="section-head">
-              <h2>Courses</h2>
+              <h2>{t('Courses')}</h2>
               <button className="text-link" onClick={newCourse}>
-                <Plus size={14} /> Add
+                <Plus size={14} /> {t('Add')}
               </button>
             </div>
             {schedule.courses.length ? (
@@ -348,14 +361,14 @@ export default function SchedulePage(): React.JSX.Element {
                           <button
                             className="icon-button"
                             onClick={() => editCourse(course)}
-                            aria-label="Edit course"
+                            aria-label={t('Edit course')}
                           >
                             <Pencil size={14} />
                           </button>
                           <button
                             className="icon-button danger"
                             onClick={() => setDeleteCourse(course)}
-                            aria-label="Delete course"
+                            aria-label={t('Delete course')}
                           >
                             <Trash2 size={14} />
                           </button>
@@ -368,8 +381,13 @@ export default function SchedulePage(): React.JSX.Element {
                           </span>
                         ) : null}
                         <span>
-                          <Clock size={13} /> {weeklyCount}{' '}
-                          {weeklyCount === 1 ? 'class' : 'classes'} / week
+                          <Clock size={13} />{' '}
+                          {t(
+                            weeklyCount === 1
+                              ? '{count} class / week'
+                              : '{count} classes / week',
+                            { count: weeklyCount }
+                          )}
                         </span>
                       </div>
                       {course.glossary.length ? (
@@ -384,7 +402,7 @@ export default function SchedulePage(): React.JSX.Element {
                           ) : null}
                         </div>
                       ) : (
-                        <p className="course-glossary-hint">No glossary terms yet.</p>
+                        <p className="course-glossary-hint">{t('No glossary terms yet.')}</p>
                       )}
                     </div>
                   )
@@ -397,34 +415,36 @@ export default function SchedulePage(): React.JSX.Element {
 
       <Modal
         open={Boolean(courseForm)}
-        title={courseForm?.name ? 'Edit course' : 'New course'}
-        subtitle="The glossary helps Whisper spell names and technical terms correctly."
+        title={t(courseForm?.name ? 'Edit course' : 'New course')}
+        subtitle={t(
+          'The glossary helps Whisper spell names and technical terms correctly.'
+        )}
         onClose={() => setCourseForm(null)}
         footer={
           <>
             <Button variant="ghost" onClick={() => setCourseForm(null)} disabled={saving}>
-              Cancel
+              {t('Cancel')}
             </Button>
             <Button variant="primary" onClick={() => void saveCourse()} disabled={saving}>
-              {saving ? 'Saving…' : 'Save course'}
+              {saving ? t('Saving…') : t('Save course')}
             </Button>
           </>
         }
       >
         {courseForm ? (
           <div className="form-grid">
-            <Field label="Course name">
+            <Field label={t('Course name')}>
               <input
                 autoFocus
                 value={courseForm.name}
                 onChange={(event) =>
                   setCourseForm({ ...courseForm, name: event.target.value })
                 }
-                placeholder="e.g. Cálculo I"
+                placeholder={t('e.g. Cálculo I')}
               />
             </Field>
             <div className="form-row">
-              <Field label="Code" hint="Optional">
+              <Field label={t('Code')} hint={t('Optional')}>
                 <input
                   value={courseForm.code}
                   onChange={(event) =>
@@ -433,7 +453,7 @@ export default function SchedulePage(): React.JSX.Element {
                   placeholder="CALC1"
                 />
               </Field>
-              <Field label="Lecturer" hint="Optional">
+              <Field label={t('Lecturer')} hint={t('Optional')}>
                 <input
                   value={courseForm.lecturer}
                   onChange={(event) =>
@@ -443,7 +463,7 @@ export default function SchedulePage(): React.JSX.Element {
                 />
               </Field>
             </div>
-            <Field label="Colour">
+            <Field label={t('Colour')}>
               <div className="color-row">
                 {COURSE_COLORS.map((color) => (
                   <button
@@ -458,8 +478,8 @@ export default function SchedulePage(): React.JSX.Element {
               </div>
             </Field>
             <Field
-              label="Glossary"
-              hint="Comma-separated names, acronyms, or terms the lecturer uses."
+              label={t('Glossary')}
+              hint={t('Comma-separated names, acronyms, or terms the lecturer uses.')}
             >
               <textarea
                 value={courseForm.glossary}
@@ -476,23 +496,27 @@ export default function SchedulePage(): React.JSX.Element {
 
       <Modal
         open={Boolean(slotForm)}
-        title={slotForm?.id && schedule.slots.some((slot) => slot.id === slotForm.id) ? 'Edit class' : 'Add class'}
-        subtitle="Pick a course and a weekly time slot."
+        title={t(
+          slotForm?.id && schedule.slots.some((slot) => slot.id === slotForm.id)
+            ? 'Edit class'
+            : 'Add class'
+        )}
+        subtitle={t('Pick a course and a weekly time slot.')}
         onClose={() => setSlotForm(null)}
         footer={
           <>
             <Button variant="ghost" onClick={() => setSlotForm(null)} disabled={saving}>
-              Cancel
+              {t('Cancel')}
             </Button>
             <Button variant="primary" onClick={() => void saveSlot()} disabled={saving}>
-              {saving ? 'Saving…' : 'Save class'}
+              {saving ? t('Saving…') : t('Save class')}
             </Button>
           </>
         }
       >
         {slotForm ? (
           <div className="form-grid">
-            <Field label="Course">
+            <Field label={t('Course')}>
               <select
                 value={slotForm.courseId}
                 onChange={(event) =>
@@ -507,7 +531,7 @@ export default function SchedulePage(): React.JSX.Element {
               </select>
             </Field>
             <div className="form-row">
-              <Field label="Day">
+              <Field label={t('Day')}>
                 <select
                   value={slotForm.weekday}
                   onChange={(event) =>
@@ -521,7 +545,7 @@ export default function SchedulePage(): React.JSX.Element {
                   ))}
                 </select>
               </Field>
-              <Field label="Room" hint="Optional">
+              <Field label={t('Room')} hint={t('Optional')}>
                 <input
                   value={slotForm.room}
                   onChange={(event) =>
@@ -532,7 +556,7 @@ export default function SchedulePage(): React.JSX.Element {
               </Field>
             </div>
             <div className="form-row">
-              <Field label="Starts">
+              <Field label={t('Starts')}>
                 <input
                   type="time"
                   value={slotForm.startTime}
@@ -541,7 +565,7 @@ export default function SchedulePage(): React.JSX.Element {
                   }
                 />
               </Field>
-              <Field label="Ends">
+              <Field label={t('Ends')}>
                 <input
                   type="time"
                   value={slotForm.endTime}
@@ -557,24 +581,24 @@ export default function SchedulePage(): React.JSX.Element {
 
       <Modal
         open={Boolean(deleteCourse)}
-        title="Remove this course?"
-        subtitle="Its weekly classes will also be removed from the timetable."
+        title={t('Remove this course?')}
+        subtitle={t('Its weekly classes will also be removed from the timetable.')}
         onClose={() => setDeleteCourse(null)}
         footer={
           <>
             <Button variant="ghost" onClick={() => setDeleteCourse(null)} disabled={saving}>
-              Cancel
+              {t('Cancel')}
             </Button>
             <Button variant="danger" onClick={() => void removeCourse()} disabled={saving}>
               <Trash2 size={15} />
-              {saving ? 'Removing…' : 'Remove course'}
+              {saving ? t('Removing…') : t('Remove course')}
             </Button>
           </>
         }
       >
         <p className="modal-text">
-          <strong>{deleteCourse?.name}</strong> will be removed. Existing notes are
-          not affected.
+          <strong>{deleteCourse?.name}</strong>{' '}
+          {t('will be removed. Existing notes are not affected.')}
         </p>
       </Modal>
     </div>

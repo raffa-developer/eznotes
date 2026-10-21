@@ -23,6 +23,7 @@ import {
   formatTimer,
   formatTimestamp
 } from '../lib/format'
+import { t, uiLocale } from '../i18n'
 
 export default function Live(): React.JSX.Element {
   const {
@@ -127,7 +128,9 @@ export default function Live(): React.JSX.Element {
       .catch((error) => {
         if (!cancelled) {
           toast(
-            `Could not restore the live view: ${error instanceof Error ? error.message : String(error)}`,
+            t('Could not restore the live view: {error}', {
+              error: error instanceof Error ? error.message : String(error)
+            }),
             'warn'
           )
         }
@@ -167,7 +170,7 @@ export default function Live(): React.JSX.Element {
     setFinalizing(true)
     setFinalizeError(null)
     setProcessing({
-      step: transcriptOnly ? 'Saving the transcript' : 'Preparing the lecture',
+      step: transcriptOnly ? t('Saving the transcript') : t('Preparing the lecture'),
       progress: 0.02
     })
     try {
@@ -188,10 +191,12 @@ export default function Live(): React.JSX.Element {
       result.warnings.forEach((warning) => toast(warning, 'warn'))
       toast(
         transcriptOnly
-          ? 'Transcript saved as a note.'
+          ? t('Transcript saved as a note.')
           : result.audioKept
-            ? `Notes written. Audio will be removed after ${retentionDays} days.`
-            : 'Notes written. Audio deleted.',
+            ? t('Notes written. Audio will be removed after {days} days.', {
+                days: retentionDays
+              })
+            : t('Notes written. Audio deleted.'),
         'success'
       )
       navigate(`/notes/${result.note.id}`)
@@ -217,10 +222,10 @@ export default function Live(): React.JSX.Element {
         <header className="page-head">
           <div>
             <Link to="/" className="back-link">
-              <ArrowLeft size={15} /> Home
+              <ArrowLeft size={15} /> {t('Home')}
             </Link>
-            <h1>No active lecture.</h1>
-            <p className="page-sub">Start a recording from the home screen.</p>
+            <h1>{t('No active lecture.')}</h1>
+            <p className="page-sub">{t('Start a recording from the home screen.')}</p>
           </div>
         </header>
       </div>
@@ -240,18 +245,22 @@ export default function Live(): React.JSX.Element {
             <Badge tone={isRecording ? 'danger' : isPaused ? 'warn' : 'neutral'}>
               <span className={`rec-dot ${recording.status}`} />
               {isProcessing
-                ? 'Writing notes'
+                ? t('Writing notes')
                 : isPaused
-                  ? 'Paused'
+                  ? t('Paused')
                   : isRecording
-                    ? 'Recording'
-                    : recording.status}
+                    ? t('Recording')
+                    : recording.status === 'done'
+                      ? t('Done')
+                      : recording.status === 'error'
+                        ? t('Error')
+                        : t('Stopped')}
             </Badge>
           </div>
           <h1>{recording.title}</h1>
           <p className="page-sub">
-            Started{' '}
-            {new Intl.DateTimeFormat('en-GB', {
+            {t('Started')}{' '}
+            {new Intl.DateTimeFormat(uiLocale(), {
               hour: '2-digit',
               minute: '2-digit'
             }).format(new Date(recording.startedAt))}
@@ -260,7 +269,7 @@ export default function Live(): React.JSX.Element {
         </div>
         <div className="live-timer">
           <span>{formatTimer(elapsed)}</span>
-          <small>{formatDuration(elapsed)} captured</small>
+          <small>{t('{duration} captured', { duration: formatDuration(elapsed) })}</small>
         </div>
       </header>
 
@@ -268,8 +277,8 @@ export default function Live(): React.JSX.Element {
         <div className="banner banner-warn">
           <AlertTriangle size={17} />
           <span>
-            Live transcription needs a Groq API key.{' '}
-            <Link to="/settings">Add it in Settings</Link>.
+            {t('Live transcription needs a Groq API key.')}{' '}
+            <Link to="/settings">{t('Add it in Settings')}</Link>.
           </span>
         </div>
       ) : null}
@@ -279,8 +288,8 @@ export default function Live(): React.JSX.Element {
           <AlertTriangle size={17} />
           <span>
             {recording.status === 'error'
-              ? recording.error ?? 'The last processing step failed.'
-              : 'This recording is stopped and waiting for notes.'}{' '}
+              ? recording.error ?? t('The last processing step failed.')
+              : t('This recording is stopped and waiting for notes.')}{' '}
             <button
               className="inline-link"
               onClick={() =>
@@ -292,11 +301,11 @@ export default function Live(): React.JSX.Element {
                 })
               }
             >
-              {recording.status === 'error' ? 'Try again' : 'Continue'}
+              {recording.status === 'error' ? t('Try again') : t('Continue')}
             </button>{' '}
-            or{' '}
+            {t('or')}{' '}
             <button className="inline-link" onClick={() => void discard()}>
-              delete this recording
+              {t('delete this recording')}
             </button>
             .
           </span>
@@ -307,11 +316,13 @@ export default function Live(): React.JSX.Element {
         <Card className="transcript-card">
           <div className="panel-head">
             <div>
-              <h2>Transcript</h2>
+              <h2>{t('Transcript')}</h2>
               <p>
                 {segments.length
-                  ? `${segments.length} ${segments.length === 1 ? 'segment' : 'segments'} · Portuguese`
-                  : 'Listening for speech…'}
+                  ? segments.length === 1
+                    ? t('1 segment · Portuguese')
+                    : t('{count} segments · Portuguese', { count: segments.length })
+                  : t('Listening for speech…')}
               </p>
             </div>
             <Waves size={20} className={isRecording ? 'wave-icon active' : 'wave-icon'} />
@@ -345,24 +356,24 @@ export default function Live(): React.JSX.Element {
                 </span>
                 <h3>
                   {!liveTranscript
-                    ? 'Live transcript is off.'
+                    ? t('Live transcript is off.')
                     : hasGroq
-                      ? 'The microphone is open.'
-                      : 'Recording audio locally.'}
+                      ? t('The microphone is open.')
+                      : t('Recording audio locally.')}
                 </h3>
                 <p>
                   {!liveTranscript
-                    ? 'The lecture is still being recorded. The final transcript and structured notes will be written after class.'
+                    ? t('The lecture is still being recorded. The final transcript and structured notes will be written after class.')
                     : hasGroq
-                      ? 'The first words will appear a few seconds after someone starts speaking.'
-                      : 'Add a Groq key to turn this audio into a live transcript. The recording is still being saved.'}
+                      ? t('The first words will appear a few seconds after someone starts speaking.')
+                      : t('Add a Groq key to turn this audio into a live transcript. The recording is still being saved.')}
                 </p>
               </div>
             )}
           </div>
 
           <div className="transcript-foot">
-            <span className="level-meter" aria-label="Microphone level">
+            <span className="level-meter" aria-label={t('Microphone level')}>
               {Array.from({ length: 18 }).map((_, index) => (
                 <i
                   key={index}
@@ -374,7 +385,9 @@ export default function Live(): React.JSX.Element {
               ))}
             </span>
             <span className="transcript-mic">
-              {settings?.settings.microphoneId ? 'Selected microphone' : 'Default microphone'}
+              {settings?.settings.microphoneId
+                ? t('Selected microphone')
+                : t('Default microphone')}
             </span>
           </div>
         </Card>
@@ -383,8 +396,8 @@ export default function Live(): React.JSX.Element {
           <Card className="outline-card">
             <div className="panel-head">
               <div>
-                <h2>Live outline</h2>
-                <p>Updates every ~90 seconds</p>
+                <h2>{t('Live outline')}</h2>
+                <p>{t('Updates every ~90 seconds')}</p>
               </div>
               <SparkIcon />
             </div>
@@ -401,14 +414,14 @@ export default function Live(): React.JSX.Element {
               <div className="outline-empty">
                 <p>
                   {!liveTranscript
-                    ? 'Live outline is off. The transcript and notes are written after class.'
+                    ? t('Live outline is off. The transcript and notes are written after class.')
                     : hasLlm
-                      ? 'The outline will appear once there is enough academic content.'
-                      : 'Choose a notes model in Settings to get a live outline.'}
+                      ? t('The outline will appear once there is enough academic content.')
+                      : t('Choose a notes model in Settings to get a live outline.')}
                 </p>
                 {!hasLlm || !liveTranscript ? (
                   <Link to="/settings" className="text-link">
-                    <SettingsIcon size={14} /> Open settings
+                    <SettingsIcon size={14} /> {t('Open settings')}
                   </Link>
                 ) : null}
               </div>
@@ -419,26 +432,30 @@ export default function Live(): React.JSX.Element {
             <div className="session-row">
               <Clock size={16} />
               <span>
-                <small>Duration</small>
+                <small>{t('Duration')}</small>
                 <strong>{formatDuration(elapsed)}</strong>
               </span>
             </div>
             <div className="session-row">
               <AudioLines size={16} />
               <span>
-                <small>Source</small>
-                <strong>{settings?.settings.microphoneId ? 'Chosen mic' : 'System default'}</strong>
+                <small>{t('Source')}</small>
+                <strong>
+                  {settings?.settings.microphoneId ? t('Chosen mic') : t('System default')}
+                </strong>
               </span>
             </div>
             <div className="session-row">
               <Trash2 size={16} />
               <span>
-                <small>Audio policy</small>
-                <strong>Ask after class</strong>
+                <small>{t('Audio policy')}</small>
+                <strong>{t('Ask after class')}</strong>
               </span>
             </div>
             <p className="session-note">
-              If you keep the audio, it is deleted automatically after {retentionDays} days.
+              {t('If you keep the audio, it is deleted automatically after {days} days.', {
+                days: retentionDays
+              })}
             </p>
           </Card>
         </div>
@@ -447,7 +464,7 @@ export default function Live(): React.JSX.Element {
       <div className="control-dock">
         <div className="dock-status">
           <span className={`rec-dot ${recording.status}`} />
-          <span>{isPaused ? 'Paused' : isRecording ? 'Listening' : 'Stopped'}</span>
+          <span>{isPaused ? t('Paused') : isRecording ? t('Listening') : t('Stopped')}</span>
           <small>{formatTimer(elapsed)}</small>
         </div>
         <div className="dock-actions">
@@ -458,7 +475,7 @@ export default function Live(): React.JSX.Element {
               disabled={isProcessing}
             >
               <Play size={16} />
-              Resume
+              {t('Resume')}
             </Button>
           ) : (
             <Button
@@ -467,7 +484,7 @@ export default function Live(): React.JSX.Element {
               disabled={!isRecording || isProcessing}
             >
               <Pause size={16} />
-              Pause
+              {t('Pause')}
             </Button>
           )}
           <Button
@@ -476,58 +493,62 @@ export default function Live(): React.JSX.Element {
             disabled={!isRecording && !isPaused}
           >
             <Square size={15} />
-            Stop & write notes
+            {t('Stop & write notes')}
           </Button>
         </div>
       </div>
 
       <Modal
         open={stopConfirm}
-        title="Finish this lecture?"
-        subtitle="ezNotes will transcribe the full recording and write structured notes."
+        title={t('Finish this lecture?')}
+        subtitle={t(
+          'ezNotes will transcribe the full recording and write structured notes.'
+        )}
         onClose={() => setStopConfirm(false)}
         footer={
           <>
             <Button variant="ghost" onClick={() => setStopConfirm(false)}>
-              Keep recording
+              {t('Keep recording')}
             </Button>
             <Button variant="primary" onClick={() => void stopRecording()}>
               <Check size={16} />
-              Stop & continue
+              {t('Stop & continue')}
             </Button>
           </>
         }
       >
         <p className="modal-text">
-          You have captured <strong>{formatDuration(elapsed)}</strong>. The final pass
-          re-transcribes the audio for better accuracy than the live transcript.
+          {t('You have captured')} <strong>{formatDuration(elapsed)}</strong>.{' '}
+          {t(
+            'The final pass re-transcribes the audio for better accuracy than the live transcript.'
+          )}
         </p>
       </Modal>
 
       <Modal
         open={Boolean(stopped) && !isProcessing}
-        title="What should happen to the audio?"
-        subtitle="The transcript and notes are kept either way."
+        title={t('What should happen to the audio?')}
+        subtitle={t('The transcript and notes are kept either way.')}
         onClose={() => undefined}
         footer={
           finalizeError ? (
             <>
               <Button variant="ghost" onClick={() => void discard()}>
-                Delete recording
+                {t('Delete recording')}
               </Button>
               <Button
                 variant="soft"
                 onClick={() => void finalize(keepChoice ?? false, true)}
                 disabled={finalizing}
               >
-                Save transcript only
+                {t('Save transcript only')}
               </Button>
               <Button
                 variant="primary"
                 onClick={() => void finalize(keepChoice ?? true)}
                 disabled={finalizing}
               >
-                Retry
+                {t('Retry')}
               </Button>
             </>
           ) : (
@@ -538,7 +559,7 @@ export default function Live(): React.JSX.Element {
                 disabled={finalizing}
               >
                 <Trash2 size={15} />
-                Delete audio now
+                {t('Delete audio now')}
               </Button>
               <Button
                 variant="primary"
@@ -546,7 +567,7 @@ export default function Live(): React.JSX.Element {
                 disabled={finalizing}
               >
                 <Check size={15} />
-                Keep for {retentionDays} days
+                {t('Keep for {days} days', { days: retentionDays })}
               </Button>
             </>
           )
@@ -558,8 +579,12 @@ export default function Live(): React.JSX.Element {
               <Check size={18} />
             </span>
             <div>
-              <strong>Keep the recording for {retentionDays} days</strong>
-              <p>You can replay it, jump to timestamps, or regenerate notes later.</p>
+              <strong>
+                {t('Keep the recording for {days} days', { days: retentionDays })}
+              </strong>
+              <p>
+                {t('You can replay it, jump to timestamps, or regenerate notes later.')}
+              </p>
             </div>
           </div>
           <div className="retention-row">
@@ -567,8 +592,8 @@ export default function Live(): React.JSX.Element {
               <Trash2 size={18} />
             </span>
             <div>
-              <strong>Delete the audio now</strong>
-              <p>The transcript and Markdown note stay in your library.</p>
+              <strong>{t('Delete the audio now')}</strong>
+              <p>{t('The transcript and Markdown note stay in your library.')}</p>
             </div>
           </div>
         </div>
@@ -587,8 +612,8 @@ export default function Live(): React.JSX.Element {
                 <span className="processing-icon">
                   <Loader2 size={26} className="spin" />
                 </span>
-                <h2>Writing your notes</h2>
-                <p>{processing?.step ?? 'Working through the lecture…'}</p>
+                <h2>{t('Writing your notes')}</h2>
+                <p>{processing?.step ?? t('Working through the lecture…')}</p>
                 <div className="progress-track">
                   <div
                     className="progress-fill"
@@ -600,7 +625,7 @@ export default function Live(): React.JSX.Element {
                 <small>
                   {processing
                     ? `${Math.round(processing.progress * 100)}%`
-                    : 'This can take a minute.'}
+                    : t('This can take a minute.')}
                 </small>
               </div>
             </div>,
