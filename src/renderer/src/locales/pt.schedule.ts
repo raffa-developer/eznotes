@@ -7,6 +7,7 @@ export const schedule: Record<string, string> = {
     'A hora de fim tem de ser posterior à hora de início.',
   'Class updated.': 'Aula atualizada.',
   'Class added.': 'Aula adicionada.',
+  'Class removed.': 'Aula removida.',
   'Course removed.': 'Disciplina removida.',
   'Add a course first, then place it on the timetable.':
     'Adicione primeiro uma disciplina e depois coloque-a no horário.',
@@ -14,6 +15,8 @@ export const schedule: Record<string, string> = {
   'Your week': 'A sua semana',
   'ezNotes uses this to know which course a lecture belongs to and what to put in the note header.':
     'O ezNotes usa isto para saber a que disciplina pertence uma aula e o que incluir no cabeçalho da nota.',
+  'Set your weekly classes once. ezNotes uses them to match lectures and prefill the note header.':
+    'Defina as suas aulas semanais uma vez. O ezNotes usa-as para associar as aulas e preencher o cabeçalho da nota.',
   'New course': 'Nova disciplina',
   'Add class': 'Adicionar aula',
   'Start with a course': 'Comece por uma disciplina',
@@ -23,6 +26,14 @@ export const schedule: Record<string, string> = {
   'Weekly timetable': 'Horário semanal',
   '{count} class scheduled': '{count} aula agendada',
   '{count} classes scheduled': '{count} aulas agendadas',
+  'Week of {range}': 'Semana de {range}',
+  'No classes': 'Sem aulas',
+  '{count} class': '{count} aula',
+  '{count} classes': '{count} aulas',
+  'No classes yet. Click a day to add one.':
+    'Ainda não há aulas. Clique num dia para adicionar uma.',
+  'Click an empty spot to add a class.':
+    'Clique num espaço vazio para adicionar uma aula.',
   'Jump to {day}': 'Ir para {day}',
   'Add class on {day}': 'Adicionar aula: {day}',
   'No room': 'Sem sala',
@@ -31,6 +42,7 @@ export const schedule: Record<string, string> = {
   Add: 'Adicionar',
   'Edit course': 'Editar disciplina',
   'Delete course': 'Apagar disciplina',
+  'Not scheduled': 'Sem aulas marcadas',
   '{count} class / week': '{count} aula / semana',
   '{count} classes / week': '{count} aulas / semana',
   'No glossary terms yet.': 'Ainda não há termos no glossário.',
@@ -52,6 +64,7 @@ export const schedule: Record<string, string> = {
   'Pick a course and a weekly time slot.':
     'Escolha uma disciplina e um horário semanal.',
   'Save class': 'Guardar aula',
+  'Delete class': 'Apagar aula',
   Course: 'Disciplina',
   Day: 'Dia',
   Room: 'Sala',

@@ -25,6 +25,8 @@ source for now.
 
 ## Features
 
+- **Weekly timetable** — a real time grid for the week, with dates, today's
+  column, course colours, and click-to-add slots.
 - **Live view** — running transcript and a rough outline while the lecture happens.
 - **Accurate second pass** — the full audio is re-transcribed after class instead
   of relying on the live chunks.

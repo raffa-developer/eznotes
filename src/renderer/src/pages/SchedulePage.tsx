@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   CalendarDays,
   Clock,
@@ -10,8 +10,8 @@ import {
 } from 'lucide-react'
 import type { ClassSlot, Course } from '../../../shared/types'
 import { useApp } from '../state/AppContext'
-import { Badge, Button, Card, EmptyState, Field, Modal } from '../components/ui'
-import { t } from '../i18n'
+import { Button, Card, EmptyState, Field, Modal } from '../components/ui'
+import { t, uiLocale } from '../i18n'
 import { uid, weekdayLong, weekdayShort, WEEKDAYS } from '../lib/format'
 import { COURSE_COLORS } from '../lib/colors'
 
@@ -33,6 +33,15 @@ interface SlotForm {
   room: string
 }
 
+interface PositionedSlot {
+  slot: ClassSlot
+  top: number
+  height: number
+  left: string
+  width: string
+  compact: boolean
+}
+
 const EMPTY_COURSE: CourseForm = {
   id: '',
   name: '',
@@ -42,13 +51,114 @@ const EMPTY_COURSE: CourseForm = {
   glossary: ''
 }
 
+const HOUR_HEIGHT = 58
+const DAY_MINUTES = 24 * 60
+
+function toMinutes(time: string): number {
+  const [hours, minutes] = time.split(':').map(Number)
+  return Math.max(0, Math.min(DAY_MINUTES, hours * 60 + minutes))
+}
+
+function clockLabel(value: number): string {
+  const total = Math.max(0, Math.min(DAY_MINUTES, value))
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(
+    total % 60
+  ).padStart(2, '0')}`
+}
+
+function endOf(slot: ClassSlot): number {
+  const start = toMinutes(slot.startTime)
+  return Math.min(DAY_MINUTES, Math.max(start + 15, toMinutes(slot.endTime)))
+}
+
+function layoutDay(slots: ClassSlot[], startMinute: number): PositionedSlot[] {
+  if (!slots.length) return []
+
+  const sorted = [...slots].sort(
+    (a, b) =>
+      toMinutes(a.startTime) - toMinutes(b.startTime) ||
+      endOf(a) - endOf(b)
+  )
+
+  // Split the day into groups of classes that physically overlap. Classes in
+  // separate groups can use the full column width; only overlapping ones share it.
+  const groups: ClassSlot[][] = []
+  for (const slot of sorted) {
+    const start = toMinutes(slot.startTime)
+    const group = groups[groups.length - 1]
+    const groupEnd = group ? Math.max(...group.map(endOf)) : -1
+    if (!group || start >= groupEnd) groups.push([slot])
+    else group.push(slot)
+  }
+
+  const positioned: PositionedSlot[] = []
+  for (const group of groups) {
+    const laneEnds: number[] = []
+    const assigned: Array<{ slot: ClassSlot; lane: number; start: number; end: number }> = []
+
+    for (const slot of group) {
+      const start = toMinutes(slot.startTime)
+      const end = endOf(slot)
+      let lane = laneEnds.findIndex((laneEnd) => laneEnd <= start)
+      if (lane === -1) {
+        lane = laneEnds.length
+        laneEnds.push(end)
+      } else {
+        laneEnds[lane] = end
+      }
+      assigned.push({ slot, lane, start, end })
+    }
+
+    const lanes = Math.max(1, laneEnds.length)
+    for (const { slot, lane, start, end } of assigned) {
+      const rawHeight = ((end - start) / 60) * HOUR_HEIGHT
+      positioned.push({
+        slot,
+        top: ((start - startMinute) / 60) * HOUR_HEIGHT,
+        height: Math.max(22, rawHeight - 4),
+        left: `${(lane / lanes) * 100}%`,
+        width: `${(1 / lanes) * 100}%`,
+        compact: rawHeight < 44
+      })
+    }
+  }
+
+  return positioned
+}
+
 export default function SchedulePage(): React.JSX.Element {
   const { schedule, refreshSchedule, refreshUpcoming, toast } = useApp()
   const [courseForm, setCourseForm] = useState<CourseForm | null>(null)
   const [slotForm, setSlotForm] = useState<SlotForm | null>(null)
   const [deleteCourse, setDeleteCourse] = useState<Course | null>(null)
   const [saving, setSaving] = useState(false)
-  const todayWeekday = ((new Date().getDay() + 6) % 7) + 1
+  const [now, setNow] = useState(() => new Date())
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  const todayWeekday = ((now.getDay() + 6) % 7) + 1
+  const mondayOffset = (now.getDay() + 6) % 7
+  const weekStart = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() - mondayOffset
+  )
+  const weekEnd = new Date(
+    weekStart.getFullYear(),
+    weekStart.getMonth(),
+    weekStart.getDate() + 6
+  )
+  const dateFormatter = new Intl.DateTimeFormat(uiLocale(), {
+    day: 'numeric',
+    month: 'short'
+  })
+  const weekRange = `${dateFormatter.format(weekStart)} – ${dateFormatter.format(
+    weekEnd
+  )}`
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
 
   const slotsByDay = useMemo(() => {
     const map = new Map<number, ClassSlot[]>()
@@ -62,8 +172,65 @@ export default function SchedulePage(): React.JSX.Element {
     return map
   }, [schedule.slots])
 
+  const range = useMemo(() => {
+    const starts = schedule.slots.map((slot) => toMinutes(slot.startTime))
+    const ends = schedule.slots.map(endOf)
+    const first = starts.length ? Math.min(...starts) : 8 * 60
+    const last = ends.length ? Math.max(...ends) : 18 * 60
+    const startMinute = Math.max(0, Math.floor(first / 60) * 60)
+    const endMinute = Math.min(
+      DAY_MINUTES,
+      Math.max(startMinute + 4 * 60, Math.ceil(last / 60) * 60)
+    )
+    const hourMarks: number[] = []
+    for (let minute = startMinute; minute <= endMinute; minute += 60) {
+      hourMarks.push(minute)
+    }
+    return { startMinute, endMinute, hourMarks }
+  }, [schedule.slots])
+
+  const dayLayouts = useMemo(() => {
+    const map = new Map<number, PositionedSlot[]>()
+    for (const day of WEEKDAYS) {
+      map.set(
+        day.value,
+        layoutDay(slotsByDay.get(day.value) ?? [], range.startMinute)
+      )
+    }
+    return map
+  }, [slotsByDay, range.startMinute])
+
+  const weeklyCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const slot of schedule.slots) {
+      counts.set(slot.courseId, (counts.get(slot.courseId) ?? 0) + 1)
+    }
+    return counts
+  }, [schedule.slots])
+
+  const defaultStart = clockLabel(range.startMinute)
+  const defaultEnd = clockLabel(Math.min(DAY_MINUTES - 1, range.startMinute + 90))
+  const gridHeight = ((range.endMinute - range.startMinute) / 60) * HOUR_HEIGHT
+  const showNow =
+    currentMinutes >= range.startMinute && currentMinutes <= range.endMinute
+  const nowTop = ((currentMinutes - range.startMinute) / 60) * HOUR_HEIGHT
+  const editingSlot = Boolean(
+    slotForm && schedule.slots.some((slot) => slot.id === slotForm.id)
+  )
+
   function courseById(id: string): Course | undefined {
     return schedule.courses.find((course) => course.id === id)
+  }
+
+  function dateForWeekday(weekday: number): Date {
+    const date = new Date(weekStart)
+    date.setDate(weekStart.getDate() + weekday - 1)
+    return date
+  }
+
+  function dayCountLabel(count: number): string {
+    if (count === 0) return t('No classes')
+    return t(count === 1 ? '{count} class' : '{count} classes', { count })
   }
 
   async function persist(next: typeof schedule): Promise<void> {
@@ -138,6 +305,21 @@ export default function SchedulePage(): React.JSX.Element {
     toast(t(exists ? 'Class updated.' : 'Class added.'), 'success')
   }
 
+  async function removeSlot(): Promise<void> {
+    if (!slotForm) return
+    if (!schedule.slots.some((slot) => slot.id === slotForm.id)) {
+      setSlotForm(null)
+      return
+    }
+    const next = {
+      ...schedule,
+      slots: schedule.slots.filter((slot) => slot.id !== slotForm.id)
+    }
+    await persist(next)
+    setSlotForm(null)
+    toast(t('Class removed.'), 'success')
+  }
+
   async function removeCourse(): Promise<void> {
     if (!deleteCourse) return
     const next = {
@@ -175,7 +357,7 @@ export default function SchedulePage(): React.JSX.Element {
     })
   }
 
-  function newSlot(weekday: number): void {
+  function newSlot(weekday: number, startTime = defaultStart, endTime = defaultEnd): void {
     if (!schedule.courses.length) {
       toast(t('Add a course first, then place it on the timetable.'), 'warn')
       newCourse()
@@ -185,21 +367,34 @@ export default function SchedulePage(): React.JSX.Element {
       id: uid('slot_'),
       courseId: schedule.courses[0].id,
       weekday,
-      startTime: '09:00',
-      endTime: '10:30',
+      startTime,
+      endTime,
       room: ''
     })
   }
 
+  function createSlotFromGrid(
+    weekday: number,
+    event: React.MouseEvent<HTMLDivElement>
+  ): void {
+    if (event.target !== event.currentTarget) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    const raw =
+      range.startMinute + ((event.clientY - rect.top) / HOUR_HEIGHT) * 60
+    const start = Math.max(0, Math.min(DAY_MINUTES - 30, Math.round(raw / 30) * 30))
+    const end = Math.min(DAY_MINUTES - 1, start + 90)
+    newSlot(weekday, clockLabel(start), clockLabel(end))
+  }
+
   return (
-    <div className="page">
+    <div className="page schedule-page">
       <header className="page-head">
         <div>
           <p className="eyebrow">{t('Timetable')}</p>
           <h1>{t('Your week')}</h1>
           <p className="page-sub">
             {t(
-              'ezNotes uses this to know which course a lecture belongs to and what to put in the note header.'
+              'Set your weekly classes once. ezNotes uses them to match lectures and prefill the note header.'
             )}
           </p>
         </div>
@@ -210,7 +405,7 @@ export default function SchedulePage(): React.JSX.Element {
           </Button>
           <Button
             variant="primary"
-            onClick={() => newSlot(1)}
+            onClick={() => newSlot(todayWeekday)}
             disabled={saving}
           >
             <CalendarDays size={16} />
@@ -236,180 +431,254 @@ export default function SchedulePage(): React.JSX.Element {
           />
         </Card>
       ) : (
-        <div className="schedule-grid">
-          <Card className="week-card">
-            <div className="panel-head">
+        <div className="sched-layout">
+          <Card className="sched-board">
+            <div className="sched-board-head">
               <div>
                 <h2>{t('Weekly timetable')}</h2>
                 <p>
-                  {t(
-                    schedule.slots.length === 1
-                      ? '{count} class scheduled'
-                      : '{count} classes scheduled',
-                    { count: schedule.slots.length }
-                  )}
+                  {schedule.slots.length
+                    ? t(
+                        schedule.slots.length === 1
+                          ? '{count} class scheduled'
+                          : '{count} classes scheduled',
+                        { count: schedule.slots.length }
+                      )
+                    : t('No classes yet. Click a day to add one.')}
                 </p>
               </div>
-              <CalendarDays size={20} className="panel-icon" />
+              <span className="sched-week-range">
+                {t('Week of {range}', { range: weekRange })}
+              </span>
             </div>
 
-            <div className="week-overview">
-              {WEEKDAYS.map((day) => {
-                const count = slotsByDay.get(day.value)?.length ?? 0
-                const dayLong = weekdayLong(day.value)
-                return (
-                  <button
-                    key={day.value}
-                    className={day.value === todayWeekday ? 'today' : ''}
-                    aria-label={t('Jump to {day}', { day: dayLong })}
-                    onClick={() =>
-                      document
-                        .getElementById(`week-day-${day.value}`)
-                        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                    }
-                  >
-                    <span>{weekdayShort(day.value)}</span>
-                    <strong>{count || '–'}</strong>
-                  </button>
-                )
-              })}
-            </div>
-
-            <div className="week-list">
-              {WEEKDAYS.map((day) => {
-                const slots = slotsByDay.get(day.value) ?? []
-                const dayLong = weekdayLong(day.value)
-                return (
-                  <div key={day.value} className="week-day" id={`week-day-${day.value}`}>
-                    <div className="week-day-head">
-                      <span>{dayLong}</span>
-                      <button
-                        className="week-add"
-                        onClick={() => newSlot(day.value)}
-                        aria-label={t('Add class on {day}', { day: dayLong })}
+            <div className="sched-grid-scroll">
+              <div className="sched-grid">
+                <div className="sched-head-row">
+                  <div className="sched-axis-head" />
+                  {WEEKDAYS.map((day) => {
+                    const isToday = day.value === todayWeekday
+                    const count = slotsByDay.get(day.value)?.length ?? 0
+                    const date = dateForWeekday(day.value)
+                    return (
+                      <div
+                        key={day.value}
+                        className={`sched-day-head ${isToday ? 'is-today' : ''}`}
                       >
-                        <Plus size={14} />
-                      </button>
-                    </div>
-                    {slots.length ? (
-                      slots.map((slot) => {
-                        const course = courseById(slot.courseId)
-                        if (!course) return null
-                        return (
-                          <button
-                            key={slot.id}
-                            className="slot-row"
-                            onClick={() => editSlot(slot)}
-                          >
+                        <div className="sched-day-top">
+                          <span className="sched-day-name">
+                            {weekdayShort(day.value)}
+                          </span>
+                          <span className="sched-day-date">{date.getDate()}</span>
+                          {isToday ? (
                             <span
-                              className="slot-color"
-                              style={{ background: course.color }}
+                              className="sched-today-dot"
+                              title={t('Today')}
                             />
-                            <span className="slot-time">
-                              {slot.startTime}
-                              <small>{slot.endTime}</small>
-                            </span>
-                            <span className="slot-main">
-                              <strong>{course.name}</strong>
-                              <small>
-                                {slot.room ? <MapPin size={12} /> : null}
-                                {slot.room || t('No room')}
-                              </small>
-                            </span>
-                            <Pencil size={14} className="slot-edit" />
+                          ) : null}
+                        </div>
+                        <div className="sched-day-bottom">
+                          <span
+                            className={`sched-day-count ${count === 0 ? 'is-empty' : ''}`}
+                          >
+                            {dayCountLabel(count)}
+                          </span>
+                          <button
+                            className="sched-day-add"
+                            type="button"
+                            onClick={() => newSlot(day.value)}
+                            aria-label={t('Add class on {day}', {
+                              day: weekdayLong(day.value)
+                            })}
+                          >
+                            <Plus size={13} />
                           </button>
-                        )
-                      })
-                    ) : (
-                      <button className="slot-empty" onClick={() => newSlot(day.value)}>
-                        {t('No classes. Add one.')}
-                      </button>
-                    )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div
+                  className="sched-body"
+                  style={
+                    {
+                      height: gridHeight,
+                      '--hour-height': `${HOUR_HEIGHT}px`
+                    } as React.CSSProperties
+                  }
+                >
+                  <div className="sched-axis" aria-hidden="true">
+                    {range.hourMarks.map((minute) => (
+                      <span
+                        key={minute}
+                        className="sched-axis-label"
+                        style={{
+                          top: ((minute - range.startMinute) / 60) * HOUR_HEIGHT
+                        }}
+                      >
+                        {clockLabel(minute)}
+                      </span>
+                    ))}
                   </div>
-                )
-              })}
+
+                  {WEEKDAYS.map((day) => {
+                    const isToday = day.value === todayWeekday
+                    return (
+                      <div
+                        key={day.value}
+                        className={`sched-col ${isToday ? 'is-today' : ''}`}
+                        onClick={(event) => createSlotFromGrid(day.value, event)}
+                        title={t('Click an empty spot to add a class.')}
+                      >
+                        {(dayLayouts.get(day.value) ?? []).map((positioned) => {
+                          const course = courseById(positioned.slot.courseId)
+                          if (!course) return null
+                          const slot = positioned.slot
+                          const room = slot.room?.trim()
+                          return (
+                            <button
+                              key={slot.id}
+                              type="button"
+                              className={`sched-slot ${positioned.compact ? 'is-compact' : ''}`}
+                              style={
+                                {
+                                  top: positioned.top,
+                                  height: positioned.height,
+                                  left: `calc(${positioned.left} + 3px)`,
+                                  width: `calc(${positioned.width} - 6px)`,
+                                  '--course-color': course.color
+                                } as React.CSSProperties
+                              }
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                editSlot(slot)
+                              }}
+                              aria-label={`${course.name}, ${clockLabel(
+                                toMinutes(slot.startTime)
+                              )}–${clockLabel(endOf(slot))}${
+                                room ? `, ${room}` : ''
+                              }`}
+                              title={`${course.name}, ${clockLabel(
+                                toMinutes(slot.startTime)
+                              )}–${clockLabel(endOf(slot))}${
+                                room ? `, ${room}` : ''
+                              }`}
+                            >
+                              <strong>{course.name}</strong>
+                              {!positioned.compact ? (
+                                <span className="sched-slot-time">
+                                  {clockLabel(toMinutes(slot.startTime))}–
+                                  {clockLabel(endOf(slot))}
+                                </span>
+                              ) : null}
+                              {!positioned.compact && room ? (
+                                <span className="sched-slot-meta">
+                                  <MapPin size={10} /> {room}
+                                </span>
+                              ) : null}
+                            </button>
+                          )
+                        })}
+                        {isToday && showNow ? (
+                          <div
+                            className="sched-now"
+                            style={{ top: nowTop }}
+                            title={t('Now')}
+                          />
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
           </Card>
 
-          <div className="course-column">
-            <div className="section-head">
+          <aside className="sched-course-panel">
+            <div className="sched-course-head">
               <h2>{t('Courses')}</h2>
-              <button className="text-link" onClick={newCourse}>
-                <Plus size={14} /> {t('Add')}
+              <span className="sched-course-total">
+                {schedule.courses.length}
+              </span>
+              <button className="text-link" type="button" onClick={newCourse}>
+                <Plus size={13} />
+                {t('Add')}
               </button>
             </div>
-            {schedule.courses.length ? (
-              <Card className="course-list-card">
-                {schedule.courses.map((course) => {
-                  const weeklyCount = schedule.slots.filter(
-                    (slot) => slot.courseId === course.id
-                  ).length
-                  return (
-                    <div key={course.id} className="course-card">
-                      <div className="course-card-top">
-                        <span
-                          className="course-swatch"
-                          style={{ background: course.color }}
-                        />
-                        <div className="course-card-title">
-                          <h3>{course.name}</h3>
-                          {course.code && course.code !== course.name ? (
-                            <Badge tone="neutral">{course.code}</Badge>
-                          ) : null}
-                        </div>
-                        <div className="course-card-actions">
-                          <button
-                            className="icon-button"
-                            onClick={() => editCourse(course)}
-                            aria-label={t('Edit course')}
-                          >
-                            <Pencil size={14} />
-                          </button>
-                          <button
-                            className="icon-button danger"
-                            onClick={() => setDeleteCourse(course)}
-                            aria-label={t('Delete course')}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="course-card-meta">
+            <Card className="sched-course-list">
+              {schedule.courses.map((course) => {
+                const count = weeklyCounts.get(course.id) ?? 0
+                const code = course.code?.trim()
+                return (
+                  <div key={course.id} className="sched-course-row">
+                    <span
+                      className="sched-course-marker"
+                      style={{ background: course.color }}
+                    />
+                    <button
+                      className="sched-course-main"
+                      type="button"
+                      onClick={() => editCourse(course)}
+                      aria-label={`${t('Edit course')}: ${course.name}`}
+                      title={course.name}
+                    >
+                      <span className="sched-course-title">
+                        <strong>{course.name}</strong>
+                        {code && code !== course.name ? (
+                          <span className="sched-course-code">{code}</span>
+                        ) : null}
+                      </span>
+                      <span className="sched-course-meta">
                         {course.lecturer ? (
                           <span>
-                            <UserRound size={13} /> {course.lecturer}
+                            <UserRound size={11} />
+                            {course.lecturer}
                           </span>
                         ) : null}
                         <span>
-                          <Clock size={13} />{' '}
-                          {t(
-                            weeklyCount === 1
-                              ? '{count} class / week'
-                              : '{count} classes / week',
-                            { count: weeklyCount }
-                          )}
+                          <Clock size={11} />
+                          {count === 0
+                            ? t('Not scheduled')
+                            : t(
+                                count === 1
+                                  ? '{count} class / week'
+                                  : '{count} classes / week',
+                                { count }
+                              )}
                         </span>
-                      </div>
-                      {course.glossary.length ? (
-                        <div className="tag-row">
-                          {course.glossary.slice(0, 6).map((term) => (
-                            <span key={term} className="tag">
-                              {term}
-                            </span>
-                          ))}
-                          {course.glossary.length > 6 ? (
-                            <span className="tag">+{course.glossary.length - 6}</span>
-                          ) : null}
-                        </div>
-                      ) : (
-                        <p className="course-glossary-hint">{t('No glossary terms yet.')}</p>
-                      )}
+                      </span>
+                    </button>
+                    <div className="sched-course-actions">
+                      <button
+                        className="icon-button"
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          editCourse(course)
+                        }}
+                        aria-label={t('Edit course')}
+                        title={course.name}
+                      >
+                        <Pencil size={13} />
+                      </button>
+                      <button
+                        className="icon-button danger"
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          setDeleteCourse(course)
+                        }}
+                        aria-label={t('Delete course')}
+                      >
+                        <Trash2 size={13} />
+                      </button>
                     </div>
-                  )
-                })}
-              </Card>
-            ) : null}
-          </div>
+                  </div>
+                )
+              })}
+            </Card>
+          </aside>
         </div>
       )}
 
@@ -496,15 +765,22 @@ export default function SchedulePage(): React.JSX.Element {
 
       <Modal
         open={Boolean(slotForm)}
-        title={t(
-          slotForm?.id && schedule.slots.some((slot) => slot.id === slotForm.id)
-            ? 'Edit class'
-            : 'Add class'
-        )}
+        title={t(editingSlot ? 'Edit class' : 'Add class')}
         subtitle={t('Pick a course and a weekly time slot.')}
         onClose={() => setSlotForm(null)}
         footer={
           <>
+            {editingSlot ? (
+              <Button
+                variant="ghost"
+                className="sched-delete-slot"
+                onClick={() => void removeSlot()}
+                disabled={saving}
+              >
+                <Trash2 size={15} />
+                {t('Delete class')}
+              </Button>
+            ) : null}
             <Button variant="ghost" onClick={() => setSlotForm(null)} disabled={saving}>
               {t('Cancel')}
             </Button>

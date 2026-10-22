@@ -155,6 +155,9 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
   native notification when the note is ready; quitting still keeps the
   recording recoverable.
 - [x] Add a React error boundary for the main window and the island.
+- [x] Redesign Schedule as a weekly time grid: dated day columns, today marker,
+  time axis, course-coloured blocks, click-empty-to-add, and a compact course
+  panel. The old repeated day list and ambiguous count numbers are gone.
 
 ---
 

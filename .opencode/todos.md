@@ -77,6 +77,10 @@ tick the box here and in `TODO.md` when it lands.
       WAV, keep the full WAV when Opus is short, and prefer the longer file for
       playback. Close-to-tray + notification while notes are being written.
       `src/main/webm.ts`, `src/main/recording.ts`, `src/main/index.ts`
+- [x] **P2-8** Redesign Schedule as a weekly time grid with dated columns,
+      today marker, course-coloured blocks, click-to-add, and a compact course
+      panel
+      `src/renderer/src/pages/SchedulePage.tsx`, `src/renderer/src/apple.css`
 
 ## Engineering hygiene
 
