@@ -912,50 +912,6 @@ select {
   gap: 5px;
 }
 
-.stat-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.stat-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-  padding: 15px 17px;
-}
-
-.stat-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: var(--accent-soft);
-  color: var(--accent);
-  flex: none;
-}
-
-.stat-card > div {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.stat-card strong {
-  font-family: var(--font-display);
-  font-size: 21px;
-  font-weight: 500;
-  letter-spacing: -0.4px;
-}
-
-.stat-card small {
-  color: var(--muted);
-  font-size: 10.5px;
-}
-
 .two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;

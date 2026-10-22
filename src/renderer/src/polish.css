@@ -82,7 +82,6 @@ h3,
 .modal-head h2,
 .processing-card h2,
 .empty-state h3,
-.stat-card strong,
 .note-date strong,
 .note-title-line h3,
 .recent-main strong {
@@ -358,15 +357,6 @@ textarea {
   align-items: start;
 }
 
-.stat-card {
-  flex: 0 0 auto;
-  padding: 14px 16px;
-}
-
-.stat-stack {
-  gap: 9px;
-}
-
 .next-class-card {
   min-height: 236px;
   padding: 28px;
@@ -558,25 +548,6 @@ textarea {
 
 .today-list-card .today-row:hover {
   background: var(--surface-2);
-}
-
-.stat-card-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.stat-card-group .stat-card {
-  padding: 15px 18px;
-  border: none;
-  border-bottom: 1px solid var(--line);
-  border-radius: 0;
-  background: transparent;
-  flex: 0 0 auto;
-}
-
-.stat-card-group .stat-card:last-child {
-  border-bottom: none;
 }
 
 .note-list-card .note-row {

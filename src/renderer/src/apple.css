@@ -836,15 +836,6 @@ textarea::placeholder {
   align-items: start;
 }
 
-.stat-card strong {
-  font-size: 16px;
-  white-space: nowrap;
-}
-
-.stat-card small {
-  line-height: 1.35;
-}
-
 .sidebar-toggle {
   width: auto;
   align-self: flex-start;
@@ -1013,44 +1004,64 @@ textarea::placeholder {
 }
 
 .stat-card-group {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 6px 20px;
 }
 
 .stat-card {
   display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  padding: 0 14px;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
   border: none;
-  border-left: 1px solid var(--line);
+  border-top: 1px solid var(--line);
   border-radius: 0;
   background: none;
 }
 
 .stat-card:first-child {
-  padding-left: 0;
-  border-left: none;
+  padding-top: 7px;
+  border-top: none;
+}
+
+.stat-card:last-child {
+  padding-bottom: 7px;
 }
 
 .stat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 30px;
   height: 30px;
   border-radius: 8px;
   background: var(--accent-soft);
   color: var(--accent);
+  flex: none;
+}
+
+.stat-card > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }
 
 .stat-card strong {
+  font-family: var(--font-ui);
   font-size: 17px;
   font-weight: 650;
   letter-spacing: -0.03em;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .stat-card small {
   color: var(--muted);
   font-size: 10.5px;
+  line-height: 1.3;
 }
 
 .setup-card {

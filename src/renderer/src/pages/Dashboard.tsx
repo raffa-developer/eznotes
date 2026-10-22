@@ -363,7 +363,7 @@ export default function Dashboard(): React.JSX.Element {
           )}
         </Card>
 
-        <Card className="stat-stack stat-card-group">
+        <Card className="stat-card-group">
           <div className="stat-card">
             <span className="stat-icon">
               <BookOpen size={17} />
