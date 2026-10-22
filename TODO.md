@@ -148,6 +148,12 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
   8 s, speech gating before each Groq call, and confidence filtering
   (`avg_logprob`, `no_speech_prob`, `compression_ratio`) plus known Whisper
   outro phrases. Default STT model is now `whisper-large-v3`.
+- [x] Never replace a full WAV with a truncated WebM: compare the WebM duration
+  with the WAV before cleanup, keep the WAV when the compressed copy is short,
+  and make the audio protocol prefer the longer file.
+- [x] Let the window close to the tray while notes are being written, with a
+  native notification when the note is ready; quitting still keeps the
+  recording recoverable.
 - [x] Add a React error boundary for the main window and the island.
 
 ---

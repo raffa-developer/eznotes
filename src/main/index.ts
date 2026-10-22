@@ -51,6 +51,8 @@ import {
 import { RecordingManager } from './recording'
 import { generateNotes, testLlm } from './llm'
 import { testGroqKey } from './stt'
+import { readWavInfo } from './wav'
+import { isWebmShorterThanWav, readWebmDurationSec } from './webm'
 import { downloadDiarizationModels, cancelDiarization } from './diarization'
 import { demoMode } from './mock'
 import { migrateUserData } from './migrate'
@@ -153,6 +155,19 @@ function createWindow(): void {
     if (!state) return
     event.preventDefault()
     const language = loadSettings().uiLanguage
+
+    if (state.status === 'processing') {
+      mainWindow?.hide()
+      notify(
+        mainText(language, 'Writing notes in the background'),
+        mainText(
+          language,
+          'ezNotes keeps working in the tray and will notify you when the note is ready.'
+        )
+      )
+      return
+    }
+
     void dialog.showMessageBox(mainWindow!, {
       type: 'info',
       title: mainText(language, 'Finish this recording first'),
@@ -656,9 +671,30 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
   ipcMain.handle('recording:pause', () => recording.pause())
   ipcMain.handle('recording:resume', () => recording.resume())
   ipcMain.handle('recording:stop', () => recording.stop())
-  ipcMain.handle('recording:finalize', (_event, input: FinalizeRecordingInput) =>
-    recording.finalize(input)
-  )
+  ipcMain.handle('recording:finalize', async (_event, input: FinalizeRecordingInput) => {
+    try {
+      const result = await recording.finalize(input)
+      if (mainWindow && (!mainWindow.isVisible() || mainWindow.isMinimized())) {
+        const language = loadSettings().uiLanguage
+        notify(
+          mainText(language, 'Notes ready'),
+          mainText(language, 'Notes ready: {title}', {
+            title: result.note.title
+          })
+        )
+      }
+      return result
+    } catch (error) {
+      if (mainWindow && (!mainWindow.isVisible() || mainWindow.isMinimized())) {
+        const language = loadSettings().uiLanguage
+        notify(
+          mainText(language, 'Notes could not be written'),
+          error instanceof Error ? error.message : String(error)
+        )
+      }
+      throw error
+    }
+  })
   ipcMain.handle('recording:discard', (_event, id: string) =>
     recording.discard(id)
   )
@@ -698,7 +734,23 @@ function registerAudioProtocol(): void {
       }
       const dir = path.join(recordingsDir(), id)
       const webm = path.join(dir, 'audio.webm')
-      const file = fs.existsSync(webm) ? webm : path.join(dir, 'audio.wav')
+      const wav = path.join(dir, 'audio.wav')
+      let file = webm
+      if (!fs.existsSync(webm)) {
+        file = wav
+      } else if (fs.existsSync(wav)) {
+        // A crashed/restarted renderer can leave a short WebM next to the full
+        // WAV. Prefer whichever copy is longer.
+        let wavSec = 0
+        try {
+          wavSec = readWavInfo(wav).durationSec
+        } catch {
+          // Fall back to the WebM if the WAV header is unreadable.
+          wavSec = 0
+        }
+        const webmSec = readWebmDurationSec(webm)
+        file = isWebmShorterThanWav(wavSec, webmSec) ? wav : webm
+      }
       if (!fs.existsSync(file)) {
         return new Response('Recording not found', { status: 404 })
       }
@@ -1088,24 +1140,45 @@ if (!gotLock) {
 
     event.preventDefault()
     const language = loadSettings().uiLanguage
-    const options = {
-      type: 'warning' as const,
-      title: mainText(language, 'ezNotes is still recording'),
-      message: mainText(language, 'A lecture is in progress.'),
-      detail: mainText(
-        language,
-        'If you quit now, the current audio stays on disk but will not be turned into a note.'
-      ),
-      buttons: [
-        mainText(language, 'Keep running'),
-        mainText(language, 'Quit anyway')
-      ],
-      defaultId: 0,
-      cancelId: 0
-    }
-    const show = mainWindow
-      ? dialog.showMessageBox(mainWindow, options)
-      : dialog.showMessageBox(options)
+    const processing = state.status === 'processing'
+    const options = processing
+      ? {
+          type: 'info' as const,
+          title: mainText(language, 'Notes are still being written'),
+          message: mainText(
+            language,
+            'ezNotes is finishing the note in the background.'
+          ),
+          detail: mainText(
+            language,
+            'If you quit now, the recording stays on disk and can be recovered on the next launch.'
+          ),
+          buttons: [
+            mainText(language, 'Keep running'),
+            mainText(language, 'Quit anyway')
+          ],
+          defaultId: 0,
+          cancelId: 0
+        }
+      : {
+          type: 'warning' as const,
+          title: mainText(language, 'ezNotes is still recording'),
+          message: mainText(language, 'A lecture is in progress.'),
+          detail: mainText(
+            language,
+            'If you quit now, the current audio stays on disk but will not be turned into a note.'
+          ),
+          buttons: [
+            mainText(language, 'Keep running'),
+            mainText(language, 'Quit anyway')
+          ],
+          defaultId: 0,
+          cancelId: 0
+        }
+    const show =
+      mainWindow && mainWindow.isVisible()
+        ? dialog.showMessageBox(mainWindow, options)
+        : dialog.showMessageBox(options)
     void show.then((result) => {
       if (result.response === 1) {
         quitting = true

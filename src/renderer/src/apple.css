@@ -1723,6 +1723,14 @@ textarea::placeholder {
   box-shadow: var(--shadow);
 }
 
+.processing-card .processing-note {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: center;
+}
+
 .processing-icon {
   background: var(--accent-soft);
   color: var(--accent);

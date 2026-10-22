@@ -40,6 +40,7 @@ import {
   writeNoteTranscript
 } from './notes'
 import { readWavInfo, wavHeader } from './wav'
+import { isWebmShorterThanWav, readWebmDurationSec } from './webm'
 import { demoMode } from './mock'
 import { log } from './log'
 import {
@@ -456,16 +457,22 @@ export class RecordingManager {
         settings.stt.speakerLabels &&
         !segments.some((segment) => segment.speaker)
       ) {
-        const status = diarizationStatus()
-        if (status.runtimeReady && status.modelsReady) {
-          speakersInBackground = true
+        if (!input.keepAudio) {
           warnings.push(
-            'Speaker labels are being added in the background. Press Regenerate on the note after they finish to include them.'
+            'Speaker detection was skipped because the audio is being deleted.'
           )
         } else {
-          warnings.push(
-            'Speaker detection is on, but its models are not downloaded. Continuing without speaker labels.'
-          )
+          const status = diarizationStatus()
+          if (status.runtimeReady && status.modelsReady) {
+            speakersInBackground = true
+            warnings.push(
+              'Speaker labels are being added in the background. Press Regenerate on the note after they finish to include them.'
+            )
+          } else {
+            warnings.push(
+              'Speaker detection is on, but its models are not downloaded. Continuing without speaker labels.'
+            )
+          }
         }
       }
 
@@ -889,7 +896,19 @@ export class RecordingManager {
         fs.rmSync(dir, { recursive: true, force: true })
         return
       }
-      await keepBestAudio(dir)
+      const result = await keepBestAudio(dir)
+      if (result.keptWav && result.reason && result.reason !== 'missing') {
+        log('recording', 'kept full WAV because compressed audio was incomplete', {
+          dir,
+          wavSec: result.wavSec,
+          webmSec: result.webmSec,
+          reason: result.reason
+        })
+        this.notice(
+          'The compressed audio was incomplete, so the full WAV was kept for playback.',
+          'warn'
+        )
+      }
       fs.rmSync(path.join(dir, MANIFEST_FILE), { force: true })
       touch(dir)
     } catch (error) {
@@ -1030,15 +1049,49 @@ function formatNoteDuration(durationSec: number): string {
   return `${Math.round(durationSec / 60)} minutos`
 }
 
-async function keepBestAudio(dir: string): Promise<void> {
+interface KeepAudioResult {
+  keptWav: boolean
+  wavSec?: number
+  webmSec?: number | null
+  reason?: 'missing' | 'unreadable' | 'short'
+}
+
+async function keepBestAudio(dir: string): Promise<KeepAudioResult> {
   const webm = path.join(dir, 'audio.webm')
+  const wav = path.join(dir, 'audio.wav')
+
   if (!fs.existsSync(webm)) {
     for (let attempt = 0; attempt < 20 && !fs.existsSync(webm); attempt += 1) {
       await new Promise((resolve) => setTimeout(resolve, 100))
     }
   }
-  if (fs.existsSync(webm) && fs.statSync(webm).size > 1024) {
-    fs.rmSync(path.join(dir, 'audio.wav'), { force: true })
+  if (!fs.existsSync(webm)) return { keptWav: true, reason: 'missing' }
+  if (!fs.existsSync(wav)) return { keptWav: false }
+
+  try {
+    const wavInfo = readWavInfo(wav)
+    if (wavInfo.durationSec <= 0) return { keptWav: false }
+
+    const webmSec = readWebmDurationSec(webm)
+    if (isWebmShorterThanWav(wavInfo.durationSec, webmSec)) {
+      fs.rmSync(webm, { force: true })
+      return {
+        keptWav: true,
+        wavSec: wavInfo.durationSec,
+        webmSec,
+        reason: webmSec === null ? 'unreadable' : 'short'
+      }
+    }
+
+    fs.rmSync(wav, { force: true })
+    return {
+      keptWav: false,
+      wavSec: wavInfo.durationSec,
+      webmSec
+    }
+  } catch {
+    // If the WAV cannot be read, do not delete anything.
+    return { keptWav: true, reason: 'unreadable' }
   }
 }
 

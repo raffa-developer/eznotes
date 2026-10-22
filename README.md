@@ -186,11 +186,16 @@ Microphone
   keeping definitions, formulas, examples, and lecturer emphasis.
 - Live outlines refresh on a configurable interval (90 seconds by default) and
   skip periods with no new speech.
+- Notes are written before optional speaker detection. You can close the window
+  while they are being written: ezNotes stays in the tray and notifies you when
+  the note is ready. Quitting during this step leaves the recording on disk, so
+  it can be recovered on the next launch.
 - Audio retention is decided after every class. Kept audio is deleted after 30
   days by default (configurable), while transcripts and notes remain.
 - Kept audio is Opus in WebM (about 11 MB/hour). WAV is used for transcription
   and speaker detection, then removed once the note is saved. If Opus encoding
-  is unavailable, the WAV is kept.
+  is unavailable, or the WebM is shorter than the WAV, the full WAV is kept so
+  playback does not silently lose part of the lecture.
 
 ## Speaker labels (optional)
 
@@ -221,7 +226,7 @@ background, so speaker detection can never delay the notes.
 | --- | --- |
 | Notes | `Documents\ezNotes\<Course>\YYYY-MM-DD - <title>.md` |
 | Note index and transcripts | `Documents\ezNotes\.eznotes\` |
-| Audio | `%APPDATA%\ezNotes\recordings\rec_*\audio.webm` (or `audio.wav` if Opus encoding was unavailable) |
+| Audio | `%APPDATA%\ezNotes\recordings\rec_*\audio.webm` (or `audio.wav` if Opus encoding was unavailable or incomplete) |
 | Settings, schedule, encrypted keys | `%APPDATA%\ezNotes\` |
 | Speaker models | `%APPDATA%\ezNotes\models\sherpa\` |
 | Diagnostics log | `%APPDATA%\ezNotes\eznotes.log` |

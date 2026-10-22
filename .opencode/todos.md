@@ -73,13 +73,18 @@ tick the box here and in `TODO.md` when it lands.
       saved, capped at 10 min, logged, and killed on quit. Notes-model network
       failures get one retry.
       `src/main/recording.ts`, `src/main/diarization.ts`, `src/main/llm.ts`
+- [x] **P2-7** Audio integrity: verify the WebM duration before deleting the
+      WAV, keep the full WAV when Opus is short, and prefer the longer file for
+      playback. Close-to-tray + notification while notes are being written.
+      `src/main/webm.ts`, `src/main/recording.ts`, `src/main/index.ts`
 
 ## Engineering hygiene
 
 - [x] **H-1** Add `vitest` + `npm test`; cover `trimOverlap`, `dedupeSegments`,
       `analyzeSpeech`, `isLikelyHallucination`, `splitFrontmatter`,
-      `sanitizeFilename`, `upcomingClasses`, `detectCues`, `isTransientLlmError`
-      — 78 tests in 9 files; `electron` is aliased to `tests/electron-stub.ts`.
+      `sanitizeFilename`, `upcomingClasses`, `detectCues`, `isTransientLlmError`,
+      `webmDurationSec`
+      — 84 tests in 10 files; `electron` is aliased to `tests/electron-stub.ts`.
 - [x] **H-2** Add CI: `typecheck` + `test` + `build`
       — `.github/workflows/ci.yml`, Node 24, Electron binary download skipped.
 - [x] **H-3** Replace hardcoded `User-Agent: ezNotes/0.5.2` with

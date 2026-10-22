@@ -11,6 +11,8 @@ export const live: Record<string, string> = {
   'No active lecture.': 'Nenhuma aula ativa.',
   'Start a recording from the home screen.': 'Inicie uma gravação no ecrã inicial.',
   'Writing notes': 'A escrever notas',
+  'You can close this window. ezNotes keeps writing in the tray and will notify you when the note is ready.':
+    'Pode fechar esta janela. O ezNotes continua a escrever na bandeja e avisa-o quando os apontamentos estiverem prontos.',
   Paused: 'Em pausa',
   Recording: 'A gravar',
   Done: 'Concluída',

@@ -40,6 +40,17 @@ const PT: Record<string, string> = {
     'Se sair agora, o áudio atual fica no disco, mas não será transformado em apontamentos.',
   'Keep running': 'Continuar a executar',
   'Quit anyway': 'Sair mesmo assim',
+  'Writing notes in the background': 'A escrever apontamentos em segundo plano',
+  'Notes ready': 'Apontamentos prontos',
+  'ezNotes keeps working in the tray and will notify you when the note is ready.':
+    'O ezNotes continua a trabalhar na bandeja e avisa-o quando os apontamentos estiverem prontos.',
+  'Notes ready: {title}': 'Apontamentos prontos: {title}',
+  'Notes could not be written': 'Não foi possível escrever os apontamentos',
+  'Notes are still being written': 'Os apontamentos ainda estão a ser escritos',
+  'ezNotes is finishing the note in the background.':
+    'O ezNotes está a terminar os apontamentos em segundo plano.',
+  'If you quit now, the recording stays on disk and can be recovered on the next launch.':
+    'Se sair agora, a gravação fica no disco e pode ser recuperada no próximo arranque.',
   'Choose where ezNotes saves your notes':
     'Escolha onde o ezNotes guarda as suas notas',
   'Choose your Obsidian vault folder':

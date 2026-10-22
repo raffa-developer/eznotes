@@ -636,6 +636,11 @@ export default function Live(): React.JSX.Element {
                     ? `${Math.round(processing.progress * 100)}%`
                     : t('This can take a minute.')}
                 </small>
+                <p className="processing-note">
+                  {t(
+                    'You can close this window. ezNotes keeps writing in the tray and will notify you when the note is ready.'
+                  )}
+                </p>
               </div>
             </div>,
             document.body
