@@ -82,7 +82,7 @@ tick the box here and in `TODO.md` when it lands.
       panel
       `src/renderer/src/pages/SchedulePage.tsx`, `src/renderer/src/apple.css`
 - [x] **P2-9** Redesign Library as a 4-column shelf of course books; opening a
-      book shows its course index and all lecture notes on paper pages, with
+      book shows its notes as simple white paper cards in a 4-column grid, with
       search, audio filtering, and sorting preserved
       `src/renderer/src/pages/Library.tsx`, `src/renderer/src/apple.css`
 

@@ -159,8 +159,9 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
   time axis, course-coloured blocks, click-empty-to-add, and a compact course
   panel. The old repeated day list and ambiguous count numbers are gone.
 - [x] Redesign Library as a shelf of course books: one book per discipline in a
-  4-column grid, opening into a paper-like spread with the course index and all
-  of its lecture notes. Search, audio filtering, and sorting are preserved.
+  4-column grid, opening into a white-paper page with the course notes in a
+  simple 4-column paper-card grid. Search, audio filtering, and sorting are
+  preserved.
 
 ---
 

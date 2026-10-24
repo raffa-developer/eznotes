@@ -37,7 +37,7 @@ source for now.
   extra API key; the models download once.
 - **Markdown you own** — one plain file per lecture, organised by course and date.
 - **Course books** — each course becomes a book on a 4-column shelf. Open it
-  to browse all of that discipline’s notes on paper-like pages.
+  to browse all of that discipline’s notes as clean white paper cards.
 - **Audio retention is a choice** — keep the recording for replay or delete it
   immediately. The transcript and note are kept either way.
 - **Compact retained audio** — kept lectures are Opus in WebM (~11 MB/hour);

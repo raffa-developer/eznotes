@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
   AudioLines,
   BookOpen,
+  CalendarDays,
   Clock,
   FolderOpen,
   Search,
@@ -37,7 +38,6 @@ export default function Library(): React.JSX.Element {
   const [onlyAudio, setOnlyAudio] = useState(false)
   const [sort, setSort] = useState<'newest' | 'oldest' | 'longest'>('newest')
   const [openBookKey, setOpenBookKey] = useState<string | null>(null)
-  const rightPageRef = useRef<HTMLDivElement | null>(null)
   const navigate = useNavigate()
 
   const allBooks = useMemo(() => {
@@ -163,19 +163,6 @@ export default function Library(): React.JSX.Element {
     return first === last ? first : `${first} – ${last}`
   }
 
-  function focusNote(noteId: string): void {
-    const target = document.getElementById(`book-note-${noteId}`)
-    const container = rightPageRef.current
-    if (target && container) {
-      container.scrollTo({
-        top: Math.max(0, target.offsetTop - 46),
-        behavior: 'smooth'
-      })
-      return
-    }
-    target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-
   function noteCount(count: number): string {
     return t(count === 1 ? '{count} note' : '{count} notes', { count })
   }
@@ -189,16 +176,6 @@ export default function Library(): React.JSX.Element {
   }
 
   if (openBook) {
-    const extraGlossary = openBook.glossary
-      .map((term) => term.trim())
-      .filter(
-        (term) =>
-          term &&
-          term.toLocaleLowerCase() !== openBook.name.toLocaleLowerCase() &&
-          term.toLocaleLowerCase() !== openBook.code?.toLocaleLowerCase() &&
-          term.toLocaleLowerCase() !== openBook.description?.toLocaleLowerCase()
-      )
-
     return (
       <div className="page library-page book-reader-page">
         <div className="book-reader-bar">
@@ -206,7 +183,6 @@ export default function Library(): React.JSX.Element {
             className="back-link"
             type="button"
             onClick={() => setOpenBookKey(null)}
-            autoFocus
           >
             <ArrowLeft size={15} />
             {t('Library')}
@@ -217,108 +193,76 @@ export default function Library(): React.JSX.Element {
         </div>
 
         <div
-          className="open-book"
+          className="open-book open-book-single"
           style={{ '--course-color': openBook.color } as React.CSSProperties}
         >
-          <div className="book-page book-page-left">
-            <span className="book-page-kicker">
-              {openBook.code ?? t('Course book')}
-            </span>
-            <h1 className="book-page-title">{openBook.name}</h1>
-            {openBook.description ? (
-              <p className="book-page-description">{openBook.description}</p>
-            ) : null}
-
-            <div className="book-page-facts">
-              {openBook.lecturer ? (
-                <span>
-                  <UserRound size={13} />
-                  {openBook.lecturer}
+          <div className="book-sheet">
+            <div className="book-sheet-head">
+              <div className="book-sheet-intro">
+                <span className="book-sheet-kicker">
+                  {openBook.code ?? t('Course book')}
                 </span>
-              ) : null}
-              <span>
-                <BookOpen size={13} />
-                {noteCount(openBook.notes.length)}
-              </span>
-              <span>
-                <Clock size={13} />
-                {formatDuration(openBook.totalDuration)}
-              </span>
-            </div>
-
-            <div className="book-page-range">{dateRange(openBook)}</div>
-
-            {extraGlossary.length ? (
-              <div className="book-page-glossary">
-                <h2>{t('Glossary')}</h2>
-                <p>{extraGlossary.join(', ')}</p>
+                <h1 className="book-sheet-title">{openBook.name}</h1>
+                {openBook.description ? (
+                  <p className="book-sheet-description">{openBook.description}</p>
+                ) : null}
+                <div className="book-sheet-facts">
+                  {openBook.lecturer ? (
+                    <span>
+                      <UserRound size={13} />
+                      {openBook.lecturer}
+                    </span>
+                  ) : null}
+                  <span>
+                    <Clock size={13} />
+                    {formatDuration(openBook.totalDuration)}
+                  </span>
+                  <span>
+                    <CalendarDays size={13} />
+                    {dateRange(openBook)}
+                  </span>
+                </div>
               </div>
-            ) : null}
-
-            <nav className="book-page-contents">
-              <h2>{t('Contents')}</h2>
-              <ol>
-                {openBook.notes.slice(0, 6).map((note, index) => (
-                  <li key={note.id}>
-                    <button type="button" onClick={() => focusNote(note.id)}>
-                      <span className="book-contents-number">
-                        {String(index + 1).padStart(2, '0')}
-                      </span>
-                      <span className="book-contents-title">{note.title}</span>
-                    </button>
-                  </li>
-                ))}
-              </ol>
-              {openBook.notes.length > 6 ? (
-                <span className="book-contents-more">
-                  +{openBook.notes.length - 6}
-                </span>
-              ) : null}
-            </nav>
-
-            <div className="book-page-footer">
-              <span>ezNotes</span>
-              <span>{t('Library')}</span>
-            </div>
-          </div>
-
-          <div className="book-page book-page-right" ref={rightPageRef}>
-            <div className="book-notes-head">
-              <h2>{t('Lecture notes')}</h2>
-              <span>{noteCount(openBook.notes.length)}</span>
+              <div className="book-sheet-count">
+                <strong>{openBook.notes.length}</strong>
+                <span>{t('Lecture notes')}</span>
+              </div>
             </div>
 
-            {openBook.notes.map((note, index) => (
-              <button
-                key={note.id}
-                id={`book-note-${note.id}`}
-                className="book-note"
-                type="button"
-                onClick={() => navigate(`/notes/${note.id}`)}
-              >
-                <span className="book-note-number">
-                  {String(index + 1).padStart(2, '0')}
-                </span>
-                <span className="book-note-main">
-                  <span className="book-note-meta">
+            <div className="note-paper-grid">
+              {openBook.notes.map((note) => (
+                <button
+                  key={note.id}
+                  className="note-paper"
+                  type="button"
+                  onClick={() => navigate(`/notes/${note.id}`)}
+                >
+                  <span className="note-paper-top">
                     <span>{formatDate(note.date)}</span>
-                    <span className="book-note-duration">
+                    <span className="note-paper-duration">
                       <Clock size={10} />
                       {formatDuration(note.durationSec)}
                     </span>
                     {note.hasAudio ? <AudioLines size={11} /> : null}
                   </span>
-                  <strong>{note.title}</strong>
+                  <strong className="note-paper-title">{note.title}</strong>
                   {note.summary ? (
-                    <span className="book-note-summary">{note.summary}</span>
+                    <span className="note-paper-summary">{note.summary}</span>
                   ) : null}
-                </span>
-                <span className="book-note-open">
-                  <BookOpen size={12} />
-                  {t('Open')}
-                </span>
-              </button>
-            ))}
+                  <span className="note-paper-foot">
+                    <span>
+                      {t('{minutes} min read', {
+                        minutes: Math.max(1, Math.ceil(note.wordCount / 200))
+                      })}
+                    </span>
+                    <span className="note-paper-open">
+                      <BookOpen size={12} />
+                      {t('Open')}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
