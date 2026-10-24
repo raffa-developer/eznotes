@@ -38,6 +38,11 @@ export default function Library(): React.JSX.Element {
   const [onlyAudio, setOnlyAudio] = useState(false)
   const [sort, setSort] = useState<'newest' | 'oldest' | 'longest'>('newest')
   const [openBookKey, setOpenBookKey] = useState<string | null>(null)
+  const [bookQuery, setBookQuery] = useState('')
+  const [bookOnlyAudio, setBookOnlyAudio] = useState(false)
+  const [bookSort, setBookSort] = useState<'newest' | 'oldest' | 'longest'>(
+    'newest'
+  )
   const navigate = useNavigate()
 
   const allBooks = useMemo(() => {
@@ -142,6 +147,33 @@ export default function Library(): React.JSX.Element {
     day: '2-digit',
     month: 'short'
   })
+  const bookFiltersActive = Boolean(bookQuery.trim()) || bookOnlyAudio
+
+  const openNotes = useMemo(() => {
+    if (!openBook) return []
+    const term = bookQuery.trim().toLocaleLowerCase()
+    const matches = openBook.notes.filter((note) => {
+      if (bookOnlyAudio && !note.hasAudio) return false
+      if (!term) return true
+      return [note.title, note.summary, note.courseName, ...note.tags]
+        .join(' ')
+        .toLocaleLowerCase()
+        .includes(term)
+    })
+    return matches.sort((a, b) => {
+      if (bookSort === 'oldest') {
+        return new Date(a.date).getTime() - new Date(b.date).getTime()
+      }
+      if (bookSort === 'longest') return b.durationSec - a.durationSec
+      return new Date(b.date).getTime() - new Date(a.date).getTime()
+    })
+  }, [openBook, bookQuery, bookOnlyAudio, bookSort])
+
+  useEffect(() => {
+    setBookQuery('')
+    setBookOnlyAudio(false)
+    setBookSort('newest')
+  }, [openBookKey])
 
   useEffect(() => {
     if (!openBook) return
@@ -155,6 +187,11 @@ export default function Library(): React.JSX.Element {
   function clearFilters(): void {
     setQuery('')
     setOnlyAudio(false)
+  }
+
+  function clearBookFilters(): void {
+    setBookQuery('')
+    setBookOnlyAudio(false)
   }
 
   function dateRange(book: CourseBook): string {
@@ -229,40 +266,110 @@ export default function Library(): React.JSX.Element {
               </div>
             </div>
 
-            <div className="note-paper-grid">
-              {openBook.notes.map((note) => (
-                <button
-                  key={note.id}
-                  className="note-paper"
-                  type="button"
-                  onClick={() => navigate(`/notes/${note.id}`)}
+            <div className="book-note-controls">
+              <div className="search-box book-note-search">
+                <Search size={15} />
+                <input
+                  value={bookQuery}
+                  onChange={(event) => setBookQuery(event.target.value)}
+                  placeholder={t('Search these notes…')}
+                />
+                {bookQuery ? (
+                  <button
+                    className="search-clear"
+                    onClick={() => setBookQuery('')}
+                    aria-label={t('Clear search')}
+                  >
+                    <X size={13} />
+                  </button>
+                ) : null}
+              </div>
+              <button
+                className={`filter-chip book-note-audio-filter ${bookOnlyAudio ? 'active' : ''}`}
+                type="button"
+                onClick={() => setBookOnlyAudio((current) => !current)}
+                aria-pressed={bookOnlyAudio}
+                disabled={openBook.audioCount === 0}
+              >
+                <AudioLines size={13} />
+                {t('Has audio')}
+                <span className="filter-count">{openBook.audioCount}</span>
+              </button>
+              <label className="sort-control">
+                <span>{t('Sort')}</span>
+                <select
+                  value={bookSort}
+                  onChange={(event) =>
+                    setBookSort(event.target.value as typeof bookSort)
+                  }
                 >
-                  <span className="note-paper-top">
-                    <span>{formatDate(note.date)}</span>
-                    <span className="note-paper-duration">
-                      <Clock size={10} />
-                      {formatDuration(note.durationSec)}
-                    </span>
-                    {note.hasAudio ? <AudioLines size={11} /> : null}
-                  </span>
-                  <strong className="note-paper-title">{note.title}</strong>
-                  {note.summary ? (
-                    <span className="note-paper-summary">{note.summary}</span>
-                  ) : null}
-                  <span className="note-paper-foot">
-                    <span>
-                      {t('{minutes} min read', {
-                        minutes: Math.max(1, Math.ceil(note.wordCount / 200))
-                      })}
-                    </span>
-                    <span className="note-paper-open">
-                      <BookOpen size={12} />
-                      {t('Open')}
-                    </span>
-                  </span>
-                </button>
-              ))}
+                  <option value="newest">{t('Newest first')}</option>
+                  <option value="oldest">{t('Oldest first')}</option>
+                  <option value="longest">{t('Longest first')}</option>
+                </select>
+              </label>
             </div>
+
+            {bookFiltersActive ? (
+              <div className="book-note-filter-meta">
+                <span>
+                  {t('Showing {shown} of {total} notes', {
+                    shown: openNotes.length,
+                    total: openBook.notes.length
+                  })}
+                </span>
+                <button className="text-link" onClick={clearBookFilters}>
+                  {t('Clear filters')}
+                </button>
+              </div>
+            ) : null}
+
+            {openNotes.length ? (
+              <div className="note-paper-grid">
+                {openNotes.map((note) => (
+                  <button
+                    key={note.id}
+                    className="note-paper"
+                    type="button"
+                    onClick={() => navigate(`/notes/${note.id}`)}
+                  >
+                    <span className="note-paper-top">
+                      <span>{formatDate(note.date)}</span>
+                      <span className="note-paper-duration">
+                        <Clock size={10} />
+                        {formatDuration(note.durationSec)}
+                      </span>
+                      {note.hasAudio ? <AudioLines size={11} /> : null}
+                    </span>
+                    <strong className="note-paper-title">{note.title}</strong>
+                    {note.summary ? (
+                      <span className="note-paper-summary">{note.summary}</span>
+                    ) : null}
+                    <span className="note-paper-foot">
+                      <span>
+                        {t('{minutes} min read', {
+                          minutes: Math.max(1, Math.ceil(note.wordCount / 200))
+                        })}
+                      </span>
+                      <span className="note-paper-open">
+                        <BookOpen size={12} />
+                        {t('Open')}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="note-paper-empty">
+                <Search size={20} />
+                <p>{t('No notes match this filter.')}</p>
+                {bookFiltersActive ? (
+                  <Button variant="ghost" onClick={clearBookFilters}>
+                    {t('Clear filters')}
+                  </Button>
+                ) : null}
+              </div>
+            )}
           </div>
         </div>
       </div>

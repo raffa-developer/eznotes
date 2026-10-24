@@ -11,6 +11,7 @@ export const library: Record<string, string> = {
   'Record lecture': 'Gravar aula',
   'Search titles, courses, summaries…':
     'Pesquisar títulos, disciplinas, resumos…',
+  'Search these notes…': 'Pesquisar nestes apontamentos…',
   'Clear search': 'Limpar pesquisa',
   Sort: 'Ordenar',
   'Newest first': 'Mais recentes primeiro',
@@ -42,6 +43,8 @@ export const library: Record<string, string> = {
   'No notes match these filters': 'Nenhuma nota corresponde a estes filtros',
   'No course books match these filters':
     'Nenhum livro corresponde a estes filtros',
+  'No notes match this filter.':
+    'Nenhum apontamento corresponde a este filtro.',
   'Try a different keyword or turn off the audio filter.':
     'Tente outra palavra ou desative o filtro de áudio.',
   'No notes yet': 'Ainda não há notas',
