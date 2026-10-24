@@ -36,6 +36,8 @@ source for now.
   lecturer from students in the saved transcript, after the note is written. No
   extra API key; the models download once.
 - **Markdown you own** — one plain file per lecture, organised by course and date.
+- **A shelf, not a file list** — the library groups notes by course as book
+  covers, with search, filters, and a quick copy action.
 - **Audio retention is a choice** — keep the recording for replay or delete it
   immediately. The transcript and note are kept either way.
 - **Compact retained audio** — kept lectures are Opus in WebM (~11 MB/hour);

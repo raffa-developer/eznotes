@@ -20,6 +20,8 @@ export const library: Record<string, string> = {
   'All notes': 'Todas as notas',
   'Has audio': 'Com áudio',
   'Showing {shown} of {total} notes': 'A mostrar {shown} de {total} notas',
+  '{count} note': '{count} nota',
+  '{count} notes': '{count} notas',
   '{notes} note across {courses} course': '{notes} nota em {courses} disciplina',
   '{notes} notes across {courses} courses':
     '{notes} notas em {courses} disciplinas',
@@ -33,6 +35,7 @@ export const library: Record<string, string> = {
   Open: 'Abrir',
   'No notes match these filters': 'Nenhuma nota corresponde a estes filtros',
   'No notes yet': 'Ainda não há notas',
+  General: 'Geral',
   'Try a different course, keyword, or turn off the audio filter.':
     'Experimente outra disciplina, outra palavra-chave ou desative o filtro de áudio.',
   'Record your first lecture and ezNotes will write the structured note here.':

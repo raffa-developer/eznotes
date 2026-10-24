@@ -158,6 +158,9 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
 - [x] Redesign Schedule as a weekly time grid: dated day columns, today marker,
   time axis, course-coloured blocks, click-empty-to-add, and a compact course
   panel. The old repeated day list and ambiguous count numbers are gone.
+- [x] Redesign Library as a shelf of lecture books: notes grouped by course,
+  serif covers with course colours, search/filter/sort preserved, quick copy,
+  and book-shaped loading skeletons.
 
 ---
 

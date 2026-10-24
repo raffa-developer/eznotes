@@ -6,16 +6,24 @@ import {
   Check,
   Clock,
   Copy,
-  FileText,
   FolderOpen,
   Search,
   SlidersHorizontal,
   X
 } from 'lucide-react'
+import type { NoteMeta } from '../../../shared/types'
 import { useApp } from '../state/AppContext'
-import { Badge, Button, Card, EmptyState } from '../components/ui'
+import { Button, EmptyState } from '../components/ui'
 import { t, uiLocale } from '../i18n'
-import { formatDate, formatDuration } from '../lib/format'
+import { formatDuration } from '../lib/format'
+
+interface Shelf {
+  key: string
+  name: string
+  color: string
+  notes: NoteMeta[]
+  first: number
+}
 
 export default function Library(): React.JSX.Element {
   const { notes, schedule, loading, toast } = useApp()
@@ -36,11 +44,19 @@ export default function Library(): React.JSX.Element {
         .filter((item) => item.count > 0),
     [schedule.courses, notes]
   )
+  const noteCourseCount = useMemo(
+    () => new Set(notes.map((note) => note.courseId ?? note.courseName)).size,
+    [notes]
+  )
   const audioCount = useMemo(
     () => notes.filter((note) => note.hasAudio).length,
     [notes]
   )
   const activeFilters = Boolean(query.trim()) || courseId !== 'all' || onlyAudio
+  const bookDateFormatter = new Intl.DateTimeFormat(uiLocale(), {
+    day: '2-digit',
+    month: 'short'
+  })
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase()
@@ -61,6 +77,27 @@ export default function Library(): React.JSX.Element {
       return new Date(b.date).getTime() - new Date(a.date).getTime()
     })
   }, [notes, query, courseId, onlyAudio, sort])
+
+  const shelves = useMemo(() => {
+    const map = new Map<string, Shelf>()
+    filtered.forEach((note, index) => {
+      const key = note.courseId ?? `course-name:${note.courseName}`
+      const course = schedule.courses.find((item) => item.id === note.courseId)
+      let shelf = map.get(key)
+      if (!shelf) {
+        shelf = {
+          key,
+          name: course?.name ?? note.courseName ?? t('General'),
+          color: course?.color ?? '#8e8e93',
+          notes: [],
+          first: index
+        }
+        map.set(key, shelf)
+      }
+      shelf.notes.push(note)
+    })
+    return [...map.values()].sort((a, b) => a.first - b.first)
+  }, [filtered, schedule.courses])
 
   function clearFilters(): void {
     setQuery('')
@@ -89,7 +126,7 @@ export default function Library(): React.JSX.Element {
   }
 
   return (
-    <div className="page">
+    <div className="page library-page">
       <header className="page-head">
         <div>
           <p className="eyebrow">{t('Your archive')}</p>
@@ -100,7 +137,7 @@ export default function Library(): React.JSX.Element {
                   notes.length === 1
                     ? '{notes} note across {courses} course, all as Markdown.'
                     : '{notes} notes across {courses} courses, all as Markdown.',
-                  { notes: notes.length, courses: coursesWithNotes.length }
+                  { notes: notes.length, courses: noteCourseCount }
                 )
               : t('Every lecture becomes a file you own.')}
           </p>
@@ -118,7 +155,7 @@ export default function Library(): React.JSX.Element {
       </header>
 
       {!loading && notes.length ? (
-        <Card className="library-toolbar">
+        <div className="library-controls">
           <div className="library-search-row">
             <div className="search-box">
               <Search size={17} />
@@ -193,116 +230,99 @@ export default function Library(): React.JSX.Element {
             </div>
           </div>
 
-          <div className="library-filter-meta">
-            <span>
-              {activeFilters
-                ? t('Showing {shown} of {total} notes', {
-                    shown: filtered.length,
-                    total: notes.length
-                  })
-                : t(
-                    notes.length === 1
-                      ? '{notes} note across {courses} course'
-                      : '{notes} notes across {courses} courses',
-                    { notes: notes.length, courses: coursesWithNotes.length }
-                  )}
-            </span>
-            {activeFilters ? (
+          {activeFilters ? (
+            <div className="library-filter-meta">
+              <span>
+                {t('Showing {shown} of {total} notes', {
+                  shown: filtered.length,
+                  total: notes.length
+                })}
+              </span>
               <button className="text-link" onClick={clearFilters}>
                 {t('Clear all')}
               </button>
-            ) : null}
-          </div>
-        </Card>
+            </div>
+          ) : null}
+        </div>
       ) : null}
 
       {loading ? (
-        <div className="skeleton-list">
-          {[0, 1, 2].map((item) => (
-            <div key={item} className="skeleton-row" />
+        <div className="book-skeleton-grid" aria-hidden="true">
+          {[0, 1, 2, 3, 4, 5].map((item) => (
+            <div key={item} className="book-skeleton" />
           ))}
         </div>
       ) : filtered.length ? (
-        <Card className="note-list-card">
-          {filtered.map((note) => {
-            const course = schedule.courses.find((item) => item.id === note.courseId)
-            return (
-              <div
-                key={note.id}
-                className="note-row"
-                onClick={() => navigate(`/notes/${note.id}`)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(event) => {
-                  if (event.target !== event.currentTarget) return
-                  if (event.key === 'Enter') navigate(`/notes/${note.id}`)
-                }}
-              >
-                <div className="note-date">
-                  <strong>
-                    {new Intl.DateTimeFormat(uiLocale(), { day: '2-digit' }).format(
-                      new Date(note.date)
-                    )}
-                  </strong>
-                  <span>
-                    {new Intl.DateTimeFormat(uiLocale(), { month: 'short' }).format(
-                      new Date(note.date)
-                    )}
-                  </span>
-                  <small>{new Date(note.date).getFullYear()}</small>
-                </div>
-                <div
-                  className="note-stripe"
-                  style={{ background: course?.color ?? '#f2c14e' }}
+        <div className="shelf-list">
+          {shelves.map((shelf) => (
+            <section className="shelf" key={shelf.key}>
+              <div className="shelf-head">
+                <span
+                  className="shelf-marker"
+                  style={{ background: shelf.color }}
                 />
-                <div className="note-main">
-                  <div className="note-title-line">
-                    <h3>{note.title}</h3>
-                    {note.hasAudio ? <Badge tone="info">{t('audio')}</Badge> : null}
-                  </div>
-                  <p className="note-meta">
-                    {note.courseName}
-                    <span className="meta-sep" />
-                    {formatDate(note.date)}
-                    <span className="meta-sep" />
-                    <Clock size={13} /> {formatDuration(note.durationSec)}
-                    <span className="meta-sep" />
-                    <FileText size={13} />{' '}
-                    {t(note.wordCount === 1 ? '{count} word' : '{count} words', {
-                      count: note.wordCount.toLocaleString()
-                    })}
-                    <span className="meta-sep" />
-                    {t('{minutes} min read', {
-                      minutes: Math.max(1, Math.ceil(note.wordCount / 200))
-                    })}
-                  </p>
-                  {note.summary ? <p className="note-summary">{note.summary}</p> : null}
-                  {note.tags.length ? (
-                    <div className="tag-row">
-                      {note.tags.map((tag) => (
-                        <span key={tag} className="tag">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-                <button
-                  className="note-quick-copy"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    void copyNote(note.id)
-                  }}
-                  aria-label={t('Copy note')}
-                  title={t('Copy note to clipboard')}
-                >
-                  {copyingId === note.id ? <Check size={15} /> : <Copy size={15} />}
-                </button>
-                <span className="note-open">{t('Open')}</span>
+                <h2>{shelf.name}</h2>
+                <span className="shelf-count">
+                  {t(
+                    shelf.notes.length === 1 ? '{count} note' : '{count} notes',
+                    { count: shelf.notes.length }
+                  )}
+                </span>
               </div>
-            )
-          })}
-        </Card>
+              <div className="shelf-books">
+                {shelf.notes.map((note) => (
+                  <div
+                    key={note.id}
+                    className="book-wrap"
+                    style={{ '--course-color': shelf.color } as React.CSSProperties}
+                  >
+                    <button
+                      className="book"
+                      type="button"
+                      onClick={() => navigate(`/notes/${note.id}`)}
+                      aria-label={`${note.title}, ${note.courseName}${
+                        note.hasAudio ? ', audio' : ''
+                      }`}
+                      title={note.title}
+                    >
+                      <span className="book-cover">
+                        <span className="book-top">
+                          <span className="book-course">{note.courseName}</span>
+                          {note.hasAudio ? (
+                            <AudioLines size={11} className="book-audio" />
+                          ) : null}
+                        </span>
+                        <span className="book-title">{note.title}</span>
+                        <span className="book-foot">
+                          <span>
+                            {bookDateFormatter.format(new Date(note.date))}
+                          </span>
+                          <span className="book-duration">
+                            <Clock size={10} />
+                            {formatDuration(note.durationSec)}
+                          </span>
+                        </span>
+                      </span>
+                    </button>
+                    <button
+                      className="book-copy"
+                      type="button"
+                      onClick={() => void copyNote(note.id)}
+                      aria-label={t('Copy note')}
+                      title={t('Copy note to clipboard')}
+                    >
+                      {copyingId === note.id ? (
+                        <Check size={13} />
+                      ) : (
+                        <Copy size={13} />
+                      )}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
       ) : (
         <EmptyState
           icon={<Search size={24} />}
