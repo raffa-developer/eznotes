@@ -1,108 +1,183 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  ArrowLeft,
   AudioLines,
   BookOpen,
-  Check,
   Clock,
-  Copy,
   FolderOpen,
   Search,
-  SlidersHorizontal,
+  UserRound,
   X
 } from 'lucide-react'
 import type { NoteMeta } from '../../../shared/types'
 import { useApp } from '../state/AppContext'
 import { Button, EmptyState } from '../components/ui'
 import { t, uiLocale } from '../i18n'
-import { formatDuration } from '../lib/format'
+import { formatDate, formatDuration } from '../lib/format'
 
-interface Shelf {
+interface CourseBook {
   key: string
   name: string
+  code?: string
+  lecturer?: string
+  description?: string
   color: string
+  glossary: string[]
   notes: NoteMeta[]
-  first: number
+  earliest: number
+  latest: number
+  totalDuration: number
+  audioCount: number
 }
 
 export default function Library(): React.JSX.Element {
   const { notes, schedule, loading, toast } = useApp()
   const [query, setQuery] = useState('')
-  const [courseId, setCourseId] = useState<string>('all')
   const [onlyAudio, setOnlyAudio] = useState(false)
   const [sort, setSort] = useState<'newest' | 'oldest' | 'longest'>('newest')
-  const [copyingId, setCopyingId] = useState<string | null>(null)
+  const [openBookKey, setOpenBookKey] = useState<string | null>(null)
+  const rightPageRef = useRef<HTMLDivElement | null>(null)
   const navigate = useNavigate()
 
-  const coursesWithNotes = useMemo(
-    () =>
-      schedule.courses
-        .map((course) => ({
-          course,
-          count: notes.filter((note) => note.courseId === course.id).length
-        }))
-        .filter((item) => item.count > 0),
-    [schedule.courses, notes]
+  const allBooks = useMemo(() => {
+    const map = new Map<string, CourseBook>()
+
+    for (const note of notes) {
+      const key = note.courseId ?? `course-name:${note.courseName}`
+      const course = schedule.courses.find((item) => item.id === note.courseId)
+      let book = map.get(key)
+      if (!book) {
+        const name = course?.name ?? note.courseName ?? t('General')
+        const code = course?.code?.trim() || undefined
+        const glossary = course?.glossary ?? []
+        const description = glossary
+          .map((term) => term.trim())
+          .find(
+            (term) =>
+              term &&
+              term.toLocaleLowerCase() !== name.toLocaleLowerCase() &&
+              term.toLocaleLowerCase() !== code?.toLocaleLowerCase()
+          )
+        book = {
+          key,
+          name,
+          code,
+          lecturer: course?.lecturer,
+          description,
+          color: course?.color ?? '#8e8e93',
+          glossary,
+          notes: [],
+          earliest: Number.POSITIVE_INFINITY,
+          latest: 0,
+          totalDuration: 0,
+          audioCount: 0
+        }
+        map.set(key, book)
+      }
+      book.notes.push(note)
+    }
+
+    for (const book of map.values()) {
+      book.notes.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      )
+      book.earliest = Math.min(
+        ...book.notes.map((note) => new Date(note.date).getTime())
+      )
+      book.latest = Math.max(
+        ...book.notes.map((note) => new Date(note.date).getTime())
+      )
+      book.totalDuration = book.notes.reduce(
+        (sum, note) => sum + note.durationSec,
+        0
+      )
+      book.audioCount = book.notes.filter((note) => note.hasAudio).length
+    }
+
+    return [...map.values()]
+  }, [notes, schedule.courses])
+
+  const booksWithAudio = useMemo(
+    () => allBooks.filter((book) => book.audioCount > 0).length,
+    [allBooks]
   )
-  const noteCourseCount = useMemo(
-    () => new Set(notes.map((note) => note.courseId ?? note.courseName)).size,
-    [notes]
-  )
-  const audioCount = useMemo(
-    () => notes.filter((note) => note.hasAudio).length,
-    [notes]
-  )
-  const activeFilters = Boolean(query.trim()) || courseId !== 'all' || onlyAudio
-  const bookDateFormatter = new Intl.DateTimeFormat(uiLocale(), {
+
+  const books = useMemo(() => {
+    const term = query.trim().toLocaleLowerCase()
+    const result = allBooks.filter((book) => {
+      if (onlyAudio && !book.audioCount) return false
+      if (!term) return true
+      const haystack = [
+        book.name,
+        book.code,
+        book.lecturer,
+        book.description,
+        ...book.glossary,
+        ...book.notes.flatMap((note) => [
+          note.title,
+          note.summary,
+          note.courseName,
+          ...note.tags
+        ])
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLocaleLowerCase()
+      return haystack.includes(term)
+    })
+
+    return result.sort((a, b) => {
+      if (sort === 'oldest') return a.earliest - b.earliest
+      if (sort === 'longest') return b.totalDuration - a.totalDuration
+      return b.latest - a.latest
+    })
+  }, [allBooks, query, onlyAudio, sort])
+
+  const activeFilters = Boolean(query.trim()) || onlyAudio
+  const openBook = openBookKey
+    ? allBooks.find((book) => book.key === openBookKey) ?? null
+    : null
+  const compactDate = new Intl.DateTimeFormat(uiLocale(), {
     day: '2-digit',
     month: 'short'
   })
 
-  const filtered = useMemo(() => {
-    const term = query.trim().toLowerCase()
-    const result = notes.filter((note) => {
-      if (courseId !== 'all' && note.courseId !== courseId) return false
-      if (onlyAudio && !note.hasAudio) return false
-      if (!term) return true
-      return (
-        note.title.toLowerCase().includes(term) ||
-        note.courseName.toLowerCase().includes(term) ||
-        note.summary.toLowerCase().includes(term) ||
-        note.tags.some((tag) => tag.toLowerCase().includes(term))
-      )
-    })
-    return result.sort((a, b) => {
-      if (sort === 'oldest') return new Date(a.date).getTime() - new Date(b.date).getTime()
-      if (sort === 'longest') return b.durationSec - a.durationSec
-      return new Date(b.date).getTime() - new Date(a.date).getTime()
-    })
-  }, [notes, query, courseId, onlyAudio, sort])
-
-  const shelves = useMemo(() => {
-    const map = new Map<string, Shelf>()
-    filtered.forEach((note, index) => {
-      const key = note.courseId ?? `course-name:${note.courseName}`
-      const course = schedule.courses.find((item) => item.id === note.courseId)
-      let shelf = map.get(key)
-      if (!shelf) {
-        shelf = {
-          key,
-          name: course?.name ?? note.courseName ?? t('General'),
-          color: course?.color ?? '#8e8e93',
-          notes: [],
-          first: index
-        }
-        map.set(key, shelf)
-      }
-      shelf.notes.push(note)
-    })
-    return [...map.values()].sort((a, b) => a.first - b.first)
-  }, [filtered, schedule.courses])
+  useEffect(() => {
+    if (!openBook) return
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setOpenBookKey(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [openBook])
 
   function clearFilters(): void {
     setQuery('')
-    setCourseId('all')
     setOnlyAudio(false)
+  }
+
+  function dateRange(book: CourseBook): string {
+    const first = compactDate.format(new Date(book.earliest))
+    const last = compactDate.format(new Date(book.latest))
+    return first === last ? first : `${first} – ${last}`
+  }
+
+  function focusNote(noteId: string): void {
+    const target = document.getElementById(`book-note-${noteId}`)
+    const container = rightPageRef.current
+    if (target && container) {
+      container.scrollTo({
+        top: Math.max(0, target.offsetTop - 46),
+        behavior: 'smooth'
+      })
+      return
+    }
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  function noteCount(count: number): string {
+    return t(count === 1 ? '{count} note' : '{count} notes', { count })
   }
 
   async function openFolder(): Promise<void> {
@@ -113,16 +188,141 @@ export default function Library(): React.JSX.Element {
     }
   }
 
-  async function copyNote(id: string): Promise<void> {
-    setCopyingId(id)
-    try {
-      const result = await window.ezNotes.notes.copy(id)
-      toast(result.message, 'success')
-    } catch (error) {
-      toast(error instanceof Error ? error.message : String(error), 'error')
-    } finally {
-      window.setTimeout(() => setCopyingId(null), 1200)
-    }
+  if (openBook) {
+    const extraGlossary = openBook.glossary
+      .map((term) => term.trim())
+      .filter(
+        (term) =>
+          term &&
+          term.toLocaleLowerCase() !== openBook.name.toLocaleLowerCase() &&
+          term.toLocaleLowerCase() !== openBook.code?.toLocaleLowerCase() &&
+          term.toLocaleLowerCase() !== openBook.description?.toLocaleLowerCase()
+      )
+
+    return (
+      <div className="page library-page book-reader-page">
+        <div className="book-reader-bar">
+          <button
+            className="back-link"
+            type="button"
+            onClick={() => setOpenBookKey(null)}
+            autoFocus
+          >
+            <ArrowLeft size={15} />
+            {t('Library')}
+          </button>
+          <span className="book-reader-kicker">
+            {openBook.code ?? t('Course book')}
+          </span>
+        </div>
+
+        <div
+          className="open-book"
+          style={{ '--course-color': openBook.color } as React.CSSProperties}
+        >
+          <div className="book-page book-page-left">
+            <span className="book-page-kicker">
+              {openBook.code ?? t('Course book')}
+            </span>
+            <h1 className="book-page-title">{openBook.name}</h1>
+            {openBook.description ? (
+              <p className="book-page-description">{openBook.description}</p>
+            ) : null}
+
+            <div className="book-page-facts">
+              {openBook.lecturer ? (
+                <span>
+                  <UserRound size={13} />
+                  {openBook.lecturer}
+                </span>
+              ) : null}
+              <span>
+                <BookOpen size={13} />
+                {noteCount(openBook.notes.length)}
+              </span>
+              <span>
+                <Clock size={13} />
+                {formatDuration(openBook.totalDuration)}
+              </span>
+            </div>
+
+            <div className="book-page-range">{dateRange(openBook)}</div>
+
+            {extraGlossary.length ? (
+              <div className="book-page-glossary">
+                <h2>{t('Glossary')}</h2>
+                <p>{extraGlossary.join(', ')}</p>
+              </div>
+            ) : null}
+
+            <nav className="book-page-contents">
+              <h2>{t('Contents')}</h2>
+              <ol>
+                {openBook.notes.slice(0, 6).map((note, index) => (
+                  <li key={note.id}>
+                    <button type="button" onClick={() => focusNote(note.id)}>
+                      <span className="book-contents-number">
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                      <span className="book-contents-title">{note.title}</span>
+                    </button>
+                  </li>
+                ))}
+              </ol>
+              {openBook.notes.length > 6 ? (
+                <span className="book-contents-more">
+                  +{openBook.notes.length - 6}
+                </span>
+              ) : null}
+            </nav>
+
+            <div className="book-page-footer">
+              <span>ezNotes</span>
+              <span>{t('Library')}</span>
+            </div>
+          </div>
+
+          <div className="book-page book-page-right" ref={rightPageRef}>
+            <div className="book-notes-head">
+              <h2>{t('Lecture notes')}</h2>
+              <span>{noteCount(openBook.notes.length)}</span>
+            </div>
+
+            {openBook.notes.map((note, index) => (
+              <button
+                key={note.id}
+                id={`book-note-${note.id}`}
+                className="book-note"
+                type="button"
+                onClick={() => navigate(`/notes/${note.id}`)}
+              >
+                <span className="book-note-number">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <span className="book-note-main">
+                  <span className="book-note-meta">
+                    <span>{formatDate(note.date)}</span>
+                    <span className="book-note-duration">
+                      <Clock size={10} />
+                      {formatDuration(note.durationSec)}
+                    </span>
+                    {note.hasAudio ? <AudioLines size={11} /> : null}
+                  </span>
+                  <strong>{note.title}</strong>
+                  {note.summary ? (
+                    <span className="book-note-summary">{note.summary}</span>
+                  ) : null}
+                </span>
+                <span className="book-note-open">
+                  <BookOpen size={12} />
+                  {t('Open')}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -137,7 +337,7 @@ export default function Library(): React.JSX.Element {
                   notes.length === 1
                     ? '{notes} note across {courses} course, all as Markdown.'
                     : '{notes} notes across {courses} courses, all as Markdown.',
-                  { notes: notes.length, courses: noteCourseCount }
+                  { notes: notes.length, courses: allBooks.length }
                 )
               : t('Every lecture becomes a file you own.')}
           </p>
@@ -174,6 +374,17 @@ export default function Library(): React.JSX.Element {
                 </button>
               ) : null}
             </div>
+            <button
+              className={`filter-chip library-audio-filter ${onlyAudio ? 'active' : ''}`}
+              type="button"
+              onClick={() => setOnlyAudio((current) => !current)}
+              aria-pressed={onlyAudio}
+              disabled={booksWithAudio === 0}
+            >
+              <AudioLines size={13} />
+              {t('Has audio')}
+              <span className="filter-count">{booksWithAudio}</span>
+            </button>
             <label className="sort-control">
               <span>{t('Sort')}</span>
               <select
@@ -187,55 +398,12 @@ export default function Library(): React.JSX.Element {
             </label>
           </div>
 
-          <div className="library-filter-row">
-            <span className="filter-label">
-              <SlidersHorizontal size={14} />
-              {t('Filter')}
-            </span>
-            <div className="filter-chips">
-              <button
-                className={`filter-chip ${courseId === 'all' ? 'active' : ''}`}
-                onClick={() => setCourseId('all')}
-                aria-pressed={courseId === 'all'}
-              >
-                {t('All notes')}
-                <span className="filter-count">{notes.length}</span>
-              </button>
-              {coursesWithNotes.map(({ course, count }) => (
-                <button
-                  key={course.id}
-                  className={`filter-chip ${courseId === course.id ? 'active' : ''}`}
-                  onClick={() =>
-                    setCourseId((current) => (current === course.id ? 'all' : course.id))
-                  }
-                  aria-pressed={courseId === course.id}
-                >
-                  <span
-                    className="filter-dot"
-                    style={{ background: course.color }}
-                  />
-                  {course.name}
-                  <span className="filter-count">{count}</span>
-                </button>
-              ))}
-              <button
-                className={`filter-chip ${onlyAudio ? 'active' : ''}`}
-                onClick={() => setOnlyAudio((current) => !current)}
-                aria-pressed={onlyAudio}
-              >
-                <AudioLines size={13} />
-                {t('Has audio')}
-                <span className="filter-count">{audioCount}</span>
-              </button>
-            </div>
-          </div>
-
           {activeFilters ? (
             <div className="library-filter-meta">
               <span>
-                {t('Showing {shown} of {total} notes', {
-                  shown: filtered.length,
-                  total: notes.length
+                {t('Showing {shown} of {total} course books', {
+                  shown: books.length,
+                  total: allBooks.length
                 })}
               </span>
               <button className="text-link" onClick={clearFilters}>
@@ -247,89 +415,59 @@ export default function Library(): React.JSX.Element {
       ) : null}
 
       {loading ? (
-        <div className="book-skeleton-grid" aria-hidden="true">
-          {[0, 1, 2, 3, 4, 5].map((item) => (
-            <div key={item} className="book-skeleton" />
+        <div className="course-book-grid" aria-hidden="true">
+          {[0, 1, 2, 3, 4, 5, 6, 7].map((item) => (
+            <div key={item} className="course-book-skeleton" />
           ))}
         </div>
-      ) : filtered.length ? (
-        <div className="shelf-list">
-          {shelves.map((shelf) => (
-            <section className="shelf" key={shelf.key}>
-              <div className="shelf-head">
-                <span
-                  className="shelf-marker"
-                  style={{ background: shelf.color }}
-                />
-                <h2>{shelf.name}</h2>
-                <span className="shelf-count">
-                  {t(
-                    shelf.notes.length === 1 ? '{count} note' : '{count} notes',
-                    { count: shelf.notes.length }
-                  )}
+      ) : books.length ? (
+        <div className="course-book-grid">
+          {books.map((book) => (
+            <button
+              key={book.key}
+              className="course-book"
+              type="button"
+              onClick={() => setOpenBookKey(book.key)}
+              style={{ '--course-color': book.color } as React.CSSProperties}
+              aria-label={t('Open the {course} book', { course: book.name })}
+              title={book.description ?? book.name}
+            >
+              <span className="course-book-cover">
+                <span className="course-book-top">
+                  <span className="course-book-code">
+                    {book.code ?? new Date(book.latest).getFullYear()}
+                  </span>
+                  {book.audioCount ? (
+                    <span className="course-book-audio">
+                      <AudioLines size={12} />
+                    </span>
+                  ) : null}
                 </span>
-              </div>
-              <div className="shelf-books">
-                {shelf.notes.map((note) => (
-                  <div
-                    key={note.id}
-                    className="book-wrap"
-                    style={{ '--course-color': shelf.color } as React.CSSProperties}
-                  >
-                    <button
-                      className="book"
-                      type="button"
-                      onClick={() => navigate(`/notes/${note.id}`)}
-                      aria-label={`${note.title}, ${note.courseName}${
-                        note.hasAudio ? ', audio' : ''
-                      }`}
-                      title={note.title}
-                    >
-                      <span className="book-cover">
-                        <span className="book-top">
-                          <span className="book-course">{note.courseName}</span>
-                          {note.hasAudio ? (
-                            <AudioLines size={11} className="book-audio" />
-                          ) : null}
-                        </span>
-                        <span className="book-title">{note.title}</span>
-                        <span className="book-foot">
-                          <span>
-                            {bookDateFormatter.format(new Date(note.date))}
-                          </span>
-                          <span className="book-duration">
-                            <Clock size={10} />
-                            {formatDuration(note.durationSec)}
-                          </span>
-                        </span>
-                      </span>
-                    </button>
-                    <button
-                      className="book-copy"
-                      type="button"
-                      onClick={() => void copyNote(note.id)}
-                      aria-label={t('Copy note')}
-                      title={t('Copy note to clipboard')}
-                    >
-                      {copyingId === note.id ? (
-                        <Check size={13} />
-                      ) : (
-                        <Copy size={13} />
-                      )}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </section>
+                <span className="course-book-title">{book.name}</span>
+                {book.description ? (
+                  <span className="course-book-description">
+                    {book.description}
+                  </span>
+                ) : null}
+                <span className="course-book-foot">
+                  <span>{noteCount(book.notes.length)}</span>
+                  <span>{dateRange(book)}</span>
+                </span>
+              </span>
+            </button>
           ))}
         </div>
       ) : (
         <EmptyState
           icon={<Search size={24} />}
-          title={t(notes.length ? 'No notes match these filters' : 'No notes yet')}
+          title={t(
+            notes.length
+              ? 'No course books match these filters'
+              : 'No notes yet'
+          )}
           body={t(
             notes.length
-              ? 'Try a different course, keyword, or turn off the audio filter.'
+              ? 'Try a different keyword or turn off the audio filter.'
               : 'Record your first lecture and ezNotes will write the structured note here.'
           )}
           action={

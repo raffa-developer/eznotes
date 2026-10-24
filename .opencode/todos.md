@@ -81,8 +81,9 @@ tick the box here and in `TODO.md` when it lands.
       today marker, course-coloured blocks, click-to-add, and a compact course
       panel
       `src/renderer/src/pages/SchedulePage.tsx`, `src/renderer/src/apple.css`
-- [x] **P2-9** Redesign Library as a shelf of lecture books grouped by course,
-      with serif covers, quick copy, filters, and book skeletons
+- [x] **P2-9** Redesign Library as a 4-column shelf of course books; opening a
+      book shows its course index and all lecture notes on paper pages, with
+      search, audio filtering, and sorting preserved
       `src/renderer/src/pages/Library.tsx`, `src/renderer/src/apple.css`
 
 ## Engineering hygiene
