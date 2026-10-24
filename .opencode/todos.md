@@ -82,8 +82,9 @@ tick the box here and in `TODO.md` when it lands.
       panel
       `src/renderer/src/pages/SchedulePage.tsx`, `src/renderer/src/apple.css`
 - [x] **P2-9** Redesign Library as a 4-column shelf of course books; opening a
-      book shows its notes as simple white paper cards in a 4-column grid, with
-      search, audio filtering, and sorting preserved
+      book shows its notes as simple paper cards in a 4-column grid, white in
+      light mode and using app dark surfaces in dark mode. Search, audio
+      filtering, and sorting preserved
       `src/renderer/src/pages/Library.tsx`, `src/renderer/src/apple.css`
 
 ## Engineering hygiene

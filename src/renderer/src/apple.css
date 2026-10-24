@@ -1854,8 +1854,8 @@ textarea::placeholder {
   background:
     linear-gradient(
       135deg,
-      color-mix(in srgb, var(--course-color) 34%, var(--surface)) 0%,
-      color-mix(in srgb, var(--course-color) 18%, var(--surface)) 100%
+      color-mix(in srgb, var(--course-color) 46%, var(--surface)) 0%,
+      color-mix(in srgb, var(--course-color) 22%, var(--surface)) 100%
     );
   box-shadow: var(--shadow);
   animation: book-open 220ms ease both;
@@ -3404,6 +3404,27 @@ body.island-window .crash-card .button {
 
 /* Single-page paper book reader */
 
+:root,
+[data-theme="light"] {
+  --book-page: #ffffff;
+  --book-card: #ffffff;
+  --book-ink: var(--text);
+  --book-muted: var(--muted);
+  --book-line: var(--line);
+  --book-card-line: var(--line-strong);
+  --book-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] {
+  --book-page: var(--surface);
+  --book-card: var(--surface-2);
+  --book-ink: var(--text);
+  --book-muted: var(--muted);
+  --book-line: var(--line);
+  --book-card-line: var(--line-strong);
+  --book-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
 .open-book-single {
   display: block;
   height: auto;
@@ -3416,9 +3437,9 @@ body.island-window .crash-card .button {
   min-height: 460px;
   padding: 34px 38px 38px;
   border-radius: 5px;
-  background: #fbf9f4;
-  color: #2b2822;
-  box-shadow: inset 0 0 0 1px rgba(44, 40, 33, 0.06);
+  background: var(--book-page);
+  color: var(--book-ink);
+  box-shadow: inset 0 0 0 1px var(--book-line);
 }
 
 .book-sheet-head {
@@ -3427,7 +3448,7 @@ body.island-window .crash-card .button {
   justify-content: space-between;
   gap: 28px;
   padding-bottom: 22px;
-  border-bottom: 1px solid rgba(44, 40, 33, 0.12);
+  border-bottom: 1px solid var(--book-line);
 }
 
 .book-sheet-intro {
@@ -3435,7 +3456,7 @@ body.island-window .crash-card .button {
 }
 
 .book-sheet-kicker {
-  color: #7a7264;
+  color: var(--book-muted);
   font-size: 9px;
   font-weight: 650;
   letter-spacing: 0.04em;
@@ -3446,6 +3467,7 @@ body.island-window .crash-card .button {
   max-height: 2.12em;
   margin-top: 6px;
   overflow: hidden;
+  color: var(--book-ink);
   font-family: var(--font-display);
   font-size: 38px;
   font-weight: 500;
@@ -3460,7 +3482,7 @@ body.island-window .crash-card .button {
   max-width: 62ch;
   margin-top: 8px;
   overflow: hidden;
-  color: #71695c;
+  color: var(--book-muted);
   font-family: var(--font-display);
   font-size: 14px;
   line-height: 1.45;
@@ -3473,7 +3495,7 @@ body.island-window .crash-card .button {
   flex-wrap: wrap;
   gap: 7px 14px;
   margin-top: 13px;
-  color: #71695c;
+  color: var(--book-muted);
   font-size: 10px;
   line-height: 1.4;
 }
@@ -3492,7 +3514,7 @@ body.island-window .crash-card .button {
 
 .book-sheet-count strong {
   display: block;
-  color: #2b2822;
+  color: var(--book-ink);
   font-family: var(--font-display);
   font-size: 36px;
   font-weight: 500;
@@ -3503,7 +3525,7 @@ body.island-window .crash-card .button {
 .book-sheet-count span {
   display: block;
   margin-top: 5px;
-  color: #7a7264;
+  color: var(--book-muted);
   font-size: 9px;
 }
 
@@ -3520,13 +3542,13 @@ body.island-window .crash-card .button {
   height: 100%;
   min-height: 204px;
   padding: 15px 16px 13px;
-  border: 1px solid rgba(44, 40, 33, 0.13);
+  border: 1px solid var(--book-card-line);
   border-radius: 6px;
-  background: #ffffff;
-  color: #2b2822;
+  background: var(--book-card);
+  color: var(--book-ink);
   text-align: left;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--book-card-shadow);
   transition:
     transform 150ms ease,
     box-shadow 150ms ease,
@@ -3534,7 +3556,7 @@ body.island-window .crash-card .button {
 }
 
 .note-paper:hover {
-  border-color: rgba(44, 40, 33, 0.24);
+  border-color: var(--book-muted);
   transform: translateY(-2px);
   box-shadow: 0 12px 20px -16px rgba(0, 0, 0, 0.4);
 }
@@ -3548,7 +3570,7 @@ body.island-window .crash-card .button {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #7b7366;
+  color: var(--book-muted);
   font-size: 8.5px;
   line-height: 1.3;
   font-variant-numeric: tabular-nums;
@@ -3573,7 +3595,7 @@ body.island-window .crash-card .button {
   max-height: 3.6em;
   margin-top: 9px;
   overflow: hidden;
-  color: #26221c;
+  color: var(--book-ink);
   font-family: var(--font-display);
   font-size: 18px;
   font-weight: 500;
@@ -3587,7 +3609,7 @@ body.island-window .crash-card .button {
   display: -webkit-box;
   margin-top: 6px;
   overflow: hidden;
-  color: #6e6659;
+  color: var(--book-muted);
   font-family: var(--font-display);
   font-size: 12px;
   line-height: 1.45;
@@ -3602,8 +3624,8 @@ body.island-window .crash-card .button {
   gap: 8px;
   margin-top: auto;
   padding-top: 10px;
-  border-top: 1px solid #eee8dd;
-  color: #7b7366;
+  border-top: 1px solid var(--book-line);
+  color: var(--book-muted);
   font-size: 8.5px;
   line-height: 1.3;
 }
@@ -3612,7 +3634,7 @@ body.island-window .crash-card .button {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  color: #2b2822;
+  color: var(--book-ink);
   font-weight: 600;
   white-space: nowrap;
 }

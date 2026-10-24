@@ -200,7 +200,7 @@ export default function Library(): React.JSX.Element {
             <div className="book-sheet-head">
               <div className="book-sheet-intro">
                 <span className="book-sheet-kicker">
-                  {openBook.code ?? t('Course book')}
+                  {t('Course book')}
                 </span>
                 <h1 className="book-sheet-title">{openBook.name}</h1>
                 {openBook.description ? (
