@@ -58,8 +58,9 @@ built around **European Portuguese lectures** and writes the final notes in
 ## Status
 
 `0.5.2` is early but usable. It is **Windows 10/11 only** and currently meant to
-be run from source. There is no signed public installer yet; an unsigned NSIS
-build can be produced locally with `npm run dist`.
+be run from source. No public installer has been published from this repository
+yet; the Windows release workflow builds and smoke-tests an NSIS installer, and
+signs it when certificate secrets are configured.
 
 The full pipeline works end-to-end with local mock services and demo mode. Real
 Groq and notes-model calls require your own API keys.
@@ -176,9 +177,11 @@ npm run pack   # unpacked app in release\win-unpacked
 npm run dist   # NSIS installer in release\
 ```
 
-The build is unsigned. Windows SmartScreen or an Application Control policy may
-block it. Run from source or sign the binary with a trusted code-signing
-certificate before distributing it.
+The local build is unsigned unless a signing certificate is configured. Windows
+SmartScreen or an Application Control policy may block unsigned binaries. The
+Windows release workflow builds, smoke-tests, and publishes the installer, and
+signs it when certificate secrets are present. See
+[`docs/RELEASING.md`](docs/RELEASING.md) for the release and signing checklist.
 
 ## How it works
 
@@ -511,7 +514,8 @@ work.
 - Speaker detection is optional, CPU-heavy on long lectures, and produces
   generic `Speaker N` labels rather than real names.
 - Speaker detection requires keeping the lecture audio.
-- A public signed installer and auto-update flow are not available yet.
+- A public installer has not been published yet, and auto-update delivery is not
+  implemented.
 - Provider and backend diagnostic error details may be shown in English even
   when the interface is in Portuguese.
 - Live transcripts can still make mistakes. The VAD and confidence filters

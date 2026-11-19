@@ -117,7 +117,7 @@ section “Next implementation wave”.
 - [x] **N-4** Fail-closed secret storage; migrate legacy plaintext fallback
 - [x] **N-5** Provider-aware first-run setup and connection checks
 - [x] **N-6** Recording health checks for mic loss, disk, and write failures
-- [ ] **N-7** Windows installer CI, smoke tests, and explicit signing state
+- [x] **N-7** Windows installer CI, smoke tests, and explicit signing state
 
 ### P2 — Study and course workflows
 

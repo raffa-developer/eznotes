@@ -288,13 +288,18 @@ verify reliability-sensitive changes with tests, and tick each item here and in
     flow; write failures mark the recording as errored and stop uses the real
     WAV size. 113 tests pass.
 
-- [ ] **N-7 Add a Windows release verification pipeline**
+- [x] **N-7 Add a Windows release verification pipeline**
   `.github/workflows/`, `package.json`, release documentation
   - Build the Windows installer in CI, retain the artifact, and smoke-test
     install, launch, upgrade, and uninstall. Sign releases when signing
     credentials are configured; clearly identify unsigned builds otherwise.
   - *Done when:* a tagged release produces a tested, downloadable Windows
     installer and the signing state is explicit.
+  - *Verified:* a Windows GitHub Actions workflow now builds and smoke-tests the
+    NSIS installer, names artifacts signed/unsigned, and publishes tagged
+    releases. The local 0.5.2 installer passed clean install, launch, reinstall,
+    launch, and uninstall; Authenticode correctly reported it as unsigned. 113
+    tests pass.
 
 ### P2 — Study and course workflows
 
