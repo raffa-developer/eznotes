@@ -280,7 +280,7 @@ export default function Dashboard(): React.JSX.Element {
             <p>
               {settings?.demoMode
                 ? t('Demo mode is on, so the two API steps are simulated. Add your timetable to try a full lecture.')
-                : t('Keys stay on this PC, encrypted with Windows DPAPI. Notes are plain Markdown files.')}
+                : t('Keys stay on this PC, encrypted with system secure storage. Notes are plain Markdown files.')}
             </p>
           </div>
           <div className="setup-steps">

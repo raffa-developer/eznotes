@@ -182,7 +182,9 @@ export function loadSettings(): Settings {
     30,
     600
   )
-  settings.stt.speakerLabels = settings.stt.speakerLabels === true
+  settings.stt.speakerLabels =
+    settings.stt.speakerLabels === true &&
+    diarizationStatus().platformSupported
   const notesMoved = migrateNotesDirectory(settings)
   settings.retentionDays = clamp(Number(settings.retentionDays) || 30, 1, 365)
   const notifyBefore = Number(settings.notifyBeforeMinutes)
@@ -207,7 +209,10 @@ export function saveSettings(next: Settings): Settings {
       ...next.stt,
       model: STT_MODELS.has(next.stt.model)
         ? next.stt.model
-        : DEFAULT_SETTINGS.stt.model
+        : DEFAULT_SETTINGS.stt.model,
+      speakerLabels:
+        next.stt.speakerLabels === true &&
+        diarizationStatus().platformSupported
     },
     retentionDays: clamp(Number(next.retentionDays) || 30, 1, 365),
     notifyBeforeMinutes: clamp(

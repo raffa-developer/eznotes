@@ -1,38 +1,45 @@
-# Releasing ezNotes on Windows
+# Releasing ezNotes
 
-## Local installer
+## Local packages
 
-```powershell
-npm run pack   # unpacked app in release\win-unpacked
-npm run dist   # NSIS installer in release\
+```bash
+npm run pack        # unpacked app for the current platform
+npm run dist        # installer/package for the current platform
+npm run dist:win    # Windows NSIS installer
+npm run dist:mac    # macOS .dmg and .zip, x64 and arm64
+npm run dist:linux  # Linux AppImage and .deb
 ```
 
-The installer is unsigned unless electron-builder receives a signing
-certificate. A local unsigned build may trigger SmartScreen or an Application
-Control policy.
+Packages land in `release/`. The Windows speech-diarization runtime is fetched
+only on Windows; `npm run dist:mac` and `npm run dist:linux` skip it.
+
+Unsigned packages may be blocked by SmartScreen on Windows or Gatekeeper on
+macOS. Linux packages are not code-signed.
 
 ## Signing
 
-Set these repository secrets to sign release builds:
+| Platform | Secrets | Notes |
+| --- | --- | --- |
+| Windows | `WINDOWS_CSC_LINK`, `WINDOWS_CSC_KEY_PASSWORD` | PFX file or URL accepted by electron-builder |
+| macOS | `MAC_CSC_LINK`, `MAC_CSC_KEY_PASSWORD` | Developer ID Application certificate |
 
-| Secret | Value |
-| --- | --- |
-| `WINDOWS_CSC_LINK` | Base64-encoded PFX certificate or a URL electron-builder can download |
-| `WINDOWS_CSC_KEY_PASSWORD` | Password for the PFX file |
+When Windows secrets are missing, the workflow names the artifact
+`ezNotes-windows-unsigned-...` and logs a warning. macOS builds without a
+certificate are unsigned and require Gatekeeper approval on first launch.
 
-When both secrets are present, the workflow reports the build as `signed` and
-electron-builder signs the executable and installer. When either is missing,
-the build is published as `unsigned` and the release notes include the
-SmartScreen warning.
+macOS notarization is not configured yet. Add notarization credentials before
+distributing a signed macOS build without Gatekeeper warnings.
 
 ## Release workflow
 
 `.github/workflows/release.yml` runs on:
 
-- a `v*` tag, which uploads the tested installer to a GitHub release
-- manual dispatch, which still builds and uploads a workflow artifact
+- a `v*` tag, which builds Windows, macOS, Linux, and publishes all packages to
+  one GitHub release
+- manual dispatch, which builds and uploads workflow artifacts without creating
+  a release
 
-The Windows job runs `npm ci`, `typecheck`, `test`, and `npm run dist`, then:
+The Windows job:
 
 1. Installs the NSIS package silently into a temporary folder.
 2. Verifies the installed `ezNotes.exe`.
@@ -40,7 +47,10 @@ The Windows job runs `npm ci`, `typecheck`, `test`, and `npm run dist`, then:
 4. Reinstalls over the existing installation to check the upgrade path.
 5. Runs the silent uninstaller and verifies the executable is gone.
 
-The local equivalent is:
+macOS builds x64 and arm64 packages on the current macOS runner. Linux builds
+AppImage and `.deb`.
+
+## Local Windows smoke test
 
 ```powershell
 $installer = Get-ChildItem release -Filter '*.exe' |
@@ -51,14 +61,12 @@ $installer = Get-ChildItem release -Filter '*.exe' |
 
 ## Publishing a release
 
-1. Update `package.json` and the README version.
-2. Run the local checks: `npm run typecheck`, `npm test`, `npm run build`.
+1. Update `package.json`, `package-lock.json`, and the README version.
+2. Run `npm run typecheck`, `npm test`, and `npm run build`.
 3. Commit the version bump.
-4. Push a tag such as `v0.5.3`.
-5. Watch the Windows release workflow and confirm the artifact is named
-   `ezNotes-signed-...` or `ezNotes-unsigned-...`.
-6. Download and install the release asset once on a clean Windows profile.
+4. Push a tag such as `v0.6.0`.
+5. Watch the release workflow and confirm Windows, macOS, and Linux assets.
+6. Install each platform package once on a clean profile.
 
 Auto-update delivery is not configured yet. The release assets include the
-installer, blockmap, and `latest.yml` so an updater can be added later without
-changing the release shape.
+Windows installer, blockmap, and `latest.yml` so an updater can be added later.

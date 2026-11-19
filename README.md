@@ -2,12 +2,12 @@
 
 [![CI](https://github.com/raffa-developer/eznotes/actions/workflows/ci.yml/badge.svg)](https://github.com/raffa-developer/eznotes/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![Platform: Windows](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6)
-![Version](https://img.shields.io/badge/version-0.5.2-007AFF)
+![Platform: Windows, macOS, Linux](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D6)
+![Version](https://img.shields.io/badge/version-0.6.0-007AFF)
 
-**Lectures in, study notes out.** ezNotes is a Windows desktop app that records
-a lecture, transcribes it, and writes structured Markdown notes you can study
-from: concepts, definitions, examples, exam hints, and a glossary.
+**Lectures in, study notes out.** ezNotes is a cross-platform desktop app that
+records a lecture, transcribes it, and writes structured Markdown notes you can
+study from: concepts, definitions, examples, exam hints, and a glossary.
 
 It is local-first. Audio, transcripts, notes, and API keys are stored on your PC.
 Audio is uploaded only to Groq for transcription, and the transcript goes only to
@@ -57,10 +57,11 @@ built around **European Portuguese lectures** and writes the final notes in
 
 ## Status
 
-`0.5.2` is early but usable. It is **Windows 10/11 only** and currently meant to
-be run from source. No public installer has been published from this repository
-yet; the Windows release workflow builds and smoke-tests an NSIS installer, and
-signs it when certificate secrets are configured.
+`0.6.0` is early but usable. It runs on **Windows 10/11**, with initial
+**macOS** and **Linux** packages. Windows remains the most complete platform:
+offline speaker detection is Windows-only in this release. No public installer
+has been published from this repository yet; the release workflow builds and
+smoke-tests Windows installers and builds macOS/Linux packages.
 
 The full pipeline works end-to-end with local mock services and demo mode. Real
 Groq and notes-model calls require your own API keys.
@@ -131,21 +132,28 @@ Groq and notes-model calls require your own API keys.
 - English and European Portuguese interface.
 - macOS-inspired layout, Apple blue, Inter for UI, Newsreader for reading and
   book covers.
-- API keys encrypted locally with Windows DPAPI.
+- API keys encrypted locally with the operating system's secure storage
+  (Windows DPAPI, macOS Keychain, or Linux Secret Service).
 
 ## Requirements
 
 | Requirement | Details |
 | --- | --- |
-| OS | Windows 10 or 11 |
+| OS | Windows 10/11, macOS 12 or newer, or a modern x64 Linux distribution |
 | Node.js | 20 or newer; CI uses Node 24 |
 | Microphone | Any input device, selectable in Settings |
 | Network | Required for Groq transcription and cloud notes models. Not required when using a local Ollama notes model. |
 | API keys | A Groq key for transcription, plus an OpenCode/Groq key or local Ollama for notes |
-| Speaker labels | Optional: about 45 MB of models and a small local Node runtime; CPU time grows with lecture length |
+| Speaker labels | Optional on Windows: about 45 MB of models and a small local Node runtime; CPU time grows with lecture length |
 
-macOS and Linux are not supported or tested. Windows DPAPI encryption, the tray,
-and the recording island are Windows-specific.
+The tray, recording island, global hotkey, exports, backup/restore, and secure
+storage work across platforms. Offline speaker detection currently has a
+Windows x64 runtime; on macOS and Linux the option is disabled with an
+explanation. Linux secure storage requires a working Secret Service/keyring
+(libsecret); if it is unavailable, ezNotes refuses to store API keys in
+plaintext.
+
+macOS asks for microphone permission the first time you record.
 
 ## Quick start
 
@@ -184,16 +192,20 @@ output, the library, and note rendering.
 
 ### Build an installer
 
-```powershell
-npm run pack   # unpacked app in release\win-unpacked
-npm run dist   # NSIS installer in release\
+```bash
+npm run pack        # unpacked app for the current platform
+npm run dist        # installer/package for the current platform
+npm run dist:win    # Windows NSIS installer
+npm run dist:mac    # macOS .dmg and .zip, x64 and arm64
+npm run dist:linux  # Linux AppImage and .deb
 ```
 
-The local build is unsigned unless a signing certificate is configured. Windows
-SmartScreen or an Application Control policy may block unsigned binaries. The
-Windows release workflow builds, smoke-tests, and publishes the installer, and
-signs it when certificate secrets are present. See
-[`docs/RELEASING.md`](docs/RELEASING.md) for the release and signing checklist.
+Packages land in `release/`. Local builds are unsigned unless a signing
+certificate is configured. Windows SmartScreen, macOS Gatekeeper, or an
+Application Control policy may block unsigned binaries. The release workflow
+builds Windows, macOS, and Linux packages; it smoke-tests the Windows installer
+and signs Windows or macOS packages when the matching certificate secrets are
+present. See [`docs/RELEASING.md`](docs/RELEASING.md) for the release checklist.
 
 ## How it works
 
@@ -206,7 +218,7 @@ Microphone
   → notes model
   → importance filter + structured Markdown
   → optional local speaker diarization in the background
-  → Documents\ezNotes\<Course>\<date> <title>.md
+  → Documents/ezNotes/<Course>/<date> <title>.md
 ```
 
 ### Live transcription quality
@@ -312,12 +324,13 @@ fully offline transcription would need local Whisper support.
 ## Speaker labels
 
 Turn on **Settings → Listening → Detect speakers after class**. Speaker detection
-is optional and runs locally; it never delays the note.
+is optional and runs locally; it never delays the note. It is currently
+Windows-only; macOS and Linux builds show the option disabled.
 
 - The note is saved first, then diarization runs in the background.
 - It runs only when the lecture audio is kept, because it needs the WAV.
 - The first run downloads about 45 MB of models: pyannote segmentation and
-  NVIDIA TitaNet, stored in `%APPDATA%\ezNotes\models\sherpa\`.
+  NVIDIA TitaNet, stored in the app data folder under `models/sherpa/`.
 - A bundled Node runtime adds about 90 MB to the installer.
 - A 90-minute lecture can use roughly 350 MB of memory while diarizing.
 - Labels are `Speaker 1`, `Speaker 2`, … in order of first appearance. The note
@@ -362,21 +375,26 @@ The library is a course bookshelf, not a flat file list.
 
 | What | Where |
 | --- | --- |
-| Notes | `Documents\ezNotes\<Course>\YYYY-MM-DD - <title>.md` |
-| Note index, transcripts, edit history, and study sets | `Documents\ezNotes\.eznotes\` |
-| Audio | `%APPDATA%\ezNotes\recordings\rec_*\audio.webm` (or `audio.wav` if Opus was unavailable or incomplete) |
-| Settings, schedule, encrypted keys | `%APPDATA%\ezNotes\` |
-| Speaker models | `%APPDATA%\ezNotes\models\sherpa\` |
-| Diagnostics log | `%APPDATA%\ezNotes\eznotes.log` |
+| Notes | `Documents/ezNotes/<Course>/YYYY-MM-DD - <title>.md` |
+| Note index, transcripts, edit history, and study sets | `Documents/ezNotes/.eznotes/` |
+| Audio | The app data folder's `recordings/rec_*/audio.webm` (or `audio.wav` if Opus was unavailable or incomplete) |
+| Settings, schedule, encrypted keys | The app data folder |
+| Speaker models | The app data folder's `models/sherpa/` |
+| Diagnostics log | The app data folder's `eznotes.log` |
 | Backups | The folder you choose when creating a backup |
+
+App data is `%APPDATA%\ezNotes` on Windows,
+`~/Library/Application Support/ezNotes` on macOS, and `~/.config/ezNotes` on
+Linux. Notes default to the system Documents folder.
 
 - Audio is sent to Groq for transcription.
 - The transcript, course, date, duration, and glossary are sent to the chosen
   notes endpoint.
 - Speaker detection runs locally; its models are downloaded from GitHub releases.
 - No analytics or telemetry is built in.
-- API keys are encrypted with Windows DPAPI through Electron `safeStorage` and
-  are never written to the notes folder, backups, or the repository.
+- API keys are encrypted with the operating system's secure storage (Windows
+  DPAPI, macOS Keychain, or Linux Secret Service) and are never written to the
+  notes folder, backups, or the repository.
 - Logs contain model and finish-reason diagnostics, never API keys or full
   transcripts.
 - Recording a lecture may require consent. Inform the lecturer and follow your
@@ -443,7 +461,7 @@ On a note page, use **Copy note** or the **Export** menu:
 - TypeScript 7
 - Vite 8 / electron-vite 6
 - Vitest 5
-- `sherpa-onnx-node` for offline speaker detection
+- `sherpa-onnx-node` for offline speaker detection on Windows
 - `webm-muxer` and WebCodecs for compact Opus audio
 
 ### Scripts
@@ -455,14 +473,17 @@ On a note page, use **Copy note** or the **Export** menu:
 | `npm run typecheck` | Typecheck the Node and web TypeScript projects |
 | `npm test` | Run the Vitest suite |
 | `npm run test:watch` | Run tests in watch mode |
-| `npm run fetch:node` | Download the Node runtime used by speaker detection (Windows x64) |
+| `npm run fetch:node` | Download the Windows x64 speaker runtime (skipped elsewhere) |
 | `npm run preview` | Preview the production build |
-| `npm run pack` | Build an unpacked app in `release/win-unpacked` |
-| `npm run dist` | Build the NSIS installer in `release/` |
+| `npm run pack` | Build an unpacked app for the current platform |
+| `npm run dist` | Build a package for the current platform |
+| `npm run dist:win` | Build the Windows NSIS installer |
+| `npm run dist:mac` | Build macOS x64 and arm64 `.dmg`/`.zip` packages |
+| `npm run dist:linux` | Build Linux AppImage and `.deb` packages |
 
 ### Tests and CI
 
-There are **135 tests in 20 files**. Coverage includes:
+There are **136 tests in 20 files**. Coverage includes:
 
 - Transcript overlap trimming and segment deduplication.
 - Speech/VAD analysis and low-confidence Whisper filtering.
@@ -534,7 +555,10 @@ work.
 
 ## Known limitations
 
-- Windows 10/11 only; macOS and Linux are not supported.
+- Windows 10/11, macOS 12+, and modern x64 Linux are supported.
+- Speaker detection is Windows-only in this release. The setting is disabled
+  with an explanation elsewhere.
+- Linux secure storage requires a working Secret Service/keyring.
 - Live transcription requires a network connection to Groq. Local Whisper is not
   implemented yet.
 - Speaker detection is optional, CPU-heavy on long lectures, and produces
@@ -559,7 +583,7 @@ work.
 The detailed, tickable list lives in [`TODO.md`](TODO.md). Highlights:
 
 - Local/offline transcription option.
-- Signed Windows installer and automatic updates.
+- Signed installers for all platforms and automatic updates.
 - More keyboard shortcuts and accessibility refinements.
 - Further accuracy work for live and final Portuguese transcription.
 - Broader provider/model presets.
@@ -570,7 +594,8 @@ compact Opus audio with WAV integrity fallback, native Anthropic/Gemini/OpenAI
 adapters, retrying notes-model calls, close-to-tray finalization, the weekly
 timetable grid, the course-book library, note and transcript editing with
 history, source-linked study cards, `.ics` import with exceptions, local
-backup/restore, and a Windows installer release workflow.
+backup/restore, a Windows installer release workflow, and the first macOS/Linux
+packaging foundation.
 
 ## Contributing
 

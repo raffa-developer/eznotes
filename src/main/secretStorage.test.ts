@@ -19,10 +19,10 @@ function adapter(available = true): {
 }
 
 describe('secure secret storage', () => {
-  it('stores and decrypts DPAPI values', () => {
+  it('stores and decrypts secure values', () => {
     const storage = adapter()
     const stored = encryptSecret(storage, 'gsk_test')
-    expect(stored.startsWith('dpapi:')).toBe(true)
+    expect(stored.startsWith('secure:')).toBe(true)
     expect(stored).not.toContain('gsk_test')
     expect(decryptSecret(storage, stored)).toBe('gsk_test')
   })
@@ -46,7 +46,7 @@ describe('secure secret storage', () => {
       }
     }
     expect(migratePlainSecrets(adapter(), container)).toBe(true)
-    expect(container.encrypted.groqApiKey?.startsWith('dpapi:')).toBe(true)
+    expect(container.encrypted.groqApiKey?.startsWith('secure:')).toBe(true)
     expect(decryptSecret(adapter(), container.encrypted.groqApiKey)).toBe(
       'legacy-key'
     )
@@ -57,6 +57,11 @@ describe('secure secret storage', () => {
     const container = { encrypted: { groqApiKey: plain } }
     expect(migratePlainSecrets(adapter(false), container)).toBe(false)
     expect(container.encrypted.groqApiKey).toBe(plain)
+  })
+
+  it('decrypts legacy DPAPI-prefixed values', () => {
+    const legacy = `dpapi:${Buffer.from('encrypted:legacy-key').toString('base64')}`
+    expect(decryptSecret(adapter(), legacy)).toBe('legacy-key')
   })
 
   it('returns null when decryption fails', () => {

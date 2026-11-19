@@ -8,7 +8,8 @@ export interface SecretContainer {
   encrypted: Partial<Record<string, string>>
 }
 
-const DPAPI_PREFIX = 'dpapi:'
+const SECURE_PREFIX = 'secure:'
+const LEGACY_DPAPI_PREFIX = 'dpapi:'
 const LEGACY_PLAIN_PREFIX = 'plain:'
 
 export const SECURE_STORAGE_UNAVAILABLE =
@@ -25,18 +26,24 @@ export function encryptSecret(
   if (!storage.isEncryptionAvailable()) {
     throw new Error(SECURE_STORAGE_UNAVAILABLE)
   }
-  return `${DPAPI_PREFIX}${storage.encryptString(value).toString('base64')}`
+  return `${SECURE_PREFIX}${storage.encryptString(value).toString('base64')}`
 }
 
 export function decryptSecret(
   storage: SecureStorageAdapter,
   stored: string | undefined
 ): string | null {
-  if (!stored?.startsWith(DPAPI_PREFIX)) return null
+  if (!stored) return null
+  const prefix = stored.startsWith(SECURE_PREFIX)
+    ? SECURE_PREFIX
+    : stored.startsWith(LEGACY_DPAPI_PREFIX)
+      ? LEGACY_DPAPI_PREFIX
+      : null
+  if (!prefix) return null
   if (!storage.isEncryptionAvailable()) return null
   try {
     return storage.decryptString(
-      Buffer.from(stored.slice(DPAPI_PREFIX.length), 'base64')
+      Buffer.from(stored.slice(prefix.length), 'base64')
     )
   } catch {
     return null

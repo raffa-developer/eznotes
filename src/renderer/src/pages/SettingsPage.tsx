@@ -436,7 +436,7 @@ export default function SettingsPage(): React.JSX.Element {
             label={t('Groq API key')}
             hint={
               <>
-                {t('Encrypted with Windows DPAPI. Get a key at')}{' '}
+                {t('Encrypted with system secure storage. Get a key at')}{' '}
                 <button
                   className="inline-link"
                   onClick={() => void window.ezNotes.app.openExternal('https://console.groq.com/keys')}
@@ -559,14 +559,19 @@ export default function SettingsPage(): React.JSX.Element {
               type="checkbox"
               checked={speakerLabels}
               onChange={(event) => setSpeakerLabels(event.target.checked)}
+              disabled={!settings.diarization.platformSupported}
             />
             <span>
               <strong>{t('Detect speakers after class (offline)')}</strong>
               <small>
-                {t(
-                  'Labels the lecturer and students in the transcript after the note is saved. Runs in the background on this PC; press Regenerate to include the labels. Needs a one-time {size} MB model download.',
-                  { size: settings.diarization.modelsSizeMb }
-                )}
+                {settings.diarization.platformSupported
+                  ? t(
+                      'Labels the lecturer and students in the transcript after the note is saved. Runs in the background on this PC; press Regenerate to include the labels. Needs a one-time {size} MB model download.',
+                      { size: settings.diarization.modelsSizeMb }
+                    )
+                  : t(
+                      'Offline speaker detection is currently available on Windows only. Recording, transcription, notes, editing, and study mode work on this platform.'
+                    )}
               </small>
             </span>
           </label>
@@ -1106,7 +1111,7 @@ export default function SettingsPage(): React.JSX.Element {
           </span>
           <div>
             <h2>{t('Appearance')}</h2>
-            <p>{t('Choose light, dark, or follow Windows.')}</p>
+            <p>{t('Choose light, dark, or follow the system.')}</p>
           </div>
         </div>
         <Card className="settings-card inline-card">
@@ -1158,7 +1163,7 @@ export default function SettingsPage(): React.JSX.Element {
               <ul>
                 <li>{t('Audio recordings and transcripts')}</li>
                 <li>{t('Notes and the searchable library')}</li>
-                <li>{t('API keys, encrypted with Windows DPAPI')}</li>
+                <li>{t('API keys, encrypted with system secure storage')}</li>
               </ul>
             </div>
             <div>

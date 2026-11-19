@@ -129,3 +129,11 @@ section “Next implementation wave”.
 ### P3 — Design and accessibility
 
 - [x] **N-12** Shared design tokens, modal focus behavior, and accessibility pass
+
+## Cross-platform support
+
+- [x] **X-1** Windows, macOS, and Linux packaging and release workflow
+- [x] **X-2** Platform-neutral secure storage and speaker-detection fallback
+- [ ] **X-3** Package the offline speaker-detection worker for macOS and Linux
+- [ ] **X-4** macOS signing/notarization and macOS/Linux install smoke tests
+- [ ] **X-5** Platform QA matrix across Windows, macOS Intel/ARM, and Linux

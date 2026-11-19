@@ -10,6 +10,13 @@ const destination = path.join(root, 'vendor', 'node')
 const nodeExe = path.join(destination, 'node.exe')
 const force = process.argv.includes('--force')
 
+if (process.platform !== 'win32') {
+  console.log(
+    '[fetch-node] the offline speaker runtime is currently Windows-only; skipping.'
+  )
+  process.exit(0)
+}
+
 // Pinned deliberately: the diarization worker is tested against this runtime.
 const version = process.env.EZNOTES_NODE_VERSION ?? 'v24.22.1'
 

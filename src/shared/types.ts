@@ -51,6 +51,7 @@ export interface SettingsStatus {
 }
 
 export interface DiarizationStatus {
+  platformSupported: boolean
   runtimeReady: boolean
   modelsReady: boolean
   modelsSizeMb: number

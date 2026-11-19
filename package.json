@@ -1,9 +1,12 @@
 {
   "name": "eznotes",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "Lecture notes that listen, filter, and structure themselves.",
   "main": "./out/main/index.js",
-  "author": "Rafael",
+  "author": {
+    "name": "Rafael Gonçalves",
+    "email": "raffa-developer@users.noreply.github.com"
+  },
   "license": "MIT",
   "private": true,
   "scripts": {
@@ -15,7 +18,10 @@
     "test:watch": "vitest",
     "fetch:node": "node scripts/fetch-node.mjs",
     "pack": "npm run fetch:node && npm run build && electron-builder --dir",
-    "dist": "npm run fetch:node && npm run build && electron-builder"
+    "dist": "npm run fetch:node && npm run build && electron-builder",
+    "dist:win": "npm run fetch:node && npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac --x64 --arm64",
+    "dist:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.137.0",
@@ -59,33 +65,56 @@
     ],
     "extraResources": [
       {
-        "from": "vendor/node/node.exe",
-        "to": "node/node.exe"
-      },
-      {
-        "from": "vendor/node/LICENSE",
-        "to": "node/LICENSE"
-      },
-      {
         "from": "licenses",
         "to": "licenses"
-      },
-      {
-        "from": "src/main/diarizer/diarization-worker.cjs",
-        "to": "diarizer/diarization-worker.cjs"
-      },
-      {
-        "from": "node_modules/sherpa-onnx-node",
-        "to": "diarizer/node_modules/sherpa-onnx-node"
-      },
-      {
-        "from": "node_modules/sherpa-onnx-win-x64",
-        "to": "diarizer/node_modules/sherpa-onnx-win-x64"
       }
     ],
     "win": {
       "target": "nsis",
-      "icon": "resources/icon.png"
+      "icon": "resources/icon.png",
+      "extraResources": [
+        {
+          "from": "vendor/node/node.exe",
+          "to": "node/node.exe"
+        },
+        {
+          "from": "vendor/node/LICENSE",
+          "to": "node/LICENSE"
+        },
+        {
+          "from": "src/main/diarizer/diarization-worker.cjs",
+          "to": "diarizer/diarization-worker.cjs"
+        },
+        {
+          "from": "node_modules/sherpa-onnx-node",
+          "to": "diarizer/node_modules/sherpa-onnx-node"
+        },
+        {
+          "from": "node_modules/sherpa-onnx-win-x64",
+          "to": "diarizer/node_modules/sherpa-onnx-win-x64"
+        }
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.education",
+      "icon": "resources/icon-1024.png",
+      "entitlements": "resources/entitlements.mac.plist",
+      "entitlementsInherit": "resources/entitlements.mac.plist",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "ezNotes records a lecture when you start a recording."
+      }
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Education",
+      "icon": "resources/icon-1024.png"
     },
     "nsis": {
       "oneClick": false,

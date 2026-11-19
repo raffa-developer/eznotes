@@ -26,8 +26,8 @@ export const settings: Record<string, string> = {
   Connected: 'Conectado',
   'Key needed': 'Chave necessária',
   'Groq API key': 'Chave de API do Groq',
-  'Encrypted with Windows DPAPI. Get a key at':
-    'Encriptada com o Windows DPAPI. Obtenha uma chave em',
+  'Encrypted with system secure storage. Get a key at':
+    'Encriptada com o armazenamento seguro do sistema. Obtenha uma chave em',
   '•••••••••••••••• saved': '•••••••••••••••• guardada',
   'Save key': 'Guardar chave',
   Test: 'Testar',
@@ -181,8 +181,8 @@ export const settings: Record<string, string> = {
   'with their frontmatter and tags. The path is saved for future exports.':
     'com o frontmatter e as etiquetas. O caminho é guardado para exportações futuras.',
   Appearance: 'Aparência',
-  'Choose light, dark, or follow Windows.':
-    'Escolha claro, escuro ou siga o Windows.',
+  'Choose light, dark, or follow the system.':
+    'Escolha claro, escuro ou siga o sistema.',
   Dark: 'Escuro',
   Light: 'Claro',
   System: 'Sistema',
@@ -202,7 +202,10 @@ export const settings: Record<string, string> = {
   'Stays on this PC': 'Fica neste PC',
   'Audio recordings and transcripts': 'Gravações de áudio e transcrições',
   'Notes and the searchable library': 'Notas e a biblioteca pesquisável',
-  'API keys, encrypted with Windows DPAPI': 'Chaves de API, encriptadas com o Windows DPAPI',
+  'API keys, encrypted with system secure storage':
+    'Chaves de API, encriptadas com o armazenamento seguro do sistema',
+  'Offline speaker detection is currently available on Windows only. Recording, transcription, notes, editing, and study mode work on this platform.':
+    'A deteção offline de oradores está atualmente disponível apenas no Windows. A gravação, transcrição, notas, edição e modo de estudo funcionam nesta plataforma.',
   'Leaves this PC': 'Sai deste PC',
   'Audio chunks go to Groq for transcription':
     'Fragmentos de áudio são enviados para o Groq para transcrição',

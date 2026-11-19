@@ -44,6 +44,7 @@ export function embeddingPath(): string {
 
 export function diarizationStatus(): DiarizationStatus {
   return {
+    platformSupported: process.platform === 'win32',
     runtimeReady: fs.existsSync(nodeExePath()),
     modelsReady: diarizationModelsReady(),
     modelsSizeMb: MODELS_SIZE_MB
@@ -84,6 +85,13 @@ export function downloadDiarizationModels(): Promise<TestResult> {
 }
 
 async function doDownloadModels(): Promise<TestResult> {
+  if (process.platform !== 'win32') {
+    return {
+      ok: false,
+      message:
+        'Offline speaker detection is currently available on Windows only.'
+    }
+  }
   if (!fs.existsSync(nodeExePath())) {
     return {
       ok: false,
@@ -153,6 +161,9 @@ function copyAtomic(source: string, destination: string): void {
 }
 
 export async function runDiarization(audioPath: string): Promise<DiarizationTurn[]> {
+  if (process.platform !== 'win32') {
+    throw new Error('Offline speaker detection is currently available on Windows only.')
+  }
   const node = nodeExePath()
   const worker = workerPath()
 
@@ -251,6 +262,7 @@ export function assignSpeakers(
 }
 
 function nodeExePath(): string {
+  if (process.platform !== 'win32') return ''
   return app.isPackaged
     ? path.join(process.resourcesPath, 'node', 'node.exe')
     : path.join(app.getAppPath(), 'vendor', 'node', 'node.exe')

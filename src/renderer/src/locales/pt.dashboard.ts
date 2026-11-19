@@ -19,8 +19,8 @@ export const dashboard: Record<string, string> = {
     'Três pequenos passos antes da primeira aula.',
   'Demo mode is on, so the two API steps are simulated. Add your timetable to try a full lecture.':
     'O modo de demonstração está ativo, por isso os dois passos de API são simulados. Adicione o seu horário para experimentar uma aula completa.',
-  'Keys stay on this PC, encrypted with Windows DPAPI. Notes are plain Markdown files.':
-    'As chaves ficam neste PC, encriptadas com o Windows DPAPI. As notas são ficheiros Markdown simples.',
+  'Keys stay on this PC, encrypted with system secure storage. Notes are plain Markdown files.':
+    'As chaves ficam neste PC, encriptadas com o armazenamento seguro do sistema. As notas são ficheiros Markdown simples.',
   'Add your timetable': 'Adicione o seu horário',
   'Courses and weekly slots': 'Cursos e blocos semanais',
   'Timetable ready': 'Horário pronto',
