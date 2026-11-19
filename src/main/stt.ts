@@ -547,7 +547,9 @@ export function transcriptCachePath(recordingDir: string): string {
 
 export function readCachedTranscript(recordingDir: string): TranscriptSegment[] | null {
   try {
-    const raw = fs.readFileSync(transcriptCachePath(recordingDir), 'utf8')
+    const raw = fs
+      .readFileSync(transcriptCachePath(recordingDir), 'utf8')
+      .replace(/^\uFEFF/, '')
     const parsed = JSON.parse(raw) as TranscriptSegment[]
     return Array.isArray(parsed) ? parsed : null
   } catch {

@@ -65,7 +65,7 @@ export function atomicWrite(file: string, data: string): void {
 
 export function readJson<T>(file: string, fallback: T): T {
   try {
-    const raw = fs.readFileSync(file, 'utf8')
+    const raw = fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '')
     return JSON.parse(raw) as T
   } catch {
     return fallback

@@ -28,7 +28,8 @@ import type {
   SecretKey,
   Settings,
   StartRecordingInput,
-  TestResult
+  TestResult,
+  TranscriptSegment
 } from '../shared/types'
 import {
   clearSecret,
@@ -43,14 +44,18 @@ import { loadSchedule, saveSchedule, upcomingClasses } from './schedule'
 import {
   deleteNote,
   getNote,
+  listNoteVersions,
   listNotes,
   removeNoteAudio,
   rescanNotes,
+  restoreNoteVersion,
   sanitizeFilename,
   searchNotes,
+  snapshotNoteVersion,
   startNotesWatcher,
   stopNotesWatcher,
-  updateNoteMarkdown
+  updateNoteMarkdown,
+  updateNoteTranscript
 } from './notes'
 import { RecordingManager } from './recording'
 import { generateNotes, testLlm } from './llm'
@@ -513,6 +518,33 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
   ipcMain.handle('notes:get', (_event, id: string) =>
     getNote(loadSettings().notesDir, id)
   )
+  ipcMain.handle(
+    'notes:updateMarkdown',
+    (_event, id: string, markdown: string) => {
+      const notesDir = loadSettings().notesDir
+      updateNoteMarkdown(notesDir, id, markdown)
+      return getNote(notesDir, id)
+    }
+  )
+  ipcMain.handle(
+    'notes:updateTranscript',
+    (_event, id: string, segments: TranscriptSegment[]) => {
+      const notesDir = loadSettings().notesDir
+      updateNoteTranscript(notesDir, id, segments)
+      return getNote(notesDir, id)
+    }
+  )
+  ipcMain.handle('notes:history', (_event, id: string) =>
+    listNoteVersions(loadSettings().notesDir, id)
+  )
+  ipcMain.handle(
+    'notes:restore',
+    (_event, id: string, versionId: string) => {
+      const notesDir = loadSettings().notesDir
+      restoreNoteVersion(notesDir, id, versionId)
+      return getNote(notesDir, id)
+    }
+  )
   ipcMain.handle('notes:delete', (_event, id: string) => {
     deleteNote(loadSettings().notesDir, id)
   })
@@ -680,7 +712,11 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
         maxTokens: 16_000
       }
     )
-    updateNoteMarkdown(notesDir, id, markdown)
+    snapshotNoteVersion(notesDir, id, 'Before regeneration')
+    updateNoteMarkdown(notesDir, id, markdown, {
+      snapshot: false,
+      markEdited: false
+    })
     const updated = getNote(notesDir, id)
     if (!updated) throw new Error('Could not reload the note.')
     return updated

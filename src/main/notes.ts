@@ -1,11 +1,12 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { app } from 'electron'
 import type {
   NoteDetail,
   NoteMeta,
   NoteSearchResult,
+  NoteVersionMeta,
   TranscriptSegment
 } from '../shared/types'
 import { writeJson } from './store'
@@ -59,7 +60,9 @@ export function readNoteTranscript(
   recordingId: string | null
 ): TranscriptSegment[] {
   try {
-    const raw = fs.readFileSync(noteTranscriptPath(notesDir, noteId), 'utf8')
+    const raw = fs
+      .readFileSync(noteTranscriptPath(notesDir, noteId), 'utf8')
+      .replace(/^\uFEFF/, '')
     return JSON.parse(raw) as TranscriptSegment[]
   } catch {
     if (!recordingId) return []
@@ -394,6 +397,8 @@ function metaFromFile(file: string): NoteMeta {
   const tags = Array.isArray(attributes.tags)
     ? attributes.tags.filter((tag): tag is string => typeof tag === 'string')
     : []
+  const userEdited =
+    typeof attributes.editedAt === 'string' && attributes.editedAt.length > 0
 
   return {
     id,
@@ -410,7 +415,8 @@ function metaFromFile(file: string): NoteMeta {
     hasAudio: Boolean(noteAudioPath(recordingId)),
     tags,
     summary: extractSummary(body),
-    wordCount: body.split(/\s+/).filter(Boolean).length
+    wordCount: body.split(/\s+/).filter(Boolean).length,
+    userEdited
   }
 }
 
@@ -448,6 +454,222 @@ export interface SaveNoteInput {
   tags: string[]
   markdown: string
   notesDir: string
+}
+
+interface StoredNoteVersion extends NoteVersionMeta {
+  markdown: string
+  transcript: TranscriptSegment[]
+}
+
+const NOTE_HISTORY_LIMIT = 30
+
+function noteHistoryDir(notesDir: string, noteId: string): string {
+  return path.join(
+    notesMetaDir(notesDir),
+    'history',
+    createHash('sha1').update(noteId).digest('hex')
+  )
+}
+
+/**
+ * Store the current note before a user edit or regeneration. History is capped
+ * per note and kept outside the Markdown folder.
+ */
+export function snapshotNoteVersion(
+  notesDir: string,
+  noteId: string,
+  reason: string
+): NoteVersionMeta | null {
+  const note = getNote(notesDir, noteId)
+  if (!note) return null
+
+  const versionId = `ver_${Date.now()}_${randomUUID().slice(0, 8)}`
+  const version: StoredNoteVersion = {
+    id: versionId,
+    createdAt: new Date().toISOString(),
+    reason,
+    title: note.title,
+    wordCount: note.wordCount,
+    markdown: note.markdown,
+    transcript: note.transcript
+  }
+  const dir = noteHistoryDir(notesDir, noteId)
+  writeJson(path.join(dir, `${versionId}.json`), version)
+  pruneNoteHistory(dir)
+  return {
+    id: version.id,
+    createdAt: version.createdAt,
+    reason: version.reason,
+    title: version.title,
+    wordCount: version.wordCount
+  }
+}
+
+export function listNoteVersions(
+  notesDir: string,
+  noteId: string
+): NoteVersionMeta[] {
+  const dir = noteHistoryDir(notesDir, noteId)
+  try {
+    return fs
+      .readdirSync(dir)
+      .filter((name) => name.endsWith('.json'))
+      .map((name) => {
+        try {
+          const version = JSON.parse(
+            fs.readFileSync(path.join(dir, name), 'utf8')
+          ) as StoredNoteVersion
+          return {
+            id: version.id,
+            createdAt: version.createdAt,
+            reason: version.reason,
+            title: version.title,
+            wordCount: version.wordCount
+          }
+        } catch {
+          return null
+        }
+      })
+      .filter((version): version is NoteVersionMeta => Boolean(version))
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
+  } catch {
+    return []
+  }
+}
+
+export function restoreNoteVersion(
+  notesDir: string,
+  noteId: string,
+  versionId: string
+): NoteMeta {
+  if (!/^ver_[A-Za-z0-9_-]+$/.test(versionId)) {
+    throw new Error('Invalid note version.')
+  }
+  const current = getNote(notesDir, noteId)
+  if (!current) throw new Error('Note not found.')
+
+  const file = path.join(noteHistoryDir(notesDir, noteId), `${versionId}.json`)
+  let version: StoredNoteVersion
+  try {
+    version = JSON.parse(fs.readFileSync(file, 'utf8')) as StoredNoteVersion
+  } catch {
+    throw new Error('That note version is no longer available.')
+  }
+  if (
+    typeof version.markdown !== 'string' ||
+    !Array.isArray(version.transcript)
+  ) {
+    throw new Error('That note version is no longer available.')
+  }
+  const transcript = normalizeTranscriptSegments(version.transcript)
+
+  snapshotNoteVersion(notesDir, noteId, 'Before restore')
+  const meta = updateNoteMarkdown(notesDir, noteId, version.markdown, {
+    snapshot: false,
+    markEdited: true
+  })
+  writeNoteTranscript(notesDir, noteId, transcript)
+  return meta
+}
+
+function pruneNoteHistory(dir: string): void {
+  try {
+    const files = fs
+      .readdirSync(dir)
+      .filter((name) => name.endsWith('.json'))
+      .sort()
+      .reverse()
+    for (const file of files.slice(NOTE_HISTORY_LIMIT)) {
+      fs.rmSync(path.join(dir, file), { force: true })
+    }
+  } catch {
+    // History is best effort and must never block saving a note.
+  }
+}
+
+function writeNoteDocument(
+  file: string,
+  attributes: Record<string, string | string[] | number | null>,
+  markdown: string
+): void {
+  const headerLines = ['---']
+  for (const [key, value] of Object.entries(attributes)) {
+    headerLines.push(`${key}: ${JSON.stringify(value)}`)
+  }
+  headerLines.push('---', '')
+  fs.writeFileSync(file, `${headerLines.join('\n')}${markdown}\n`, 'utf8')
+}
+
+function markNoteEdited(notesDir: string, id: string): NoteMeta {
+  const index = ensureNotesCache(notesDir)
+  const meta = index.find((note) => note.id === id)
+  if (!meta) throw new Error('Note not found.')
+
+  const raw = fs.readFileSync(meta.path, 'utf8')
+  const { attributes, body } = splitFrontmatter(raw)
+  attributes.editedAt = new Date().toISOString()
+  writeNoteDocument(meta.path, attributes, body.trim())
+
+  const next: NoteMeta = { ...meta, userEdited: true }
+  commitNotes(
+    notesDir,
+    index.map((note) => (note.id === id ? next : note))
+  )
+  return next
+}
+
+export function normalizeTranscriptSegments(
+  input: TranscriptSegment[]
+): TranscriptSegment[] {
+  if (!Array.isArray(input) || input.length > 20_000) {
+    throw new Error('Invalid transcript.')
+  }
+  return input.map((segment, index) => {
+    if (!segment || typeof segment !== 'object') {
+      throw new Error('Invalid transcript segment.')
+    }
+    const start = Number(segment.start)
+    const end = Number(segment.end)
+    if (!Number.isFinite(start) || !Number.isFinite(end)) {
+      throw new Error('Transcript timestamps are invalid.')
+    }
+    const safeStart = Math.max(0, start)
+    const safeEnd = Math.max(safeStart, end)
+    const id =
+      typeof segment.id === 'string' && segment.id.trim()
+        ? segment.id.trim().slice(0, 120)
+        : `seg_${index}`
+    const text =
+      typeof segment.text === 'string' ? segment.text.slice(0, 20_000) : ''
+    const speaker =
+      typeof segment.speaker === 'string' && segment.speaker.trim()
+        ? segment.speaker.trim().slice(0, 80)
+        : undefined
+    return {
+      id,
+      start: safeStart,
+      end: safeEnd,
+      text,
+      ...(speaker ? { speaker } : {})
+    }
+  })
+}
+
+export function updateNoteTranscript(
+  notesDir: string,
+  id: string,
+  segments: TranscriptSegment[]
+): NoteMeta {
+  const index = ensureNotesCache(notesDir)
+  const meta = index.find((note) => note.id === id)
+  if (!meta) throw new Error('Note not found.')
+
+  snapshotNoteVersion(notesDir, id, 'Edit transcript')
+  writeNoteTranscript(notesDir, id, normalizeTranscriptSegments(segments))
+  return markNoteEdited(notesDir, id)
 }
 
 export function saveNote(input: SaveNoteInput): NoteMeta {
@@ -495,7 +717,8 @@ export function saveNote(input: SaveNoteInput): NoteMeta {
     hasAudio: Boolean(noteAudioPath(input.recordingId)),
     tags: input.tags,
     summary,
-    wordCount
+    wordCount,
+    userEdited: false
   }
 
   const index = ensureNotesCache(input.notesDir)
@@ -506,33 +729,45 @@ export function saveNote(input: SaveNoteInput): NoteMeta {
   return meta
 }
 
+export interface UpdateNoteOptions {
+  snapshot?: boolean
+  reason?: string
+  markEdited?: boolean
+}
+
 export function updateNoteMarkdown(
   notesDir: string,
   id: string,
-  markdown: string
+  markdown: string,
+  options: UpdateNoteOptions = {}
 ): NoteMeta {
   const index = ensureNotesCache(notesDir)
   const meta = index.find((note) => note.id === id)
   if (!meta) throw new Error('Note not found.')
+
+  if (options.snapshot !== false) {
+    snapshotNoteVersion(notesDir, id, options.reason ?? 'Edit')
+  }
 
   const raw = fs.readFileSync(meta.path, 'utf8')
   const { attributes } = splitFrontmatter(raw)
   const cleanMarkdown = markdown.trim()
   const nextTitle = extractTitle(cleanMarkdown, meta.title)
   attributes.title = nextTitle
-  const headerLines = ['---']
-  for (const [key, value] of Object.entries(attributes)) {
-    headerLines.push(`${key}: ${JSON.stringify(value)}`)
+  const markEdited = options.markEdited !== false
+  if (markEdited) {
+    attributes.editedAt = new Date().toISOString()
+  } else {
+    delete attributes.editedAt
   }
-  headerLines.push('---', '')
-
-  fs.writeFileSync(meta.path, `${headerLines.join('\n')}${cleanMarkdown}\n`, 'utf8')
+  writeNoteDocument(meta.path, attributes, cleanMarkdown)
 
   const next: NoteMeta = {
     ...meta,
     title: nextTitle,
     summary: extractSummary(cleanMarkdown),
-    wordCount: cleanMarkdown.split(/\s+/).filter(Boolean).length
+    wordCount: cleanMarkdown.split(/\s+/).filter(Boolean).length,
+    userEdited: markEdited
   }
   commitNotes(
     notesDir,
@@ -573,6 +808,7 @@ export function deleteNote(notesDir: string, id: string, deleteAudio = true): vo
   }
 
   fs.rmSync(noteTranscriptPath(notesDir, id), { force: true })
+  fs.rmSync(noteHistoryDir(notesDir, id), { recursive: true, force: true })
 
   commitNotes(
     notesDir,
@@ -593,12 +829,13 @@ export function splitFrontmatter(raw: string): {
   attributes: Record<string, string | string[] | number | null>
   body: string
 } {
-  if (!raw.startsWith('---\n')) return { attributes: {}, body: raw }
-  const end = raw.indexOf('\n---', 4)
-  if (end === -1) return { attributes: {}, body: raw }
+  const normalized = raw.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n')
+  if (!normalized.startsWith('---\n')) return { attributes: {}, body: normalized }
+  const end = normalized.indexOf('\n---', 4)
+  if (end === -1) return { attributes: {}, body: normalized }
 
-  const header = raw.slice(4, end)
-  const body = raw.slice(end + 4).replace(/^\r?\n/, '')
+  const header = normalized.slice(4, end)
+  const body = normalized.slice(end + 4).replace(/^\r?\n/, '')
   const attributes: Record<string, string | string[] | number | null> = {}
 
   for (const line of header.split(/\r?\n/)) {

@@ -303,7 +303,7 @@ verify reliability-sensitive changes with tests, and tick each item here and in
 
 ### P2 — Study and course workflows
 
-- [ ] **N-8 Add safe note and transcript review/editing**
+- [x] **N-8 Add safe note and transcript review/editing**
   `src/main/notes.ts`, `src/shared/types.ts`,
   `src/renderer/src/pages/NotePage.tsx`
   - Let users correct transcript text, rename generic speakers, and edit note
@@ -311,6 +311,12 @@ verify reliability-sensitive changes with tests, and tick each item here and in
     user edits.
   - *Done when:* edits persist across restart, transcript timestamps and
     speaker assignments are retained, and a prior version can be restored.
+  - *Verified:* notes and transcripts are editable, speaker labels can be
+    renamed across the transcript, every edit snapshots the prior note and
+    transcript, and History can restore it. Regeneration warns before replacing
+    edited notes and snapshots first. CRLF/BOM frontmatter now loads correctly.
+    A desktop pass edited and restored a note, then renamed a speaker and
+    corrected transcript text with timestamps intact. 120 tests pass.
 
 - [ ] **N-9 Add a source-linked study mode**
   New study UI and persistence under `.eznotes`; reuse note/transcript data

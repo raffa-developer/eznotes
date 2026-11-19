@@ -102,6 +102,15 @@ export interface NoteMeta {
   tags: string[]
   summary: string
   wordCount: number
+  userEdited: boolean
+}
+
+export interface NoteVersionMeta {
+  id: string
+  createdAt: string
+  reason: string
+  title: string
+  wordCount: number
 }
 
 export type NoteSearchKind = 'note' | 'transcript'
@@ -272,6 +281,13 @@ export interface EzNotesApi {
     search: (query: string) => Promise<NoteSearchResult[]>
     rescan: () => Promise<NoteMeta[]>
     get: (id: string) => Promise<NoteDetail | null>
+    updateMarkdown: (id: string, markdown: string) => Promise<NoteDetail>
+    updateTranscript: (
+      id: string,
+      segments: TranscriptSegment[]
+    ) => Promise<NoteDetail>
+    history: (id: string) => Promise<NoteVersionMeta[]>
+    restore: (id: string, versionId: string) => Promise<NoteDetail>
     delete: (id: string) => Promise<void>
     deleteAudio: (id: string) => Promise<NoteDetail | null>
     copy: (id: string) => Promise<NoteExportResult>

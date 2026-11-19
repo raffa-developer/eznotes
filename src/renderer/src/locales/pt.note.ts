@@ -1,6 +1,39 @@
 export const note: Record<string, string> = {
   'Notes regenerated from the same transcript.':
     'Nota regenerada a partir da mesma transcrição.',
+  'Note saved. The previous version is in History.':
+    'Nota guardada. A versão anterior está no histórico.',
+  'Version restored.': 'Versão restaurada.',
+  'Note edit': 'Edição da nota',
+  'Transcript edit': 'Edição da transcrição',
+  'Before regeneration': 'Antes de regenerar',
+  'Before restore': 'Antes de restaurar',
+  'Edit note': 'Editar nota',
+  History: 'Histórico',
+  Edited: 'Editada',
+  'Edit transcript': 'Editar transcrição',
+  'Transcript saved. The previous version is in History.':
+    'Transcrição guardada. A versão anterior está no histórico.',
+  'Note Markdown': 'Markdown da nota',
+  'Saves to the Markdown file and keeps the previous version in History.':
+    'Guarda no ficheiro Markdown e mantém a versão anterior no histórico.',
+  'Save note': 'Guardar nota',
+  'Replace your edits?': 'Substituir as suas edições?',
+  'Regeneration rewrites the note from the transcript.':
+    'A regeneração reescreve a nota a partir da transcrição.',
+  'This note has edits you made. Regenerating replaces the note text with a new version; the current version is saved in History and can be restored.':
+    'Esta nota tem edições suas. A regeneração substitui o texto da nota por uma nova versão; a versão atual fica no histórico e pode ser restaurada.',
+  'Note history': 'Histórico da nota',
+  'Restore an earlier version of this note and its transcript.':
+    'Restaure uma versão anterior desta nota e da respetiva transcrição.',
+  'Loading history…': 'A carregar o histórico…',
+  'Restoring…': 'A restaurar…',
+  Restore: 'Restaurar',
+  'No earlier versions yet. A version is saved before each edit or regeneration.':
+    'Ainda não há versões anteriores. É guardada uma versão antes de cada edição ou regeneração.',
+  'Correct text and rename speaker labels. Timestamps stay unchanged.':
+    'Corrija o texto e renomeie as etiquetas dos oradores. As marcas temporais não mudam.',
+  'Save transcript': 'Guardar transcrição',
   'Note deleted.': 'Nota apagada.',
   'Audio deleted. The transcript and note are untouched.':
     'O áudio foi apagado. A transcrição e a nota mantêm-se intactas.',

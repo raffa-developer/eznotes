@@ -54,6 +54,13 @@ const api: EzNotesApi = {
     search: (query: string) => ipcRenderer.invoke('notes:search', query),
     rescan: () => ipcRenderer.invoke('notes:rescan'),
     get: (id: string) => ipcRenderer.invoke('notes:get', id),
+    updateMarkdown: (id: string, markdown: string) =>
+      ipcRenderer.invoke('notes:updateMarkdown', id, markdown),
+    updateTranscript: (id: string, segments) =>
+      ipcRenderer.invoke('notes:updateTranscript', id, segments),
+    history: (id: string) => ipcRenderer.invoke('notes:history', id),
+    restore: (id: string, versionId: string) =>
+      ipcRenderer.invoke('notes:restore', id, versionId),
     delete: (id: string) => ipcRenderer.invoke('notes:delete', id),
     deleteAudio: (id: string) => ipcRenderer.invoke('notes:deleteAudio', id),
     copy: (id: string) => ipcRenderer.invoke('notes:copy', id),

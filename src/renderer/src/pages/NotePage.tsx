@@ -14,18 +14,27 @@ import {
   Copy,
   FileText,
   FolderOpen,
+  History,
   List,
   Mic,
   Music,
+  Pencil,
   RefreshCw,
+  RotateCcw,
+  Save,
   Tag,
   Trash2
 } from 'lucide-react'
-import type { NoteDetail, NoteExportFormat } from '../../../shared/types'
+import type {
+  NoteDetail,
+  NoteExportFormat,
+  NoteVersionMeta,
+  TranscriptSegment
+} from '../../../shared/types'
 import { useApp } from '../state/AppContext'
 import { Badge, Button, Card, EmptyState, Modal } from '../components/ui'
 import ExportMenu from '../components/ExportMenu'
-import { t } from '../i18n'
+import { t, uiLocale } from '../i18n'
 import { formatDate, formatDuration, formatTimestamp } from '../lib/format'
 
 export default function NotePage(): React.JSX.Element {
@@ -44,11 +53,25 @@ export default function NotePage(): React.JSX.Element {
   const [exporting, setExporting] = useState(false)
   const [copied, setCopied] = useState(false)
   const [toc, setToc] = useState<Array<{ id: string; text: string; level: number }>>([])
+  const [editingNote, setEditingNote] = useState(false)
+  const [noteDraft, setNoteDraft] = useState('')
+  const [savingNote, setSavingNote] = useState(false)
+  const [regenerateOpen, setRegenerateOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [versions, setVersions] = useState<NoteVersionMeta[]>([])
+  const [loadingVersions, setLoadingVersions] = useState(false)
+  const [restoringId, setRestoringId] = useState<string | null>(null)
+  const [transcriptOpen, setTranscriptOpen] = useState(false)
+  const [transcriptDraft, setTranscriptDraft] = useState<TranscriptSegment[]>([])
+  const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({})
+  const [savingTranscript, setSavingTranscript] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
     if (!id) return
     setLoading(true)
+    setEditingNote(false)
+    setTranscriptOpen(false)
     window.ezNotes.notes
       .get(id)
       .then((next) => setNote(next))
@@ -70,6 +93,118 @@ export default function NotePage(): React.JSX.Element {
       toast(error instanceof Error ? error.message : String(error), 'error')
     } finally {
       setRegenerating(false)
+    }
+  }
+
+  function startEditingNote(): void {
+    if (!note) return
+    setNoteDraft(note.markdown)
+    setEditingNote(true)
+  }
+
+  async function saveNoteEdit(): Promise<void> {
+    if (!note) return
+    setSavingNote(true)
+    try {
+      const updated = await window.ezNotes.notes.updateMarkdown(
+        note.id,
+        noteDraft
+      )
+      setNote(updated)
+      setEditingNote(false)
+      await refreshNotes()
+      toast(t('Note saved. The previous version is in History.'), 'success')
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'error')
+    } finally {
+      setSavingNote(false)
+    }
+  }
+
+  async function openHistory(): Promise<void> {
+    if (!note) return
+    setHistoryOpen(true)
+    setLoadingVersions(true)
+    try {
+      setVersions(await window.ezNotes.notes.history(note.id))
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'error')
+    } finally {
+      setLoadingVersions(false)
+    }
+  }
+
+  async function restoreVersion(versionId: string): Promise<void> {
+    if (!note) return
+    setRestoringId(versionId)
+    try {
+      const updated = await window.ezNotes.notes.restore(note.id, versionId)
+      setNote(updated)
+      await refreshNotes()
+      setHistoryOpen(false)
+      toast(t('Version restored.'), 'success')
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'error')
+    } finally {
+      setRestoringId(null)
+    }
+  }
+
+  function versionReason(reason: string): string {
+    if (reason === 'Edit') return t('Note edit')
+    if (reason === 'Edit transcript') return t('Transcript edit')
+    if (reason === 'Before regeneration') return t('Before regeneration')
+    if (reason === 'Before restore') return t('Before restore')
+    return reason
+  }
+
+  function openTranscriptEditor(): void {
+    if (!note) return
+    const next = note.transcript.map((segment) => ({ ...segment }))
+    const speakers = [
+      ...new Set(
+        next
+          .map((segment) => segment.speaker)
+          .filter((speaker): speaker is string => Boolean(speaker))
+      )
+    ]
+    setTranscriptDraft(next)
+    setSpeakerNames(
+      Object.fromEntries(speakers.map((speaker) => [speaker, speaker]))
+    )
+    setTranscriptOpen(true)
+  }
+
+  function updateTranscriptText(index: number, text: string): void {
+    setTranscriptDraft((current) =>
+      current.map((segment, item) =>
+        item === index ? { ...segment, text } : segment
+      )
+    )
+  }
+
+  async function saveTranscript(): Promise<void> {
+    if (!note) return
+    setSavingTranscript(true)
+    try {
+      const segments = transcriptDraft.map((segment) => ({
+        ...segment,
+        speaker: segment.speaker
+          ? speakerNames[segment.speaker]?.trim() || segment.speaker
+          : undefined
+      }))
+      const updated = await window.ezNotes.notes.updateTranscript(
+        note.id,
+        segments
+      )
+      setNote(updated)
+      setTranscriptOpen(false)
+      await refreshNotes()
+      toast(t('Transcript saved. The previous version is in History.'), 'success')
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'error')
+    } finally {
+      setSavingTranscript(false)
     }
   }
 
@@ -214,7 +349,27 @@ export default function NotePage(): React.JSX.Element {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => void regenerate()}
+              onClick={startEditingNote}
+              disabled={editingNote}
+            >
+              <Pencil size={15} />
+              {t('Edit note')}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => void openHistory()}
+            >
+              <History size={15} />
+              {t('History')}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (note.userEdited) setRegenerateOpen(true)
+                else void regenerate()
+              }}
               disabled={regenerating || !note.transcript.length}
             >
               <RefreshCw size={15} className={regenerating ? 'spin' : ''} />
@@ -248,6 +403,7 @@ export default function NotePage(): React.JSX.Element {
           {course?.code && course.code !== note.courseName ? (
             <Badge tone="neutral">{course.code}</Badge>
           ) : null}
+          {note.userEdited ? <Badge tone="warn">{t('Edited')}</Badge> : null}
         </div>
         <h1>{note.title}</h1>
         <div className="note-meta-row">
@@ -297,29 +453,64 @@ export default function NotePage(): React.JSX.Element {
 
       <div className="note-grid">
         <Card className="note-content-card">
-          <article className="markdown-body">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm, remarkMath]}
-              rehypePlugins={[rehypeKatex, rehypeSlug]}
-              components={{
-                a: ({ href, children }) => (
-                  <a
-                    href={href}
-                    onClick={(event) => {
-                      event.preventDefault()
-                      if (href && /^https?:\/\//.test(href)) {
-                        void window.ezNotes.app.openExternal(href)
-                      }
-                    }}
+          {editingNote ? (
+            <div className="note-editor">
+              <textarea
+                value={noteDraft}
+                onChange={(event) => setNoteDraft(event.target.value)}
+                spellCheck
+                aria-label={t('Note Markdown')}
+              />
+              <div className="note-editor-actions">
+                <span>
+                  {t(
+                    'Saves to the Markdown file and keeps the previous version in History.'
+                  )}
+                </span>
+                <div>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setEditingNote(false)}
+                    disabled={savingNote}
                   >
-                    {children}
-                  </a>
-                )
-              }}
-            >
-              {displayMarkdown}
-            </ReactMarkdown>
-          </article>
+                    {t('Cancel')}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={() => void saveNoteEdit()}
+                    disabled={savingNote || !noteDraft.trim()}
+                  >
+                    <Save size={15} />
+                    {savingNote ? t('Saving…') : t('Save note')}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <article className="markdown-body">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeKatex, rehypeSlug]}
+                components={{
+                  a: ({ href, children }) => (
+                    <a
+                      href={href}
+                      onClick={(event) => {
+                        event.preventDefault()
+                        if (href && /^https?:\/\//.test(href)) {
+                          void window.ezNotes.app.openExternal(href)
+                        }
+                      }}
+                    >
+                      {children}
+                    </a>
+                  )
+                }}
+              >
+                {displayMarkdown}
+              </ReactMarkdown>
+            </article>
+          )}
         </Card>
 
         <aside className="note-side">
@@ -431,6 +622,16 @@ export default function NotePage(): React.JSX.Element {
                   </span>
                   <span className="summary-hint">{t('Show')}</span>
                 </summary>
+                <div className="transcript-side-tools">
+                  <button
+                    className="text-link"
+                    type="button"
+                    onClick={openTranscriptEditor}
+                  >
+                    <Pencil size={12} />
+                    {t('Edit transcript')}
+                  </button>
+                </div>
                 <div className="transcript-side-scroll">
                   {note.transcript.map((segment) => (
                     <button
@@ -504,6 +705,162 @@ export default function NotePage(): React.JSX.Element {
             'You will no longer be able to replay this lecture or jump to its timestamps. The written notes are kept.'
           )}
         </p>
+      </Modal>
+
+      <Modal
+        open={regenerateOpen}
+        title={t('Replace your edits?')}
+        subtitle={t('Regeneration rewrites the note from the transcript.')}
+        onClose={() => setRegenerateOpen(false)}
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => setRegenerateOpen(false)}
+              disabled={regenerating}
+            >
+              {t('Cancel')}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setRegenerateOpen(false)
+                void regenerate()
+              }}
+              disabled={regenerating}
+            >
+              <RefreshCw size={15} />
+              {t('Regenerate')}
+            </Button>
+          </>
+        }
+      >
+        <p className="modal-text">
+          {t(
+            'This note has edits you made. Regenerating replaces the note text with a new version; the current version is saved in History and can be restored.'
+          )}
+        </p>
+      </Modal>
+
+      <Modal
+        open={historyOpen}
+        title={t('Note history')}
+        subtitle={t('Restore an earlier version of this note and its transcript.')}
+        onClose={() => setHistoryOpen(false)}
+        width={680}
+        footer={
+          <Button variant="ghost" onClick={() => setHistoryOpen(false)}>
+            {t('Close')}
+          </Button>
+        }
+      >
+        {loadingVersions ? (
+          <p className="modal-text">{t('Loading history…')}</p>
+        ) : versions.length ? (
+          <div className="history-list">
+            {versions.map((version) => (
+              <div className="history-row" key={version.id}>
+                <span className="history-main">
+                  <strong>{version.title}</strong>
+                  <small>
+                    <span>
+                      {new Intl.DateTimeFormat(uiLocale(), {
+                        dateStyle: 'medium',
+                        timeStyle: 'short'
+                      }).format(new Date(version.createdAt))}
+                    </span>
+                    <span>{versionReason(version.reason)}</span>
+                    <span>
+                      {t(
+                        version.wordCount === 1
+                          ? '{count} word'
+                          : '{count} words',
+                        { count: version.wordCount }
+                      )}
+                    </span>
+                  </small>
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void restoreVersion(version.id)}
+                  disabled={restoringId !== null}
+                >
+                  <RotateCcw size={14} />
+                  {restoringId === version.id
+                    ? t('Restoring…')
+                    : t('Restore')}
+                </Button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="modal-text">
+            {t(
+              'No earlier versions yet. A version is saved before each edit or regeneration.'
+            )}
+          </p>
+        )}
+      </Modal>
+
+      <Modal
+        open={transcriptOpen}
+        title={t('Edit transcript')}
+        subtitle={t('Correct text and rename speaker labels. Timestamps stay unchanged.')}
+        onClose={() => setTranscriptOpen(false)}
+        width={860}
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => setTranscriptOpen(false)}
+              disabled={savingTranscript}
+            >
+              {t('Cancel')}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => void saveTranscript()}
+              disabled={savingTranscript}
+            >
+              <Save size={15} />
+              {savingTranscript ? t('Saving…') : t('Save transcript')}
+            </Button>
+          </>
+        }
+      >
+        {Object.keys(speakerNames).length ? (
+          <div className="speaker-rename-grid">
+            {Object.entries(speakerNames).map(([original, name]) => (
+              <label className="speaker-rename" key={original}>
+                <span>{original}</span>
+                <input
+                  value={name}
+                  onChange={(event) =>
+                    setSpeakerNames((current) => ({
+                      ...current,
+                      [original]: event.target.value
+                    }))
+                  }
+                />
+              </label>
+            ))}
+          </div>
+        ) : null}
+        <div className="transcript-edit-list">
+          {transcriptDraft.map((segment, index) => (
+            <label className="transcript-edit-row" key={segment.id}>
+              <span>{formatTimestamp(segment.start)}</span>
+              <textarea
+                value={segment.text}
+                rows={2}
+                onChange={(event) =>
+                  updateTranscriptText(index, event.target.value)
+                }
+              />
+            </label>
+          ))}
+        </div>
       </Modal>
     </div>
   )

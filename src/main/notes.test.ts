@@ -40,6 +40,14 @@ Corpo da nota.
     const raw = '---\nid: "note_1"\n# Corpo'
     expect(splitFrontmatter(raw)).toEqual({ attributes: {}, body: raw })
   })
+
+  it('parses Windows line endings and a UTF-8 BOM', () => {
+    const raw =
+      '\uFEFF---\r\nid: "note_1"\r\ntitle: "Aula"\r\n---\r\n# Corpo\r\n'
+    const { attributes, body } = splitFrontmatter(raw)
+    expect(attributes).toMatchObject({ id: 'note_1', title: 'Aula' })
+    expect(body).toBe('# Corpo\n')
+  })
 })
 
 describe('sanitizeFilename', () => {
