@@ -32,6 +32,10 @@ export const common: Record<string, string> = {
   Close: 'Fechar',
   Dismiss: 'Dispensar',
   'Microphone unavailable: {message}': 'Microfone indisponível: {message}',
+  'The microphone disconnected. Recording stopped and the audio captured so far is safe.':
+    'O microfone foi desligado. A gravação parou e o áudio captado até agora está seguro.',
+  'Could not stop the recording: {message}':
+    'Não foi possível parar a gravação: {message}',
   'Saved microphone was unavailable. Using the default device.':
     'O microfone guardado não estava disponível. A utilizar o dispositivo predefinido.',
   'Audio compression stopped: {message}': 'A compressão de áudio parou: {message}',

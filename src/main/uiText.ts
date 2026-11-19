@@ -28,6 +28,12 @@ const PT: Record<string, string> = {
     'Não foi possível iniciar a gravação rápida: {message}',
   'Could not stop the recording: {message}':
     'Não foi possível parar a gravação: {message}',
+  'Low disk space: {mb} MB free. Free some space or stop the recording soon.':
+    'Pouco espaço em disco: {mb} MB livres. Liberte espaço ou pare a gravação em breve.',
+  'Disk space is critically low ({mb} MB free). The recording was stopped so the audio already captured stays safe.':
+    'O espaço em disco está criticamente baixo ({mb} MB livres). A gravação foi parada para que o áudio já captado fique seguro.',
+  'Recording could not write to disk: {message}':
+    'A gravação não conseguiu escrever no disco: {message}',
   'Quick recording': 'Gravação rápida',
   'Finish this recording first': 'Termine primeiro esta gravação',
   'ezNotes still has a recording open.':

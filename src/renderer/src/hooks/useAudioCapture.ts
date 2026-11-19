@@ -132,6 +132,25 @@ export function useAudioCapture(): void {
       return
     }
 
+    const track = stream.getAudioTracks()[0]
+    track?.addEventListener('ended', () => {
+      if (activeIdRef.current !== id) return
+      toast(
+        t(
+          'The microphone disconnected. Recording stopped and the audio captured so far is safe.'
+        ),
+        'error'
+      )
+      void window.ezNotes.recording.stop().catch((error) => {
+        toast(
+          t('Could not stop the recording: {message}', {
+            message: error instanceof Error ? error.message : String(error)
+          }),
+          'error'
+        )
+      })
+    })
+
     const context = new AudioContext({ sampleRate: 16000 })
     try {
       await context.resume()

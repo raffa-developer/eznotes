@@ -273,14 +273,20 @@ verify reliability-sensitive changes with tests, and tick each item here and in
     The card shows the selected/default microphone, links to Settings, and adds
     Check connections once both services are configured. 109 tests pass.
 
-- [ ] **N-6 Detect recording health problems**
+- [x] **N-6 Detect recording health problems**
   `src/renderer/src/hooks/useAudioCapture.ts`,
-  `src/main/recording.ts`, `src/renderer/src/pages/Live.tsx`
+  `src/main/recording.ts`, `src/main/storageHealth.ts`,
+  `src/renderer/src/pages/Live.tsx`
   - Detect microphone track termination and recording write failures; surface
     actionable warnings and preserve recoverable audio. Check available disk
     space where supported before and during long recordings.
   - *Done when:* tests/smoke tests cover device loss, low disk, and recovery
     without silently saving a misleadingly short recording.
+  - *Verified:* recordings refuse to start below 128 MB free, warn below 512 MB,
+    and auto-stop at the critical threshold so captured audio is retained. A
+    forced microphone track end stopped the recording and opened the retention
+    flow; write failures mark the recording as errored and stop uses the real
+    WAV size. 113 tests pass.
 
 - [ ] **N-7 Add a Windows release verification pipeline**
   `.github/workflows/`, `package.json`, release documentation

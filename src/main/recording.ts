@@ -46,8 +46,15 @@ import {
   ByteRingBuffer,
   float32ToPcm16
 } from './audioBuffer'
+import {
+  CRITICAL_DISK_BYTES,
+  diskSpaceLevel,
+  freeDiskBytes,
+  megabytes
+} from './storageHealth'
 import { demoMode } from './mock'
 import { log } from './log'
+import { mainText } from './uiText'
 import {
   assignSpeakers,
   diarizationStatus,
@@ -95,6 +102,8 @@ interface Session {
   lastOutlineText: string
   lastLevelSent: number
   lastNoticeAt: number
+  diskWarned: boolean
+  diskStopTriggered: boolean
   error?: string
 }
 
@@ -129,6 +138,12 @@ export class RecordingManager {
     }
 
     const settings = loadSettings()
+    const free = freeDiskBytes(recordingsDir())
+    if (diskSpaceLevel(free) === 'critical') {
+      throw new Error(
+        `Not enough free disk space to start a recording. Free at least ${megabytes(CRITICAL_DISK_BYTES)} MB and try again.`
+      )
+    }
     const id = `rec_${Date.now()}_${randomUUID().slice(0, 8)}`
     const dir = path.join(recordingsDir(), id)
     fs.mkdirSync(dir, { recursive: true })
@@ -169,7 +184,9 @@ export class RecordingManager {
       outline: [],
       lastOutlineText: '',
       lastLevelSent: 0,
-      lastNoticeAt: 0
+      lastNoticeAt: 0,
+      diskWarned: false,
+      diskStopTriggered: false
     }
 
     this.session = session
@@ -207,6 +224,18 @@ export class RecordingManager {
       )
     }
 
+    if (diskSpaceLevel(free) === 'low' && free !== null) {
+      session.diskWarned = true
+      this.notice(
+        mainText(
+          loadSettings().uiLanguage,
+          'Low disk space: {mb} MB free. Free some space or stop the recording soon.',
+          { mb: megabytes(free) }
+        ),
+        'warn'
+      )
+    }
+
     return this.snapshot()
   }
 
@@ -231,7 +260,11 @@ export class RecordingManager {
       this.writeManifest(session)
       this.emitState()
       this.notice(
-        `Recording could not write to disk: ${session.error}`,
+        mainText(
+          loadSettings().uiLanguage,
+          'Recording could not write to disk: {message}',
+          { message: session.error }
+        ),
         'error'
       )
       return
@@ -297,6 +330,7 @@ export class RecordingManager {
       throw new Error('There is no active recording to stop.')
     }
 
+    const wasError = session.status === 'error'
     this.clearTimers(session)
     session.status = 'stopped'
     session.pausedAt = null
@@ -310,6 +344,19 @@ export class RecordingManager {
       })
     }
     session.writer = null
+
+    if (wasError) {
+      try {
+        const actualBytes = Math.max(
+          0,
+          fs.statSync(session.audioPath).size - 44
+        )
+        session.dataBytes = actualBytes
+        session.totalSamples = Math.floor(actualBytes / 2)
+      } catch {
+        // Keep the accepted-sample count if the file cannot be inspected.
+      }
+    }
 
     try {
       fs.writeSync(session.fd, wavHeader(session.dataBytes), 0, 44, 0)
@@ -694,7 +741,9 @@ export class RecordingManager {
       outline: [],
       lastOutlineText: '',
       lastLevelSent: 0,
-      lastNoticeAt: 0
+      lastNoticeAt: 0,
+      diskWarned: false,
+      diskStopTriggered: false
     }
 
     this.session = session
@@ -1011,6 +1060,49 @@ export class RecordingManager {
     }
 
     this.writeManifest(session)
+    this.checkDiskHealth(session)
+  }
+
+  private checkDiskHealth(session: Session): void {
+    if (this.session !== session) return
+    if (
+      session.status !== 'recording' &&
+      session.status !== 'paused'
+    ) {
+      return
+    }
+
+    const free = freeDiskBytes(session.dir)
+    const level = diskSpaceLevel(free)
+    if (level === 'low' && free !== null && !session.diskWarned) {
+      session.diskWarned = true
+      this.notice(
+        mainText(
+          loadSettings().uiLanguage,
+          'Low disk space: {mb} MB free. Free some space or stop the recording soon.',
+          { mb: megabytes(free) }
+        ),
+        'warn'
+      )
+    }
+
+    if (level === 'critical' && !session.diskStopTriggered) {
+      session.diskStopTriggered = true
+      this.notice(
+        mainText(
+          loadSettings().uiLanguage,
+          'Disk space is critically low ({mb} MB free). The recording was stopped so the audio already captured stays safe.',
+          { mb: megabytes(free ?? 0) }
+        ),
+        'error'
+      )
+      void this.stop().catch((error) => {
+        log('recording', 'could not stop after low disk warning', {
+          id: session.id,
+          message: error instanceof Error ? error.message : String(error)
+        })
+      })
+    }
   }
 
   private persistLiveTranscript(session: Session): void {
