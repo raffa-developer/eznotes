@@ -41,6 +41,11 @@ import {
 } from './notes'
 import { readWavInfo, wavHeader } from './wav'
 import { isWebmShorterThanWav, readWebmDurationSec } from './webm'
+import {
+  AudioChunkWriter,
+  ByteRingBuffer,
+  float32ToPcm16
+} from './audioBuffer'
 import { demoMode } from './mock'
 import { log } from './log'
 import {
@@ -57,6 +62,7 @@ const LIVE_MIN_RECENT_VOICED_MS = 800
 const LIVE_MIN_VOICED_RATIO = 0.12
 const ROLLING_SECONDS = 30
 const CHECKPOINT_INTERVAL_MS = 30_000
+const WRITE_BATCH_BYTES = 16 * 1024
 const MANIFEST_FILE = 'session.json'
 const LIVE_TRANSCRIPT_FILE = 'live-transcript.json'
 
@@ -73,7 +79,8 @@ interface Session {
   fd: number
   dataBytes: number
   totalSamples: number
-  rolling: Buffer
+  rolling: ByteRingBuffer
+  writer: AudioChunkWriter | null
   pausedAt: number | null
   pausedTotalMs: number
   headerTimer: NodeJS.Timeout | null
@@ -129,6 +136,11 @@ export class RecordingManager {
     const fd = fs.openSync(audioPath, 'w')
     fs.writeSync(fd, wavHeader(0))
 
+    const writer = new AudioChunkWriter(
+      (chunk) => fs.writeSync(fd, chunk),
+      WRITE_BATCH_BYTES
+    )
+
     const session: Session = {
       id,
       startedAt: new Date(),
@@ -142,7 +154,8 @@ export class RecordingManager {
       fd,
       dataBytes: 0,
       totalSamples: 0,
-      rolling: Buffer.alloc(0),
+      rolling: new ByteRingBuffer(ROLLING_SECONDS * SAMPLE_RATE * 2),
+      writer,
       pausedAt: null,
       pausedTotalMs: 0,
       headerTimer: null,
@@ -199,36 +212,41 @@ export class RecordingManager {
 
   appendAudio(arrayBuffer: ArrayBuffer): void {
     const session = this.session
-    if (!session || session.status !== 'recording') return
-    const input = Buffer.from(arrayBuffer)
-    if (input.length < 4) return
-    const sampleCount = Math.floor(input.length / 4)
-    const pcm = Buffer.allocUnsafe(sampleCount * 2)
-    let sum = 0
+    if (!session || session.status !== 'recording' || !session.writer) return
+    if (arrayBuffer.byteLength < 4) return
 
-    for (let i = 0; i < sampleCount; i++) {
-      const value = input.readFloatLE(i * 4)
-      const clamped = Math.max(-1, Math.min(1, value))
-      sum += clamped * clamped
-      pcm.writeInt16LE(Math.round(clamped * 32767), i * 2)
-    }
+    const chunk = float32ToPcm16(arrayBuffer)
+    if (!chunk.samples) return
 
-    fs.writeSync(session.fd, pcm)
-    session.dataBytes += pcm.length
-    session.totalSamples += sampleCount
-
-    session.rolling = Buffer.concat([session.rolling, pcm])
-    const maxRollingBytes = ROLLING_SECONDS * SAMPLE_RATE * 2
-    if (session.rolling.length > maxRollingBytes) {
-      session.rolling = session.rolling.subarray(
-        session.rolling.length - maxRollingBytes
+    try {
+      session.writer.push(chunk.pcm)
+    } catch (error) {
+      session.status = 'error'
+      session.error =
+        error instanceof Error ? error.message : String(error)
+      log('recording', 'audio write failed', {
+        id: session.id,
+        message: session.error
+      })
+      this.writeManifest(session)
+      this.emitState()
+      this.notice(
+        `Recording could not write to disk: ${session.error}`,
+        'error'
       )
+      return
     }
+
+    session.dataBytes += chunk.pcm.length
+    session.totalSamples += chunk.samples
+    session.rolling.append(chunk.pcm)
 
     const now = Date.now()
     if (now - session.lastLevelSent > 90) {
       session.lastLevelSent = now
-      const rms = Math.sqrt(sum / Math.max(1, sampleCount))
+      const rms = Math.sqrt(
+        chunk.sumSquares / Math.max(1, chunk.samples)
+      )
       this.send({ type: 'level', level: Math.min(1, rms * 6) })
     }
   }
@@ -282,6 +300,16 @@ export class RecordingManager {
     this.clearTimers(session)
     session.status = 'stopped'
     session.pausedAt = null
+
+    try {
+      session.writer?.flush()
+    } catch (error) {
+      log('recording', 'could not flush audio before stop', {
+        id: session.id,
+        message: error instanceof Error ? error.message : String(error)
+      })
+    }
+    session.writer = null
 
     try {
       fs.writeSync(session.fd, wavHeader(session.dataBytes), 0, 44, 0)
@@ -528,6 +556,7 @@ export class RecordingManager {
     const session = this.session
     if (session?.id !== id) return
     this.clearTimers(session)
+    session.writer = null
     try {
       fs.closeSync(session.fd)
     } catch {
@@ -647,7 +676,8 @@ export class RecordingManager {
       fd: -1,
       dataBytes,
       totalSamples: Math.floor(dataBytes / 2),
-      rolling: Buffer.alloc(0),
+      rolling: new ByteRingBuffer(ROLLING_SECONDS * SAMPLE_RATE * 2),
+      writer: null,
       pausedAt: null,
       pausedTotalMs: 0,
       headerTimer: null,
@@ -713,9 +743,7 @@ export class RecordingManager {
 
     const chunkBytes = Math.floor(LIVE_CHUNK_SECONDS * SAMPLE_RATE * 2)
     if (session.rolling.length < SAMPLE_RATE * 2 * 2) return
-    const rawChunk = session.rolling.subarray(
-      Math.max(0, session.rolling.length - chunkBytes)
-    )
+    const rawChunk = session.rolling.tail(chunkBytes)
     const speech = analyzeSpeech(rawChunk, SAMPLE_RATE, LIVE_INTERVAL_MS)
     if (
       !speech ||
@@ -962,6 +990,15 @@ export class RecordingManager {
   private checkpoint(session: Session): void {
     if (this.session !== session) return
     if (session.status !== 'recording' && session.status !== 'paused') return
+
+    try {
+      session.writer?.flush()
+    } catch (error) {
+      log('recording', 'audio batch flush failed', {
+        id: session.id,
+        message: error instanceof Error ? error.message : String(error)
+      })
+    }
 
     try {
       fs.writeSync(session.fd, wavHeader(session.dataBytes), 0, 44, 0)

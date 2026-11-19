@@ -187,3 +187,132 @@ Legend: **P0** = risk of losing a lecture · **P1** = expected product gap ·
 
 - [x] **README link**
   The README links `TODO.md` from the language note and the Roadmap section.
+
+---
+
+## Next implementation wave
+
+Ordered backlog from the repository review. Keep implementation items small,
+verify reliability-sensitive changes with tests, and tick each item here and in
+[`.opencode/todos.md`](.opencode/todos.md) when complete.
+
+### P1 — Reliability, performance, and setup
+
+- [x] **N-1 Audio capture hot path**
+  `src/main/recording.ts`, `src/main/audioBuffer.ts`,
+  `src/renderer/src/hooks/useAudioCapture.ts`
+  - Replace repeated rolling-window `Buffer.concat` copies with a bounded ring
+    buffer or equivalent.
+  - Batch disk writes without losing ordering, draining buffered audio on stop,
+    or weakening the crash-safe checkpoint/recovery guarantees.
+  - *Done when:* a repeatable long synthetic recording has no missing or
+    reordered samples, recovers as a valid WAV after forced termination, and
+    includes before/after CPU and allocation measurements.
+  - *Verified:* the ring buffer cut a 12.8-minute synthetic rolling-window
+    workload from 1,853 ms to 20 ms (about 93×) with no retained heap growth.
+    A real 6-second Electron capture stopped with a matching WAV header and data
+    size; a forced-kill capture recovered at 4.10 s after the header was repaired.
+    The write batcher flushes at 16 KB and on every checkpoint, pause/resume, and
+    stop. 94 tests pass.
+
+- [ ] **N-2 Isolate microphone-level rendering**
+  `src/renderer/src/state/AppContext.tsx`, `src/renderer/src/pages/Live.tsx`,
+  `src/renderer/src/pages/Island.tsx`
+  - Move high-frequency level updates out of the app-wide context, or otherwise
+    restrict them to the meter components; coalesce updates to display cadence.
+  - *Done when:* meter animation remains responsive while unrelated pages and
+    shell components do not rerender on every level event.
+
+- [ ] **N-3 Make note indexing incremental and searchable**
+  `src/main/notes.ts`, `src/main/index.ts`, `src/shared/types.ts`,
+  `src/renderer/src/pages/Library.tsx`
+  - Avoid recursively scanning the notes folder on every `notes:list` call.
+    Keep external Markdown additions, edits, moves, and deletions discoverable
+    with a debounced watcher plus an explicit rescan/fallback path.
+  - Add global search over note text and transcript text, not only card metadata.
+  - *Done when:* tests cover external file changes and index rebuilds; a seeded
+    large library can open/search without repeated full scans or blocking the
+    main process.
+
+- [ ] **N-4 Fail closed when secure secret storage is unavailable**
+  `src/main/store.ts`, `src/shared/types.ts`,
+  `src/renderer/src/pages/SettingsPage.tsx`, `src/renderer/src/locales/`
+  - Do not describe base64-encoded plaintext as encryption. Migrate legacy
+    `plain:` values to `safeStorage` when available; otherwise refuse new secret
+    storage and show a clear localized warning.
+  - *Done when:* tests verify encryption, migration, unavailable-storage
+    behavior, and that secrets never appear in settings responses or logs.
+
+- [ ] **N-5 Make first-run setup provider-aware**
+  `src/renderer/src/pages/Dashboard.tsx`,
+  `src/renderer/src/pages/SettingsPage.tsx`,
+  `src/renderer/src/locales/`
+  - Replace the hard-coded “OpenCode key” setup label with copy derived from the
+    selected provider. Guide users through microphone selection, provider
+    credentials or local Ollama, connection tests, and adding a course.
+  - *Done when:* each supported provider shows the right credential/setup
+    instructions, local Ollama does not request a cloud key, and the user can
+    confirm readiness before the first recording.
+
+- [ ] **N-6 Detect recording health problems**
+  `src/renderer/src/hooks/useAudioCapture.ts`,
+  `src/main/recording.ts`, `src/renderer/src/pages/Live.tsx`
+  - Detect microphone track termination and recording write failures; surface
+    actionable warnings and preserve recoverable audio. Check available disk
+    space where supported before and during long recordings.
+  - *Done when:* tests/smoke tests cover device loss, low disk, and recovery
+    without silently saving a misleadingly short recording.
+
+- [ ] **N-7 Add a Windows release verification pipeline**
+  `.github/workflows/`, `package.json`, release documentation
+  - Build the Windows installer in CI, retain the artifact, and smoke-test
+    install, launch, upgrade, and uninstall. Sign releases when signing
+    credentials are configured; clearly identify unsigned builds otherwise.
+  - *Done when:* a tagged release produces a tested, downloadable Windows
+    installer and the signing state is explicit.
+
+### P2 — Study and course workflows
+
+- [ ] **N-8 Add safe note and transcript review/editing**
+  `src/main/notes.ts`, `src/shared/types.ts`,
+  `src/renderer/src/pages/NotePage.tsx`
+  - Let users correct transcript text, rename generic speakers, and edit note
+    Markdown. Keep edit history/undo and warn before regeneration can replace
+    user edits.
+  - *Done when:* edits persist across restart, transcript timestamps and
+    speaker assignments are retained, and a prior version can be restored.
+
+- [ ] **N-9 Add a source-linked study mode**
+  New study UI and persistence under `.eznotes`; reuse note/transcript data
+  - Generate flashcards and short quizzes from selected notes. Link each answer
+    to its source note section and, when available, transcript timestamp.
+  - *Done when:* users can review, mark confidence, revisit missed cards, and
+    verify generated answers against their source; study data is exportable.
+
+- [ ] **N-10 Import schedules from `.ics`**
+  `src/main/schedule.ts`, `src/shared/types.ts`,
+  `src/renderer/src/pages/SchedulePage.tsx`
+  - Add import preview, course matching/creation, recurring classes, and
+    one-off exceptions. Handle time zones and daylight-saving transitions.
+  - *Done when:* users can preview and resolve conflicts before saving, with
+    tests for recurrence, exceptions, time zones, and DST boundaries.
+
+- [ ] **N-11 Add local backup and restore**
+  Settings/export UI, `src/main/store.ts`, notes and recordings storage
+  - Provide a guided backup that can include Markdown, transcripts, schedule,
+    settings, and optionally audio. Never include API secrets by default.
+  - *Done when:* a backup can be restored to a clean profile, archive contents
+    are validated before writing, and restore conflicts are explained.
+
+### P3 — Design and accessibility
+
+- [ ] **N-12 Consolidate design tokens and improve accessibility**
+  `src/renderer/src/styles.css`, `src/renderer/src/polish.css`,
+  `src/renderer/src/apple.css`, `src/renderer/src/components/ui.tsx`
+  - Reduce overlapping global CSS through shared color, spacing, typography,
+    and focus tokens without changing the established light-first visual
+    direction. Add modal focus trapping/restoration, keyboard checks, contrast
+    checks, and reduced-motion support.
+  - *Done when:* main flows pass keyboard-only review in both themes and
+    automated accessibility checks; screenshots show no unintended visual
+    regressions.

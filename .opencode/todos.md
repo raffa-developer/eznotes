@@ -103,3 +103,29 @@ tick the box here and in `TODO.md` when it lands.
       `src/main/log.ts` (`rotateLogFile`) + tests
 - [x] **H-5** Link `TODO.md` from the README
       `README.md` (Status and Roadmap sections)
+
+## Next implementation wave
+
+Detailed scope and acceptance criteria are in [`../TODO.md`](../TODO.md),
+section “Next implementation wave”.
+
+### P1 — Reliability, performance, and setup
+
+- [x] **N-1** Optimize audio capture buffering and writes; preserve crash recovery
+- [ ] **N-2** Isolate high-frequency microphone-level updates from app-wide renders
+- [ ] **N-3** Incremental note index, external-file discovery, and global search
+- [ ] **N-4** Fail-closed secret storage; migrate legacy plaintext fallback
+- [ ] **N-5** Provider-aware first-run setup and connection checks
+- [ ] **N-6** Recording health checks for mic loss, disk, and write failures
+- [ ] **N-7** Windows installer CI, smoke tests, and explicit signing state
+
+### P2 — Study and course workflows
+
+- [ ] **N-8** Editable notes/transcripts, speaker renaming, and undo/history
+- [ ] **N-9** Source-linked flashcards and quiz study mode
+- [ ] **N-10** `.ics` schedule import with exceptions and timezone handling
+- [ ] **N-11** Validated local backup and restore, excluding secrets by default
+
+### P3 — Design and accessibility
+
+- [ ] **N-12** Shared design tokens, modal focus behavior, and accessibility pass
