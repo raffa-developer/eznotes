@@ -25,6 +25,7 @@ import {
   formatTimestamp
 } from '../lib/format'
 import { t, uiLocale } from '../i18n'
+import { scrollElementIntoView } from '../lib/motion'
 
 function MicrophoneMeter(): React.JSX.Element {
   const level = useAudioLevel()
@@ -160,7 +161,7 @@ export default function Live(): React.JSX.Element {
   }, [setRecording, toast])
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    scrollElementIntoView(bottomRef.current, { block: 'end' })
   }, [segments.length])
 
   useEffect(() => {

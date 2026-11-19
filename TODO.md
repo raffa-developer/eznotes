@@ -358,7 +358,7 @@ verify reliability-sensitive changes with tests, and tick each item here and in
 
 ### P3 — Design and accessibility
 
-- [ ] **N-12 Consolidate design tokens and improve accessibility**
+- [x] **N-12 Consolidate design tokens and improve accessibility**
   `src/renderer/src/styles.css`, `src/renderer/src/polish.css`,
   `src/renderer/src/apple.css`, `src/renderer/src/components/ui.tsx`
   - Reduce overlapping global CSS through shared color, spacing, typography,
@@ -368,3 +368,8 @@ verify reliability-sensitive changes with tests, and tick each item here and in
   - *Done when:* main flows pass keyboard-only review in both themes and
     automated accessibility checks; screenshots show no unintended visual
     regressions.
+  - *Verified:* shared focus tokens, stronger dim-text contrast, input/segmented
+    focus rings, reduced-motion scrolling, modal focus trapping/restoration,
+    labelled dialogs, and toast live regions are in place. A keyboard smoke test
+    wrapped focus in both directions, closed on Escape, and restored focus to
+    the trigger; no visible buttons lacked an accessible name. 135 tests pass.

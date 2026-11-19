@@ -39,6 +39,7 @@ import ExportMenu from '../components/ExportMenu'
 import StudyModal from '../components/StudyModal'
 import { t, uiLocale } from '../i18n'
 import { formatDate, formatDuration, formatTimestamp } from '../lib/format'
+import { scrollElementIntoView } from '../lib/motion'
 
 export default function NotePage(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
@@ -320,11 +321,12 @@ export default function NotePage(): React.JSX.Element {
             ?.toLocaleLowerCase()
             .includes(source.heading!.toLocaleLowerCase())
         )
-        target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        scrollElementIntoView(target ?? null, { block: 'start' })
       } else if (source.timestamp !== undefined) {
-        document
-          .querySelector('.audio-card')
-          ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        scrollElementIntoView(
+          document.querySelector('.audio-card'),
+          { block: 'center' }
+        )
       }
     }, 150)
   }
@@ -562,9 +564,9 @@ export default function NotePage(): React.JSX.Element {
                     key={item.id}
                     className={item.level === 3 ? 'toc-sub' : ''}
                     onClick={() =>
-                      document
-                        .getElementById(item.id)
-                        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      scrollElementIntoView(document.getElementById(item.id), {
+                        block: 'start'
+                      })
                     }
                   >
                     {item.text}

@@ -1,5 +1,7 @@
 import {
   useEffect,
+  useId,
+  useRef,
   type ButtonHTMLAttributes,
   type ReactNode
 } from 'react'
@@ -92,30 +94,93 @@ export function Modal({
   footer?: ReactNode
   width?: number
 }): React.JSX.Element | null {
+  const titleId = useId()
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const previousFocus = useRef<HTMLElement | null>(null)
+  const onCloseRef = useRef(onClose)
+
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
+
   useEffect(() => {
     if (!open) return
-    const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') onClose()
+    const dialog = dialogRef.current
+    previousFocus.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null
+
+    const focusables = (): HTMLElement[] => {
+      if (!dialog) return []
+      return Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((element) => element.getClientRects().length > 0)
     }
+
+    const focusTimer = window.setTimeout(() => {
+      const first = focusables()[0]
+      if (first) first.focus()
+      else dialog?.focus()
+    }, 0)
+
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onCloseRef.current()
+        return
+      }
+      if (event.key !== 'Tab') return
+
+      const items = focusables()
+      if (!items.length) {
+        event.preventDefault()
+        dialog?.focus()
+        return
+      }
+      const first = items[0]
+      const last = items[items.length - 1]
+      const active = document.activeElement
+      if (event.shiftKey) {
+        if (active === first || !dialog?.contains(active)) {
+          event.preventDefault()
+          last.focus()
+        }
+      } else if (active === last || !dialog?.contains(active)) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+    return () => {
+      window.clearTimeout(focusTimer)
+      window.removeEventListener('keydown', onKey)
+      const previous = previousFocus.current
+      previousFocus.current = null
+      if (previous && document.contains(previous)) previous.focus()
+    }
+  }, [open])
 
   if (!open) return null
 
   return createPortal(
     <div className="modal-backdrop" onMouseDown={onClose}>
       <div
+        ref={dialogRef}
         className="modal"
         style={{ maxWidth: width }}
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-labelledby={titleId}
+        tabIndex={-1}
       >
         <div className="modal-head">
           <div>
-            <h2>{title}</h2>
+            <h2 id={titleId}>{title}</h2>
             {subtitle ? <p>{subtitle}</p> : null}
           </div>
           <button className="icon-button" onClick={onClose} aria-label={t('Close')}>
@@ -161,13 +226,14 @@ export function Segmented<T extends string>({
   onChange: (value: T) => void
 }): React.JSX.Element {
   return (
-    <div className="segmented">
+    <div className="segmented" role="group">
       {options.map((option) => (
         <button
           key={option.value}
           type="button"
           className={option.value === value ? 'active' : ''}
           onClick={() => onChange(option.value)}
+          aria-pressed={option.value === value}
         >
           {option.label}
         </button>
@@ -184,7 +250,7 @@ export function ToastStack({
   dismiss: (id: number) => void
 }): React.JSX.Element {
   return (
-    <div className="toast-stack">
+    <div className="toast-stack" role="status" aria-live="polite" aria-atomic="false">
       {toasts.map((toast) => (
         <div key={toast.id} className={`toast toast-${toast.tone}`}>
           <span>{toast.message}</span>

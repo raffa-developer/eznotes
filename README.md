@@ -84,8 +84,13 @@ Groq and notes-model calls require your own API keys.
 - Structured Markdown notes with concepts, definitions, examples, exam hints,
   open questions, and a glossary.
 - Optional offline speaker labels for the lecturer and students.
+- Edit notes and transcripts in the app, rename speakers, and restore earlier
+  versions from a per-note history.
+- Study mode: generate source-linked flashcards, rate confidence, revisit missed
+  cards, and export the study set.
 - Transcript-only fallback if the notes model fails.
-- Regenerate a note from the saved transcript at any time.
+- Regenerate a note from the saved transcript at any time, with a warning before
+  replacing manual edits.
 - Notes-model network failures are retried once on transient errors.
 
 ### Library
@@ -96,6 +101,8 @@ Groq and notes-model calls require your own API keys.
 - Open a book to see every note for that course as simple paper cards in a
   four-column grid.
 - Per-book search, audio-only filter, and newest/oldest/longest sorting.
+- Global search across note text and transcripts, with excerpts and transcript
+  timestamps.
 - Paper cards follow the app theme: white in light mode, app surfaces in dark
   mode.
 - Open any note directly from its card.
@@ -104,6 +111,8 @@ Groq and notes-model calls require your own API keys.
 
 - Weekly timetable with dated Monday–Sunday columns, a time axis, today
   highlight, and a current-time line.
+- Import `.ics` calendars with a preview: weekly classes, one-off changes,
+  cancellations, course matching, and optional conflict skipping.
 - Click an empty spot in the timetable to add a class at that time.
 - Per-day quick-add buttons and a compact course panel.
 - Overlapping classes share the column cleanly.
@@ -115,6 +124,9 @@ Groq and notes-model calls require your own API keys.
 
 - Markdown files organised by course and date.
 - Export to Markdown, A4 PDF, Obsidian, Notion clipboard, or the clipboard.
+- Export study sets to Markdown.
+- Local folder backups for notes, transcripts, schedule, and settings, with
+  optional audio. API keys are never included.
 - Light, dark, or system theme.
 - English and European Portuguese interface.
 - macOS-inspired layout, Apple blue, Inter for UI, Newsreader for reading and
@@ -311,6 +323,8 @@ is optional and runs locally; it never delays the note.
 - Labels are `Speaker 1`, `Speaker 2`, … in order of first appearance. The note
   prompt treats the most active speaker as the lecturer and marks student
   questions.
+- Use **Edit transcript** to rename speakers or correct text. Timestamps stay
+  unchanged and the previous version is kept in History.
 - Once labels are ready, open the note and press **Regenerate** to include them.
 - If diarization fails or models are missing, the note is still saved with a
   warning. The worker has a 10-minute cap and is killed on app quit.
@@ -328,6 +342,7 @@ The library is a course bookshelf, not a flat file list.
 - Each book has its own search, audio-only filter, and sort controls.
 - The shelf itself supports search, audio filtering, and sorting by newest,
   oldest, or longest.
+- Searching also scans note text and transcripts and shows matching excerpts.
 - Notes open directly in the note reader. Press `Esc` or use **Library** to
   return to the shelf.
 
@@ -335,6 +350,8 @@ The library is a course bookshelf, not a flat file list.
 
 - Monday–Sunday columns with this week's dates and a time axis.
 - Today is highlighted and a current-time line is shown on today's column.
+- Import `.ics` calendars with a preview of recurring classes, one-off changes,
+  cancellations, and time conflicts.
 - Click an empty spot in the timetable to create a class at that time.
 - Each day has a quick-add button.
 - Overlapping classes are laid out side by side.
@@ -346,11 +363,12 @@ The library is a course bookshelf, not a flat file list.
 | What | Where |
 | --- | --- |
 | Notes | `Documents\ezNotes\<Course>\YYYY-MM-DD - <title>.md` |
-| Note index and sidecar transcripts | `Documents\ezNotes\.eznotes\` |
+| Note index, transcripts, edit history, and study sets | `Documents\ezNotes\.eznotes\` |
 | Audio | `%APPDATA%\ezNotes\recordings\rec_*\audio.webm` (or `audio.wav` if Opus was unavailable or incomplete) |
 | Settings, schedule, encrypted keys | `%APPDATA%\ezNotes\` |
 | Speaker models | `%APPDATA%\ezNotes\models\sherpa\` |
 | Diagnostics log | `%APPDATA%\ezNotes\eznotes.log` |
+| Backups | The folder you choose when creating a backup |
 
 - Audio is sent to Groq for transcription.
 - The transcript, course, date, duration, and glossary are sent to the chosen
@@ -358,7 +376,7 @@ The library is a course bookshelf, not a flat file list.
 - Speaker detection runs locally; its models are downloaded from GitHub releases.
 - No analytics or telemetry is built in.
 - API keys are encrypted with Windows DPAPI through Electron `safeStorage` and
-  are never written to the notes folder or the repository.
+  are never written to the notes folder, backups, or the repository.
 - Logs contain model and finish-reason diagnostics, never API keys or full
   transcripts.
 - Recording a lecture may require consent. Inform the lecturer and follow your
@@ -444,14 +462,22 @@ On a note page, use **Copy note** or the **Export** menu:
 
 ### Tests and CI
 
-There are **84 tests in 10 files**. Coverage includes:
+There are **135 tests in 20 files**. Coverage includes:
 
 - Transcript overlap trimming and segment deduplication.
 - Speech/VAD analysis and low-confidence Whisper filtering.
 - WebM duration parsing and the WAV/WebM retention decision.
-- Transient notes-model error classification.
-- Frontmatter parsing, filename sanitising, and title/summary extraction.
-- Upcoming-class calculation, auto-start scheduling, and quick recording lookup.
+- Audio ring-buffer wraparound, ordered write batching, and PCM conversion.
+- Transient notes-model error classification and study-card JSON parsing.
+- Frontmatter parsing (including CRLF/BOM), filename sanitising, and
+  title/summary extraction.
+- Incremental note indexing, external file changes, rescanning, and content/
+  transcript search.
+- Note edit history, transcript normalisation, restore, and deletion cleanup.
+- Study-set persistence, ratings, sources, export, and cleanup.
+- Upcoming-class calculation, auto-start scheduling, quick recording lookup,
+  one-off classes, cancellations, and ICS recurrence/DST parsing.
+- Disk-space health and secure-secret migration.
 - Cue detection, log rotation, speaker assignment, provider response parsing, and
   translation lookup/interpolation.
 
@@ -512,8 +538,11 @@ work.
 - Live transcription requires a network connection to Groq. Local Whisper is not
   implemented yet.
 - Speaker detection is optional, CPU-heavy on long lectures, and produces
-  generic `Speaker N` labels rather than real names.
+  generic `Speaker N` labels rather than real names; you can rename them in the
+  transcript editor.
 - Speaker detection requires keeping the lecture audio.
+- ICS import supports weekly recurrence rules. Other recurrence patterns are
+  skipped with a warning in the import preview.
 - A public installer has not been published yet, and auto-update delivery is not
   implemented.
 - Provider and backend diagnostic error details may be shown in English even
@@ -522,6 +551,8 @@ work.
   reduce hallucinations but cannot remove them entirely.
 - The notes model can return an incomplete note; use **Regenerate** or switch
   models if it does.
+- Study cards are only as accurate as the note and transcript they are generated
+  from; verify them against the linked source.
 
 ## Roadmap
 
@@ -537,7 +568,9 @@ Recently shipped: crash-safe recordings and recovery, transcript-only notes,
 background speaker labels, opt-in auto-start, tray and global hotkey support,
 compact Opus audio with WAV integrity fallback, native Anthropic/Gemini/OpenAI
 adapters, retrying notes-model calls, close-to-tray finalization, the weekly
-timetable grid, and the course-book library.
+timetable grid, the course-book library, note and transcript editing with
+history, source-linked study cards, `.ics` import with exceptions, local
+backup/restore, and a Windows installer release workflow.
 
 ## Contributing
 

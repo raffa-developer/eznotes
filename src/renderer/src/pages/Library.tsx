@@ -329,6 +329,7 @@ export default function Library(): React.JSX.Element {
                   value={bookQuery}
                   onChange={(event) => setBookQuery(event.target.value)}
                   placeholder={t('Search these notes…')}
+                  aria-label={t('Search these notes…')}
                 />
                 {bookQuery ? (
                   <button
@@ -479,6 +480,7 @@ export default function Library(): React.JSX.Element {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={t('Search titles, courses, summaries…')}
+                aria-label={t('Search titles, courses, summaries…')}
               />
               {query ? (
                 <button

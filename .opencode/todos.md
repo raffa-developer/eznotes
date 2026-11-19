@@ -128,4 +128,4 @@ section “Next implementation wave”.
 
 ### P3 — Design and accessibility
 
-- [ ] **N-12** Shared design tokens, modal focus behavior, and accessibility pass
+- [x] **N-12** Shared design tokens, modal focus behavior, and accessibility pass

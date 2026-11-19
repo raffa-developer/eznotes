@@ -14,8 +14,10 @@
   --line-strong: rgba(0, 0, 0, 0.14);
   --text: #1d1d1f;
   --muted: #6e6e73;
-  --dim: #8e8e93;
+  --dim: #737378;
   --accent: #007aff;
+  --focus-ring: #007aff;
+  --focus-offset: 2px;
   --accent-hover: #0066d6;
   --accent-soft: rgba(0, 122, 255, 0.1);
   --accent-ink: #ffffff;
@@ -57,8 +59,10 @@
   --line-strong: rgba(255, 255, 255, 0.16);
   --text: #f5f5f7;
   --muted: #a1a1a6;
-  --dim: #7c7c82;
+  --dim: #8b8b92;
   --accent: #0a84ff;
+  --focus-ring: #0a84ff;
+  --focus-offset: 2px;
   --accent-hover: #409cff;
   --accent-soft: rgba(10, 132, 255, 0.16);
   --accent-ink: #ffffff;
@@ -117,7 +121,17 @@ h3 {
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.segmented button:focus-visible,
+.study-rate:focus-visible,
+.content-match:focus-visible,
+.transcript-side-line:focus-visible,
+.speaker-rename input:focus-visible,
+.transcript-edit-row textarea:focus-visible {
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
