@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import type { ClassSlot, Schedule } from '../shared/types'
-import { isoWeekday, upcomingClasses } from './schedule'
+import type {
+  ClassSlot,
+  Schedule,
+  ScheduleImportPreview
+} from '../shared/types'
+import {
+  applyScheduleImport,
+  findImportConflicts,
+  isoWeekday,
+  upcomingClasses
+} from './schedule'
 
 const course = {
   id: 'c1',
@@ -82,5 +91,112 @@ describe('upcomingClasses', () => {
     }
 
     expect(upcomingClasses(orphaned, wednesdayMorning)).toEqual([])
+  })
+
+  it('skips canceled dates and applies moved times', () => {
+    const canceled = upcomingClasses(
+      {
+        ...scheduleWith([slot({})]),
+        exceptions: [
+          {
+            id: 'e1',
+            slotId: 's1',
+            date: '2026-10-21',
+            canceled: true
+          }
+        ]
+      },
+      wednesdayMorning
+    )
+    expect(new Date(canceled[0].startsAt).getDate()).toBe(28)
+
+    const moved = upcomingClasses(
+      {
+        ...scheduleWith([slot({})]),
+        exceptions: [
+          {
+            id: 'e2',
+            slotId: 's1',
+            date: '2026-10-21',
+            canceled: false,
+            startTime: '11:00',
+            endTime: '12:30'
+          }
+        ]
+      },
+      wednesdayMorning
+    )
+    expect(new Date(moved[0].startsAt).getHours()).toBe(11)
+    expect(new Date(moved[0].endsAt).getHours()).toBe(12)
+  })
+
+  it('respects date-bounded slots and includes one-off classes', () => {
+    const bounded = upcomingClasses(
+      scheduleWith([
+        slot({
+          startsOn: '2026-10-22',
+          endsOn: '2026-12-01'
+        })
+      ]),
+      wednesdayMorning
+    )
+    expect(bounded[0].slot.weekday).toBe(3)
+    expect(new Date(bounded[0].startsAt).getDate()).toBe(28)
+
+    const withOneOff = upcomingClasses(
+      {
+        ...scheduleWith([slot({})]),
+        oneOffs: [
+          {
+            id: 'o1',
+            courseId: 'c1',
+            date: '2026-10-21',
+            startTime: '13:00',
+            endTime: '14:00'
+          }
+        ]
+      },
+      wednesdayMorning
+    )
+    const oneOff = withOneOff.find((item) => item.oneOffId === 'o1')
+    expect(oneOff?.slot.startTime).toBe('13:00')
+  })
+})
+
+describe('schedule import', () => {
+  const preview: ScheduleImportPreview = {
+    fileName: 'semester.ics',
+    courses: [{ name: 'Redes' }],
+    slots: [
+      {
+        key: 'redes:2',
+        courseName: 'Redes',
+        weekday: 2,
+        startTime: '09:00',
+        endTime: '10:00'
+      }
+    ],
+    oneOffs: [],
+    exceptions: [],
+    skipped: 0,
+    warnings: [],
+    conflicts: []
+  }
+
+  it('detects conflicts and can skip them without creating an empty course', () => {
+    const schedule: Schedule = {
+      courses: [course],
+      slots: [slot({ weekday: 2 })]
+    }
+
+    expect(findImportConflicts(schedule, preview)).toHaveLength(1)
+
+    const skipped = applyScheduleImport(schedule, preview, true)
+    expect(skipped.courses).toHaveLength(1)
+    expect(skipped.slots).toHaveLength(1)
+
+    const imported = applyScheduleImport(schedule, preview, false)
+    expect(imported.courses.map((item) => item.name)).toContain('Redes')
+    expect(imported.slots).toHaveLength(2)
   })
 })

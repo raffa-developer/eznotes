@@ -25,6 +25,7 @@ import type {
   NoteExportFormat,
   NoteExportResult,
   Schedule,
+  ScheduleImportPreview,
   SecretKey,
   Settings,
   StartRecordingInput,
@@ -41,7 +42,8 @@ import {
   settingsStatus,
   updateSettings
 } from './store'
-import { loadSchedule, saveSchedule, upcomingClasses } from './schedule'
+import { loadSchedule, saveSchedule, upcomingClasses, applyScheduleImport, findImportConflicts } from './schedule'
+import { parseIcs } from './ics'
 import {
   deleteNote,
   getNote,
@@ -513,6 +515,36 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
   )
   ipcMain.handle('schedule:upcoming', () =>
     upcomingClasses(loadSchedule(), new Date(), 12)
+  )
+  ipcMain.handle('schedule:chooseImport', async () => {
+    const settings = loadSettings()
+    const result = mainWindow
+      ? await dialog.showOpenDialog(mainWindow, {
+          title: mainText(settings.uiLanguage, 'Import a calendar'),
+          properties: ['openFile'],
+          filters: [{ name: 'Calendar', extensions: ['ics', 'ical'] }]
+        })
+      : await dialog.showOpenDialog({
+          title: mainText(settings.uiLanguage, 'Import a calendar'),
+          properties: ['openFile'],
+          filters: [{ name: 'Calendar', extensions: ['ics', 'ical'] }]
+        })
+    if (result.canceled || !result.filePaths[0]) return null
+
+    const file = result.filePaths[0]
+    const preview = parseIcs(
+      fs.readFileSync(file, 'utf8'),
+      path.basename(file)
+    )
+    preview.conflicts = findImportConflicts(loadSchedule(), preview)
+    return preview
+  })
+  ipcMain.handle(
+    'schedule:applyImport',
+    (_event, preview: ScheduleImportPreview, skipConflicts: boolean) =>
+      saveSchedule(
+        applyScheduleImport(loadSchedule(), preview, Boolean(skipConflicts))
+      )
   )
 
   ipcMain.handle('notes:list', () => listNotes(loadSettings().notesDir))

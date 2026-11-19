@@ -1,14 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  AlertTriangle,
   CalendarDays,
   Clock,
   MapPin,
   Pencil,
   Plus,
   Trash2,
+  Upload,
   UserRound
 } from 'lucide-react'
-import type { ClassSlot, Course } from '../../../shared/types'
+import type {
+  ClassSlot,
+  Course,
+  Schedule,
+  ScheduleImportPreview
+} from '../../../shared/types'
 import { useApp } from '../state/AppContext'
 import { Button, Card, EmptyState, Field, Modal } from '../components/ui'
 import { t, uiLocale } from '../i18n'
@@ -31,6 +38,8 @@ interface SlotForm {
   startTime: string
   endTime: string
   room: string
+  startsOn?: string
+  endsOn?: string
 }
 
 interface PositionedSlot {
@@ -64,6 +73,23 @@ function clockLabel(value: number): string {
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(
     total % 60
   ).padStart(2, '0')}`
+}
+
+function localDateKey(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function withinDateRange(
+  date: string,
+  startsOn: string | undefined,
+  endsOn: string | undefined
+): boolean {
+  if (startsOn && date < startsOn) return false
+  if (endsOn && date > endsOn) return false
+  return true
 }
 
 function endOf(slot: ClassSlot): number {
@@ -133,6 +159,9 @@ export default function SchedulePage(): React.JSX.Element {
   const [deleteCourse, setDeleteCourse] = useState<Course | null>(null)
   const [saving, setSaving] = useState(false)
   const [now, setNow] = useState(() => new Date())
+  const [importPreview, setImportPreview] = useState<ScheduleImportPreview | null>(null)
+  const [skipImportConflicts, setSkipImportConflicts] = useState(true)
+  const [importing, setImporting] = useState(false)
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 60_000)
@@ -163,18 +192,57 @@ export default function SchedulePage(): React.JSX.Element {
   const slotsByDay = useMemo(() => {
     const map = new Map<number, ClassSlot[]>()
     for (const day of WEEKDAYS) map.set(day.value, [])
-    for (const slot of schedule.slots) {
-      map.get(slot.weekday)?.push(slot)
+
+    const exceptions = schedule.exceptions ?? []
+    const oneOffs = schedule.oneOffs ?? []
+
+    for (const day of WEEKDAYS) {
+      const dayDate = dateForWeekday(day.value)
+      const key = localDateKey(dayDate)
+      for (const slot of schedule.slots) {
+        if (slot.weekday !== day.value) continue
+        if (!withinDateRange(key, slot.startsOn, slot.endsOn)) continue
+        const exception = exceptions.find(
+          (item) => item.slotId === slot.id && item.date === key
+        )
+        if (exception?.canceled) continue
+        map.get(day.value)?.push({
+          ...slot,
+          startTime: exception?.startTime ?? slot.startTime,
+          endTime: exception?.endTime ?? slot.endTime,
+          room: exception?.room ?? slot.room
+        })
+      }
+      for (const oneOff of oneOffs) {
+        if (oneOff.date !== key) continue
+        map.get(day.value)?.push({
+          id: oneOff.id,
+          courseId: oneOff.courseId,
+          weekday: day.value,
+          startTime: oneOff.startTime,
+          endTime: oneOff.endTime,
+          room: oneOff.room
+        })
+      }
+      map.get(day.value)?.sort((a, b) => a.startTime.localeCompare(b.startTime))
     }
-    for (const slots of map.values()) {
-      slots.sort((a, b) => a.startTime.localeCompare(b.startTime))
-    }
+
     return map
-  }, [schedule.slots])
+    // dateForWeekday is derived from weekStart, which changes with `now`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schedule.slots, schedule.oneOffs, schedule.exceptions, weekStart.getTime()])
 
   const range = useMemo(() => {
     const starts = schedule.slots.map((slot) => toMinutes(slot.startTime))
     const ends = schedule.slots.map(endOf)
+    for (const oneOff of schedule.oneOffs ?? []) {
+      starts.push(toMinutes(oneOff.startTime))
+      ends.push(toMinutes(oneOff.endTime))
+    }
+    for (const exception of schedule.exceptions ?? []) {
+      if (exception.startTime) starts.push(toMinutes(exception.startTime))
+      if (exception.endTime) ends.push(toMinutes(exception.endTime))
+    }
     const first = starts.length ? Math.min(...starts) : 8 * 60
     const last = ends.length ? Math.max(...ends) : 18 * 60
     const startMinute = Math.max(0, Math.floor(first / 60) * 60)
@@ -187,7 +255,7 @@ export default function SchedulePage(): React.JSX.Element {
       hourMarks.push(minute)
     }
     return { startMinute, endMinute, hourMarks }
-  }, [schedule.slots])
+  }, [schedule.slots, schedule.oneOffs, schedule.exceptions])
 
   const dayLayouts = useMemo(() => {
     const map = new Map<number, PositionedSlot[]>()
@@ -246,6 +314,39 @@ export default function SchedulePage(): React.JSX.Element {
     }
   }
 
+  async function chooseImport(): Promise<void> {
+    setImporting(true)
+    try {
+      const preview = await window.ezNotes.schedule.chooseImport()
+      if (!preview) return
+      setImportPreview(preview)
+      setSkipImportConflicts(preview.conflicts.length > 0)
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'error')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  async function applyImport(): Promise<void> {
+    if (!importPreview) return
+    setImporting(true)
+    try {
+      await window.ezNotes.schedule.applyImport(
+        importPreview,
+        skipImportConflicts
+      )
+      setImportPreview(null)
+      await refreshSchedule()
+      await refreshUpcoming()
+      toast(t('Calendar imported.'), 'success')
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'error')
+    } finally {
+      setImporting(false)
+    }
+  }
+
   async function saveCourse(): Promise<void> {
     if (!courseForm) return
     if (!courseForm.name.trim()) {
@@ -291,7 +392,9 @@ export default function SchedulePage(): React.JSX.Element {
       weekday: slotForm.weekday,
       startTime: slotForm.startTime,
       endTime: slotForm.endTime,
-      room: slotForm.room.trim() || undefined
+      room: slotForm.room.trim() || undefined,
+      startsOn: slotForm.startsOn,
+      endsOn: slotForm.endsOn
     }
     const exists = schedule.slots.some((item) => item.id === slot.id)
     const next = {
@@ -313,7 +416,10 @@ export default function SchedulePage(): React.JSX.Element {
     }
     const next = {
       ...schedule,
-      slots: schedule.slots.filter((slot) => slot.id !== slotForm.id)
+      slots: schedule.slots.filter((slot) => slot.id !== slotForm.id),
+      exceptions: (schedule.exceptions ?? []).filter(
+        (item) => item.slotId !== slotForm.id
+      )
     }
     await persist(next)
     setSlotForm(null)
@@ -322,9 +428,20 @@ export default function SchedulePage(): React.JSX.Element {
 
   async function removeCourse(): Promise<void> {
     if (!deleteCourse) return
+    const removedSlots = new Set(
+      schedule.slots
+        .filter((slot) => slot.courseId === deleteCourse.id)
+        .map((slot) => slot.id)
+    )
     const next = {
       courses: schedule.courses.filter((course) => course.id !== deleteCourse.id),
-      slots: schedule.slots.filter((slot) => slot.courseId !== deleteCourse.id)
+      slots: schedule.slots.filter((slot) => slot.courseId !== deleteCourse.id),
+      oneOffs: (schedule.oneOffs ?? []).filter(
+        (item) => item.courseId !== deleteCourse.id
+      ),
+      exceptions: (schedule.exceptions ?? []).filter(
+        (item) => !removedSlots.has(item.slotId)
+      )
     }
     await persist(next)
     setDeleteCourse(null)
@@ -353,7 +470,9 @@ export default function SchedulePage(): React.JSX.Element {
       weekday: slot.weekday,
       startTime: slot.startTime,
       endTime: slot.endTime,
-      room: slot.room ?? ''
+      room: slot.room ?? '',
+      startsOn: slot.startsOn,
+      endsOn: slot.endsOn
     })
   }
 
@@ -399,6 +518,14 @@ export default function SchedulePage(): React.JSX.Element {
           </p>
         </div>
         <div className="page-actions">
+          <Button
+            variant="ghost"
+            onClick={() => void chooseImport()}
+            disabled={saving || importing}
+          >
+            <Upload size={16} />
+            {t('Import .ics')}
+          </Button>
           <Button variant="ghost" onClick={newCourse} disabled={saving}>
             <Plus size={16} />
             {t('New course')}
@@ -552,6 +679,19 @@ export default function SchedulePage(): React.JSX.Element {
                               }
                               onClick={(event) => {
                                 event.stopPropagation()
+                                if (
+                                  (schedule.oneOffs ?? []).some(
+                                    (item) => item.id === slot.id
+                                  )
+                                ) {
+                                  toast(
+                                    t(
+                                      'One-off imported classes are read-only. Re-import the calendar to change them.'
+                                    ),
+                                    'info'
+                                  )
+                                  return
+                                }
                                 editSlot(slot)
                               }}
                               aria-label={`${course.name}, ${clockLabel(
@@ -681,6 +821,119 @@ export default function SchedulePage(): React.JSX.Element {
           </aside>
         </div>
       )}
+
+      <Modal
+        open={Boolean(importPreview)}
+        title={t('Import calendar')}
+        subtitle={importPreview?.fileName}
+        onClose={() => setImportPreview(null)}
+        width={620}
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => setImportPreview(null)}
+              disabled={importing}
+            >
+              {t('Cancel')}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => void applyImport()}
+              disabled={
+                importing ||
+                !importPreview ||
+                importPreview.slots.length +
+                  importPreview.oneOffs.length ===
+                  0
+              }
+            >
+              <Upload size={15} />
+              {importing ? t('Importing…') : t('Import classes')}
+            </Button>
+          </>
+        }
+      >
+        {importPreview ? (
+          <div className="import-preview">
+            <div className="import-stats">
+              <span>
+                <strong>{importPreview.slots.length}</strong>{' '}
+                {t('weekly classes')}
+              </span>
+              <span>
+                <strong>{importPreview.oneOffs.length}</strong>{' '}
+                {t('one-off changes')}
+              </span>
+              <span>
+                <strong>
+                  {importPreview.exceptions.filter((item) => item.canceled).length}
+                </strong>{' '}
+                {t('cancellations')}
+              </span>
+              <span>
+                <strong>{importPreview.skipped}</strong> {t('skipped')}
+              </span>
+            </div>
+
+            {importPreview.courses.length ? (
+              <div className="import-courses">
+                {importPreview.courses.map((course) => (
+                  <span key={`${course.name}-${course.code ?? ''}`}>
+                    {course.name}
+                    {course.code ? <small>{course.code}</small> : null}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+
+            {importPreview.conflicts.length ? (
+              <div className="banner banner-warn">
+                <AlertTriangle size={16} />
+                <span>
+                  {t(
+                    importPreview.conflicts.length === 1
+                      ? '{count} time conflict with your current timetable.'
+                      : '{count} time conflicts with your current timetable.',
+                    { count: importPreview.conflicts.length }
+                  )}
+                  <small className="import-conflict-list">
+                    {importPreview.conflicts.slice(0, 4).join('; ')}
+                  </small>
+                </span>
+              </div>
+            ) : null}
+
+            {importPreview.conflicts.length ? (
+              <label className="toggle-row">
+                <input
+                  type="checkbox"
+                  checked={skipImportConflicts}
+                  onChange={(event) =>
+                    setSkipImportConflicts(event.target.checked)
+                  }
+                />
+                <span>
+                  <strong>{t('Skip conflicting classes')}</strong>
+                  <small>
+                    {t(
+                      'Leave this off to add both classes and resolve the overlap in the timetable.'
+                    )}
+                  </small>
+                </span>
+              </label>
+            ) : null}
+
+            {importPreview.warnings.length ? (
+              <div className="import-warnings">
+                {importPreview.warnings.map((warning) => (
+                  <p key={warning}>{warning}</p>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </Modal>
 
       <Modal
         open={Boolean(courseForm)}

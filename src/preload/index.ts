@@ -47,7 +47,10 @@ const api: EzNotesApi = {
   schedule: {
     get: () => ipcRenderer.invoke('schedule:get'),
     save: (schedule: Schedule) => ipcRenderer.invoke('schedule:save', schedule),
-    upcoming: () => ipcRenderer.invoke('schedule:upcoming')
+    upcoming: () => ipcRenderer.invoke('schedule:upcoming'),
+    chooseImport: () => ipcRenderer.invoke('schedule:chooseImport'),
+    applyImport: (preview, skipConflicts) =>
+      ipcRenderer.invoke('schedule:applyImport', preview, skipConflicts)
   },
   notes: {
     list: () => ipcRenderer.invoke('notes:list'),

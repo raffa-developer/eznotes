@@ -74,11 +74,81 @@ export interface ClassSlot {
   startTime: string // HH:mm
   endTime: string // HH:mm
   room?: string
+  startsOn?: string // YYYY-MM-DD, inclusive
+  endsOn?: string // YYYY-MM-DD, inclusive
+}
+
+export interface OneOffClass {
+  id: string
+  courseId: string
+  date: string // YYYY-MM-DD
+  startTime: string
+  endTime: string
+  room?: string
+}
+
+export interface ScheduleException {
+  id: string
+  slotId: string
+  date: string // YYYY-MM-DD
+  canceled: boolean
+  startTime?: string
+  endTime?: string
+  room?: string
 }
 
 export interface Schedule {
   courses: Course[]
   slots: ClassSlot[]
+  oneOffs?: OneOffClass[]
+  exceptions?: ScheduleException[]
+}
+
+export interface ImportedScheduleCourse {
+  name: string
+  code?: string
+}
+
+export interface ImportedScheduleSlot {
+  key: string
+  courseName: string
+  code?: string
+  weekday: number
+  startTime: string
+  endTime: string
+  startsOn?: string
+  endsOn?: string
+  room?: string
+}
+
+export interface ImportedOneOff {
+  key: string
+  courseName: string
+  code?: string
+  date: string
+  startTime: string
+  endTime: string
+  room?: string
+}
+
+export interface ImportedScheduleException {
+  slotKey: string
+  date: string
+  canceled: boolean
+  startTime?: string
+  endTime?: string
+  room?: string
+}
+
+export interface ScheduleImportPreview {
+  fileName: string
+  courses: ImportedScheduleCourse[]
+  slots: ImportedScheduleSlot[]
+  oneOffs: ImportedOneOff[]
+  exceptions: ImportedScheduleException[]
+  skipped: number
+  warnings: string[]
+  conflicts: string[]
 }
 
 export interface UpcomingClass {
@@ -87,6 +157,7 @@ export interface UpcomingClass {
   startsAt: string
   endsAt: string
   isNow: boolean
+  oneOffId?: string
 }
 
 export interface NoteMeta {
@@ -301,6 +372,11 @@ export interface EzNotesApi {
     get: () => Promise<Schedule>
     save: (schedule: Schedule) => Promise<Schedule>
     upcoming: () => Promise<UpcomingClass[]>
+    chooseImport: () => Promise<ScheduleImportPreview | null>
+    applyImport: (
+      preview: ScheduleImportPreview,
+      skipConflicts: boolean
+    ) => Promise<Schedule>
   }
   notes: {
     list: () => Promise<NoteMeta[]>

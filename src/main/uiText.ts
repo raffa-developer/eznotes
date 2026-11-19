@@ -59,6 +59,7 @@ const PT: Record<string, string> = {
     'Se sair agora, a gravação fica no disco e pode ser recuperada no próximo arranque.',
   'Choose where ezNotes saves your notes':
     'Escolha onde o ezNotes guarda as suas notas',
+  'Import a calendar': 'Importar um calendário',
   'Choose your Obsidian vault folder':
     'Escolha a pasta do seu cofre Obsidian',
   'Note copied to the clipboard.':

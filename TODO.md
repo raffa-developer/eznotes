@@ -330,13 +330,19 @@ verify reliability-sensitive changes with tests, and tick each item here and in
     Markdown study set. Demo mode generated and rated cards in Electron; 126
     tests pass.
 
-- [ ] **N-10 Import schedules from `.ics`**
-  `src/main/schedule.ts`, `src/shared/types.ts`,
+- [x] **N-10 Import schedules from `.ics`**
+  `src/main/ics.ts`, `src/main/schedule.ts`, `src/shared/types.ts`,
   `src/renderer/src/pages/SchedulePage.tsx`
   - Add import preview, course matching/creation, recurring classes, and
     one-off exceptions. Handle time zones and daylight-saving transitions.
   - *Done when:* users can preview and resolve conflicts before saving, with
     tests for recurrence, exceptions, time zones, and DST boundaries.
+  - *Verified:* the importer handles weekly RRULEs, BYDAY, COUNT/UNTIL,
+    EXDATE cancellations, RECURRENCE-ID moves, standalone events, IANA time
+    zones, and DST. The Schedule page previews counts/conflicts, offers
+    skip-conflicts, and renders date-bounded classes, canceled dates, and
+    one-off changes. A desktop import showed the moved Friday class and hid the
+    canceled weekly occurrence. 133 tests pass.
 
 - [ ] **N-11 Add local backup and restore**
   Settings/export UI, `src/main/store.ts`, notes and recordings storage

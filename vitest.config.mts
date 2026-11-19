@@ -9,6 +9,9 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    env: {
+      TZ: 'Europe/Lisbon'
+    },
     include: ['src/**/*.test.ts']
   }
 })

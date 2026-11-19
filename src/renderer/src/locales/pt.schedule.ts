@@ -76,5 +76,23 @@ export const schedule: Record<string, string> = {
   'Removing…': 'A remover…',
   'Remove course': 'Remover disciplina',
   'will be removed. Existing notes are not affected.':
-    'será removida. As notas existentes não são afetadas.'
+    'será removida. As notas existentes não são afetadas.',
+  'Import .ics': 'Importar .ics',
+  'Import calendar': 'Importar calendário',
+  'Calendar imported.': 'Calendário importado.',
+  'Importing…': 'A importar…',
+  'Import classes': 'Importar aulas',
+  'weekly classes': 'aulas semanais',
+  'one-off changes': 'alterações pontuais',
+  cancellations: 'cancelamentos',
+  skipped: 'ignorados',
+  '{count} time conflict with your current timetable.':
+    '{count} conflito de horário com o seu horário atual.',
+  '{count} time conflicts with your current timetable.':
+    '{count} conflitos de horário com o seu horário atual.',
+  'Skip conflicting classes': 'Ignorar aulas em conflito',
+  'Leave this off to add both classes and resolve the overlap in the timetable.':
+    'Desative para adicionar ambas as aulas e resolver a sobreposição no horário.',
+  'One-off imported classes are read-only. Re-import the calendar to change them.':
+    'As aulas pontuais importadas são só de leitura. Importe novamente o calendário para as alterar.'
 }
