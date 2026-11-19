@@ -60,6 +60,16 @@ const PT: Record<string, string> = {
   'Choose where ezNotes saves your notes':
     'Escolha onde o ezNotes guarda as suas notas',
   'Import a calendar': 'Importar um calendário',
+  'Choose where to save the backup':
+    'Escolha onde guardar a cópia de segurança',
+  'Choose the backup folder': 'Escolha a pasta da cópia de segurança',
+  'Choose where to restore the notes library':
+    'Escolha onde restaurar a biblioteca de notas',
+  'Backup created: {path}': 'Cópia de segurança criada: {path}',
+  'Backup canceled.': 'Cópia de segurança cancelada.',
+  'Restore canceled.': 'Restauração cancelada.',
+  'Backup restored to {path}. Your previous notes were left untouched.':
+    'Cópia restaurada em {path}. As notas anteriores não foram alteradas.',
   'Choose your Obsidian vault folder':
     'Escolha a pasta do seu cofre Obsidian',
   'Note copied to the clipboard.':

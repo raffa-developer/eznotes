@@ -3735,6 +3735,46 @@ textarea::placeholder {
   line-height: 1.55;
 }
 
+.backup-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.backup-copy {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.backup-copy strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.backup-copy small {
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.55;
+}
+
+.backup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  flex: none;
+  gap: 6px;
+}
+
+@media (max-width: 760px) {
+  .backup-row {
+    flex-direction: column;
+  }
+}
+
 .provider-note {
   padding: 12px 14px;
   border: 1px solid var(--line);

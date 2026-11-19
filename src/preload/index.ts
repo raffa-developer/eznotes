@@ -42,7 +42,10 @@ const api: EzNotesApi = {
     testLlm: () => ipcRenderer.invoke('settings:testLlm'),
     testStt: () => ipcRenderer.invoke('settings:testStt'),
     downloadDiarizationModels: () =>
-      ipcRenderer.invoke('settings:downloadDiarizationModels')
+      ipcRenderer.invoke('settings:downloadDiarizationModels'),
+    createBackup: (includeAudio: boolean) =>
+      ipcRenderer.invoke('settings:createBackup', includeAudio),
+    restoreBackup: () => ipcRenderer.invoke('settings:restoreBackup')
   },
   schedule: {
     get: () => ipcRenderer.invoke('schedule:get'),

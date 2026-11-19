@@ -17,12 +17,13 @@ import {
   ShieldCheck,
   Sun,
   Trash2,
+  Upload,
   XCircle
 } from 'lucide-react'
 import type { LlmProvider, Theme, UiLanguage } from '../../../shared/types'
 import { DEFAULT_HOTKEY, HOTKEY_OPTIONS } from '../../../shared/hotkeys'
 import { useApp } from '../state/AppContext'
-import { Badge, Button, Card, Field, Segmented } from '../components/ui'
+import { Badge, Button, Card, Field, Modal, Segmented } from '../components/ui'
 import { t } from '../i18n'
 
 const PROVIDER_PRESETS: Record<
@@ -94,7 +95,14 @@ const LANGUAGES = [
 ]
 
 export default function SettingsPage(): React.JSX.Element {
-  const { settings, refreshSettings, toast } = useApp()
+  const {
+    settings,
+    refreshSettings,
+    refreshNotes,
+    refreshSchedule,
+    refreshUpcoming,
+    toast
+  } = useApp()
   const [groqKey, setGroqKey] = useState('')
   const [llmKey, setLlmKey] = useState('')
   const [sttModel, setSttModel] = useState('whisper-large-v3')
@@ -117,6 +125,10 @@ export default function SettingsPage(): React.JSX.Element {
   const [micId, setMicId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState<'stt' | 'llm' | null>(null)
+  const [backupIncludeAudio, setBackupIncludeAudio] = useState(false)
+  const [backingUp, setBackingUp] = useState(false)
+  const [restoringBackup, setRestoringBackup] = useState(false)
+  const [restoreConfirm, setRestoreConfirm] = useState(false)
   const [testResult, setTestResult] = useState<{
     stt?: { ok: boolean; message: string }
     llm?: { ok: boolean; message: string }
@@ -280,6 +292,42 @@ export default function SettingsPage(): React.JSX.Element {
     await refreshSettings()
     if (next.settings.obsidianVault) {
       toast(t('Obsidian vault: {path}', { path: next.settings.obsidianVault }), 'success')
+    }
+  }
+
+  async function createLocalBackup(): Promise<void> {
+    setBackingUp(true)
+    try {
+      const result = await window.ezNotes.settings.createBackup(
+        backupIncludeAudio
+      )
+      if (!result.canceled) toast(result.message, 'success')
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'error')
+    } finally {
+      setBackingUp(false)
+    }
+  }
+
+  async function restoreLocalBackup(): Promise<void> {
+    setRestoringBackup(true)
+    try {
+      const result = await window.ezNotes.settings.restoreBackup()
+      if (!result.canceled) {
+        await Promise.all([
+          refreshSettings(),
+          refreshNotes(),
+          refreshSchedule(),
+          refreshUpcoming()
+        ])
+        result.warnings.forEach((warning) => toast(warning, 'warn'))
+        toast(result.message, 'success')
+      }
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'error')
+    } finally {
+      setRestoringBackup(false)
+      setRestoreConfirm(false)
     }
   }
 
@@ -938,6 +986,76 @@ export default function SettingsPage(): React.JSX.Element {
       <section className="settings-section">
         <div className="settings-section-head">
           <span className="settings-icon">
+            <Download size={19} />
+          </span>
+          <div>
+            <h2>{t('Local backup')}</h2>
+            <p>
+              {t(
+                'Keep a copy of your notes, transcripts, schedule, and settings outside the app.'
+              )}
+            </p>
+          </div>
+        </div>
+        <Card className="settings-card">
+          <div className="backup-row">
+            <div className="backup-copy">
+              <strong>{t('Back up or restore your library')}</strong>
+              <small>
+                {t(
+                  'Backups never include API keys. Restoring creates a separate notes folder so the current library is not overwritten.'
+                )}
+              </small>
+            </div>
+            <div className="backup-actions">
+              <Button
+                variant="outline"
+                onClick={() => void createLocalBackup()}
+                disabled={backingUp || restoringBackup}
+              >
+                {backingUp ? (
+                  <Loader2 size={15} className="spin" />
+                ) : (
+                  <Download size={15} />
+                )}
+                {backingUp ? t('Backing up…') : t('Create backup')}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setRestoreConfirm(true)}
+                disabled={backingUp || restoringBackup}
+              >
+                <Upload size={15} />
+                {t('Restore backup')}
+              </Button>
+            </div>
+          </div>
+          <label className="toggle-row">
+            <input
+              type="checkbox"
+              checked={backupIncludeAudio}
+              onChange={(event) => setBackupIncludeAudio(event.target.checked)}
+            />
+            <span>
+              <strong>{t('Include lecture audio')}</strong>
+              <small>
+                {t(
+                  'Off by default. Audio can make the backup much larger; kept recordings are copied only for notes that still have them.'
+                )}
+              </small>
+            </span>
+          </label>
+          <p className="settings-note">
+            {t(
+              'Restore replaces your schedule and preferences and switches the library to a new restored folder. Your current notes folder stays on disk.'
+            )}
+          </p>
+        </Card>
+      </section>
+
+      <section className="settings-section">
+        <div className="settings-section-head">
+          <span className="settings-icon">
             <BookOpen size={19} />
           </span>
           <div>
@@ -1077,6 +1195,40 @@ export default function SettingsPage(): React.JSX.Element {
           </div>
         </Card>
       </section>
+
+      <Modal
+        open={restoreConfirm}
+        title={t('Restore a backup?')}
+        subtitle={t(
+          'Your current schedule and preferences will be replaced.'
+        )}
+        onClose={() => setRestoreConfirm(false)}
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => setRestoreConfirm(false)}
+              disabled={restoringBackup}
+            >
+              {t('Cancel')}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => void restoreLocalBackup()}
+              disabled={restoringBackup}
+            >
+              <Upload size={15} />
+              {restoringBackup ? t('Restoring…') : t('Choose backup')}
+            </Button>
+          </>
+        }
+      >
+        <p className="modal-text">
+          {t(
+            'The restored notes go into a new folder, so this library is not deleted or merged. API keys stay on this PC and are never read from the backup.'
+          )}
+        </p>
+      </Modal>
     </div>
   )
 }

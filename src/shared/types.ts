@@ -341,6 +341,23 @@ export interface AppInfo {
   demoMode: boolean
 }
 
+export interface BackupResult {
+  canceled: boolean
+  path?: string
+  noteCount: number
+  audioCount: number
+  message: string
+}
+
+export interface RestoreBackupResult {
+  canceled: boolean
+  notesDir?: string
+  noteCount: number
+  audioCount: number
+  warnings: string[]
+  message: string
+}
+
 export interface LlmMessage {
   role: 'system' | 'user' | 'assistant'
   content: string
@@ -367,6 +384,8 @@ export interface EzNotesApi {
     testLlm: () => Promise<TestResult>
     testStt: () => Promise<TestResult>
     downloadDiarizationModels: () => Promise<TestResult>
+    createBackup: (includeAudio: boolean) => Promise<BackupResult>
+    restoreBackup: () => Promise<RestoreBackupResult>
   }
   schedule: {
     get: () => Promise<Schedule>

@@ -21,9 +21,11 @@ import { pathToFileURL } from 'node:url'
 import type { MenuItemConstructorOptions, OpenDialogOptions } from 'electron'
 import type {
   AppInfo,
+  BackupResult,
   FinalizeRecordingInput,
   NoteExportFormat,
   NoteExportResult,
+  RestoreBackupResult,
   Schedule,
   ScheduleImportPreview,
   SecretKey,
@@ -69,6 +71,11 @@ import {
   rateStudyCard,
   studyMarkdown
 } from './study'
+import {
+  createBackup,
+  inspectBackup,
+  restoreBackup
+} from './backup'
 import { readWavInfo } from './wav'
 import { isWebmShorterThanWav, readWebmDurationSec } from './webm'
 import { downloadDiarizationModels, cancelDiarization } from './diarization'
@@ -508,6 +515,146 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
   ipcMain.handle('settings:downloadDiarizationModels', () =>
     downloadDiarizationModels()
   )
+  ipcMain.handle(
+    'settings:createBackup',
+    async (_event, includeAudio: boolean): Promise<BackupResult> => {
+      const settings = loadSettings()
+      const result = mainWindow
+        ? await dialog.showOpenDialog(mainWindow, {
+            title: mainText(
+              settings.uiLanguage,
+              'Choose where to save the backup'
+            ),
+            defaultPath: app.getPath('documents'),
+            properties: ['openDirectory', 'createDirectory']
+          })
+        : await dialog.showOpenDialog({
+            title: mainText(
+              settings.uiLanguage,
+              'Choose where to save the backup'
+            ),
+            defaultPath: app.getPath('documents'),
+            properties: ['openDirectory', 'createDirectory']
+          })
+      if (result.canceled || !result.filePaths[0]) {
+        return {
+          canceled: true,
+          noteCount: 0,
+          audioCount: 0,
+          message: mainText(settings.uiLanguage, 'Backup canceled.')
+        }
+      }
+
+      const outcome = await createBackup(
+        result.filePaths[0],
+        settings.notesDir,
+        app.getPath('userData'),
+        settings,
+        Boolean(includeAudio)
+      )
+      log('backup', 'created', {
+        path: outcome.path,
+        notes: outcome.noteCount,
+        audio: outcome.audioCount
+      })
+      return {
+        canceled: false,
+        path: outcome.path,
+        noteCount: outcome.noteCount,
+        audioCount: outcome.audioCount,
+        message: mainText(
+          settings.uiLanguage,
+          'Backup created: {path}',
+          { path: outcome.path }
+        )
+      }
+    }
+  )
+  ipcMain.handle('settings:restoreBackup', async (): Promise<RestoreBackupResult> => {
+    const settings = loadSettings()
+    const source = mainWindow
+      ? await dialog.showOpenDialog(mainWindow, {
+          title: mainText(settings.uiLanguage, 'Choose the backup folder'),
+          defaultPath: app.getPath('documents'),
+          properties: ['openDirectory']
+        })
+      : await dialog.showOpenDialog({
+          title: mainText(settings.uiLanguage, 'Choose the backup folder'),
+          defaultPath: app.getPath('documents'),
+          properties: ['openDirectory']
+        })
+    if (source.canceled || !source.filePaths[0]) {
+      return {
+        canceled: true,
+        noteCount: 0,
+        audioCount: 0,
+        warnings: [],
+        message: mainText(settings.uiLanguage, 'Restore canceled.')
+      }
+    }
+
+    inspectBackup(source.filePaths[0])
+    const destination = mainWindow
+      ? await dialog.showOpenDialog(mainWindow, {
+          title: mainText(
+            settings.uiLanguage,
+            'Choose where to restore the notes library'
+          ),
+          defaultPath: app.getPath('documents'),
+          properties: ['openDirectory', 'createDirectory']
+        })
+      : await dialog.showOpenDialog({
+          title: mainText(
+            settings.uiLanguage,
+            'Choose where to restore the notes library'
+          ),
+          defaultPath: app.getPath('documents'),
+          properties: ['openDirectory', 'createDirectory']
+        })
+    if (destination.canceled || !destination.filePaths[0]) {
+      return {
+        canceled: true,
+        noteCount: 0,
+        audioCount: 0,
+        warnings: [],
+        message: mainText(settings.uiLanguage, 'Restore canceled.')
+      }
+    }
+
+    const outcome = await restoreBackup(
+      source.filePaths[0],
+      destination.filePaths[0],
+      recordingsDir()
+    )
+    updateSettings({
+      ...outcome.settings,
+      notesDir: outcome.notesDir,
+      obsidianVault: settings.obsidianVault,
+      microphoneId: settings.microphoneId
+    })
+    if (outcome.schedule) saveSchedule(outcome.schedule)
+    syncNotesWatcher()
+    syncGlobalHotkey()
+    updateTrayMenu()
+    log('backup', 'restored', {
+      path: outcome.notesDir,
+      notes: outcome.noteCount,
+      audio: outcome.audioCount,
+      warnings: outcome.warnings.length
+    })
+    return {
+      canceled: false,
+      notesDir: outcome.notesDir,
+      noteCount: outcome.noteCount,
+      audioCount: outcome.audioCount,
+      warnings: outcome.warnings,
+      message: mainText(
+        settings.uiLanguage,
+        'Backup restored to {path}. Your previous notes were left untouched.',
+        { path: outcome.notesDir }
+      )
+    }
+  })
 
   ipcMain.handle('schedule:get', () => loadSchedule())
   ipcMain.handle('schedule:save', (_event, schedule: Schedule) =>

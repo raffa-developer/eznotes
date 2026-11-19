@@ -133,6 +133,27 @@ export const settings: Record<string, string> = {
   Storage: 'Armazenamento',
   'Notes are plain Markdown. Audio is kept separately and expires.':
     'As notas estão em Markdown simples. O áudio é guardado separadamente e expira.',
+  'Local backup': 'Cópia de segurança local',
+  'Keep a copy of your notes, transcripts, schedule, and settings outside the app.':
+    'Guarde uma cópia das notas, transcrições, horário e definições fora da aplicação.',
+  'Back up or restore your library':
+    'Crie uma cópia de segurança ou restaure a biblioteca',
+  'Backups never include API keys. Restoring creates a separate notes folder so the current library is not overwritten.':
+    'As cópias nunca incluem chaves de API. A restauração cria uma pasta de notas separada para não substituir a biblioteca atual.',
+  'Create backup': 'Criar cópia',
+  'Backing up…': 'A criar cópia…',
+  'Restore backup': 'Restaurar cópia',
+  'Include lecture audio': 'Incluir áudio das aulas',
+  'Off by default. Audio can make the backup much larger; kept recordings are copied only for notes that still have them.':
+    'Desativado por predefinição. O áudio pode tornar a cópia muito maior; só são copiadas gravações de notas que ainda as tenham.',
+  'Restore replaces your schedule and preferences and switches the library to a new restored folder. Your current notes folder stays on disk.':
+    'A restauração substitui o horário e as preferências e muda a biblioteca para uma nova pasta restaurada. A sua pasta de notas atual permanece no disco.',
+  'Restore a backup?': 'Restaurar uma cópia de segurança?',
+  'Your current schedule and preferences will be replaced.':
+    'O seu horário e preferências atuais serão substituídos.',
+  'The restored notes go into a new folder, so this library is not deleted or merged. API keys stay on this PC and are never read from the backup.':
+    'As notas restauradas vão para uma nova pasta, por isso esta biblioteca não é apagada nem misturada. As chaves de API permanecem neste PC e nunca são lidas da cópia.',
+  'Choose backup': 'Escolher cópia',
   'Notes folder': 'Pasta de notas',
   Choose: 'Escolher',
   Open: 'Abrir',

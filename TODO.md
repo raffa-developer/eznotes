@@ -344,12 +344,17 @@ verify reliability-sensitive changes with tests, and tick each item here and in
     one-off changes. A desktop import showed the moved Friday class and hid the
     canceled weekly occurrence. 133 tests pass.
 
-- [ ] **N-11 Add local backup and restore**
-  Settings/export UI, `src/main/store.ts`, notes and recordings storage
+- [x] **N-11 Add local backup and restore**
+  Settings/export UI, `src/main/backup.ts`, notes and recordings storage
   - Provide a guided backup that can include Markdown, transcripts, schedule,
     settings, and optionally audio. Never include API secrets by default.
   - *Done when:* a backup can be restored to a clean profile, archive contents
     are validated before writing, and restore conflicts are explained.
+  - *Verified:* folder backups include notes, sidecars, schedule, sanitized
+    settings, and optionally referenced audio; API keys are never copied.
+    Validation rejects incomplete backups, and restore creates a separate
+    library folder, rebuilds the index, and leaves the current notes untouched.
+    135 tests pass.
 
 ### P3 — Design and accessibility
 
