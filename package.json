@@ -41,6 +41,7 @@
     "webm-muxer": "^5.1.4"
   },
   "devDependencies": {
+    "@electron/notarize": "^3.1.2",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -59,6 +60,7 @@
     "directories": {
       "output": "release"
     },
+    "afterSign": "scripts/notarize.cjs",
     "files": [
       "out/**/*",
       "resources/**/*"

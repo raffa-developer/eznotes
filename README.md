@@ -202,8 +202,9 @@ Packages land in `release/`. Local builds are unsigned unless a signing
 certificate is configured. Windows SmartScreen, macOS Gatekeeper, or an
 Application Control policy may block unsigned binaries. The release workflow
 builds Windows, macOS, and Linux packages; it smoke-tests the Windows installer
-and signs Windows or macOS packages when the matching certificate secrets are
-present. See [`docs/RELEASING.md`](docs/RELEASING.md) for the release checklist.
+and Linux AppImage, verifies the macOS disk image, and signs/notarizes macOS
+packages when the matching certificate and Apple secrets are present. See
+[`docs/RELEASING.md`](docs/RELEASING.md) for the release checklist.
 
 ## How it works
 

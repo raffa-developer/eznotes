@@ -22,14 +22,15 @@ macOS. Linux packages are not code-signed.
 | Platform | Secrets | Notes |
 | --- | --- | --- |
 | Windows | `WINDOWS_CSC_LINK`, `WINDOWS_CSC_KEY_PASSWORD` | PFX file or URL accepted by electron-builder |
-| macOS | `MAC_CSC_LINK`, `MAC_CSC_KEY_PASSWORD` | Developer ID Application certificate |
+| macOS signing | `MAC_CSC_LINK`, `MAC_CSC_KEY_PASSWORD` | Developer ID Application certificate |
+| macOS notarization | `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | Enables the afterSign notarize hook |
 
 When Windows secrets are missing, the workflow names the artifact
 `ezNotes-windows-unsigned-...` and logs a warning. macOS builds without a
 certificate are unsigned and require Gatekeeper approval on first launch.
 
-macOS notarization is not configured yet. Add notarization credentials before
-distributing a signed macOS build without Gatekeeper warnings.
+If the three Apple notarization secrets are present, the macOS build is
+notarized and stapled before packaging. Without them, the hook logs a skip.
 
 ## Release workflow
 
@@ -49,7 +50,8 @@ The Windows job:
 5. Runs the silent uninstaller and verifies the executable is gone.
 
 macOS builds x64 and arm64 packages on the current macOS runner. Linux builds
-AppImage and `.deb`.
+AppImage and `.deb`, and the workflow verifies the DMG and launches the AppImage
+under Xvfb for 20 seconds.
 
 ## Local Windows smoke test
 

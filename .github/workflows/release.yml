@@ -95,7 +95,15 @@ jobs:
         env:
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: npm run dist:mac
+
+      - name: Verify macOS disk image
+        run: |
+          dmg="$(ls release/*.dmg | head -n 1)"
+          hdiutil verify "$dmg"
 
       - name: Upload macOS packages
         uses: actions/upload-artifact@v4
@@ -127,6 +135,22 @@ jobs:
 
       - name: Build Linux packages
         run: npm run dist:linux
+
+      - name: Smoke test AppImage launch
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+          appimage="$(ls release/*.AppImage | head -n 1)"
+          chmod +x "$appimage"
+          set +e
+          timeout 20s xvfb-run -a "$appimage" --appimage-extract-and-run --no-sandbox --user-data-dir=/tmp/eznotes-smoke
+          status=$?
+          set -e
+          if [ "$status" -ne 124 ]; then
+            echo "AppImage exited before the smoke timeout with code $status"
+            exit 1
+          fi
+          echo "AppImage stayed running for the smoke window."
 
       - name: Upload Linux packages
         uses: actions/upload-artifact@v4
