@@ -113,6 +113,32 @@ export interface NoteVersionMeta {
   wordCount: number
 }
 
+export type StudyConfidence = 0 | 1 | 2 | 3
+
+export interface StudySource {
+  heading?: string
+  timestamp?: number
+  excerpt?: string
+}
+
+export interface StudyCard {
+  id: string
+  question: string
+  answer: string
+  source: StudySource
+  confidence: StudyConfidence
+  attempts: number
+  lastReviewedAt: string | null
+}
+
+export interface StudySet {
+  noteId: string
+  noteTitle: string
+  courseName: string
+  generatedAt: string
+  cards: StudyCard[]
+}
+
 export type NoteSearchKind = 'note' | 'transcript'
 
 export interface NoteSearchResult {
@@ -288,6 +314,14 @@ export interface EzNotesApi {
     ) => Promise<NoteDetail>
     history: (id: string) => Promise<NoteVersionMeta[]>
     restore: (id: string, versionId: string) => Promise<NoteDetail>
+    study: (id: string) => Promise<StudySet | null>
+    generateStudy: (id: string) => Promise<StudySet>
+    rateStudyCard: (
+      id: string,
+      cardId: string,
+      confidence: StudyConfidence
+    ) => Promise<StudySet>
+    exportStudy: (id: string) => Promise<NoteExportResult>
     delete: (id: string) => Promise<void>
     deleteAudio: (id: string) => Promise<NoteDetail | null>
     copy: (id: string) => Promise<NoteExportResult>

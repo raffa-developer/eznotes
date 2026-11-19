@@ -61,6 +61,18 @@ const api: EzNotesApi = {
     history: (id: string) => ipcRenderer.invoke('notes:history', id),
     restore: (id: string, versionId: string) =>
       ipcRenderer.invoke('notes:restore', id, versionId),
+    study: (id: string) => ipcRenderer.invoke('notes:study', id),
+    generateStudy: (id: string) =>
+      ipcRenderer.invoke('notes:generateStudy', id),
+    rateStudyCard: (id: string, cardId: string, confidence) =>
+      ipcRenderer.invoke(
+        'notes:rateStudyCard',
+        id,
+        cardId,
+        confidence
+      ),
+    exportStudy: (id: string) =>
+      ipcRenderer.invoke('notes:exportStudy', id),
     delete: (id: string) => ipcRenderer.invoke('notes:delete', id),
     deleteAudio: (id: string) => ipcRenderer.invoke('notes:deleteAudio', id),
     copy: (id: string) => ipcRenderer.invoke('notes:copy', id),

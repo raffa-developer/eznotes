@@ -34,6 +34,43 @@ export const note: Record<string, string> = {
   'Correct text and rename speaker labels. Timestamps stay unchanged.':
     'Corrija o texto e renomeie as etiquetas dos oradores. As marcas temporais não mudam.',
   'Save transcript': 'Guardar transcrição',
+  Study: 'Estudar',
+  'Study this note': 'Estudar esta nota',
+  'Short questions generated from the note, with links back to the source.':
+    'Perguntas curtas geradas a partir da nota, com ligações à fonte.',
+  'Loading study set…': 'A carregar o conjunto de estudo…',
+  'Turn this lecture into active recall.':
+    'Transforme esta aula em recordação ativa.',
+  'Generate a small set of questions from this note and its transcript. Every answer links back to the section or timestamp it came from.':
+    'Gere um conjunto pequeno de perguntas a partir desta nota e da transcrição. Cada resposta liga à secção ou à marca temporal de onde veio.',
+  'Generate study set': 'Gerar conjunto de estudo',
+  'Generating…': 'A gerar…',
+  'Study set generated.': 'Conjunto de estudo gerado.',
+  cards: 'cartões',
+  card: 'cartão',
+  'need review': 'por rever',
+  'needs review': 'por rever',
+  'All cards': 'Todos os cartões',
+  'Needs review': 'Por rever',
+  'Card {index} of {total}': 'Cartão {index} de {total}',
+  '{count} attempt': '{count} tentativa',
+  '{count} attempts': '{count} tentativas',
+  'How did that feel?': 'Como correu?',
+  Again: 'Outra vez',
+  Almost: 'Quase',
+  'Got it': 'Já sei',
+  'Show answer': 'Mostrar resposta',
+  'Review the remaining cards.': 'Reveja os cartões restantes.',
+  'You reviewed every card in this view.':
+    'Reviu todos os cartões desta vista.',
+  '{count} cards still need review.': '{count} cartões ainda precisam de revisão.',
+  '{count} card still needs review.': '{count} cartão ainda precisa de revisão.',
+  'All cards are marked as confident.':
+    'Todos os cartões estão marcados como seguros.',
+  'Review missed cards': 'Rever cartões falhados',
+  'Start again': 'Começar de novo',
+  'Transcript at {time}': 'Transcrição em {time}',
+  'Open source': 'Abrir fonte',
   'Note deleted.': 'Nota apagada.',
   'Audio deleted. The transcript and note are untouched.':
     'O áudio foi apagado. A transcrição e a nota mantêm-se intactas.',

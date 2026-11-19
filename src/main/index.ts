@@ -28,6 +28,7 @@ import type {
   SecretKey,
   Settings,
   StartRecordingInput,
+  StudyConfidence,
   TestResult,
   TranscriptSegment
 } from '../shared/types'
@@ -58,8 +59,14 @@ import {
   updateNoteTranscript
 } from './notes'
 import { RecordingManager } from './recording'
-import { generateNotes, testLlm } from './llm'
+import { generateNotes, generateStudyCards, testLlm } from './llm'
 import { testGroqKey } from './stt'
+import {
+  createStudySet,
+  loadStudySet,
+  rateStudyCard,
+  studyMarkdown
+} from './study'
 import { readWavInfo } from './wav'
 import { isWebmShorterThanWav, readWebmDurationSec } from './webm'
 import { downloadDiarizationModels, cancelDiarization } from './diarization'
@@ -545,6 +552,76 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
       return getNote(notesDir, id)
     }
   )
+  ipcMain.handle('notes:study', (_event, id: string) =>
+    loadStudySet(loadSettings().notesDir, id)
+  )
+  ipcMain.handle('notes:generateStudy', async (_event, id: string) => {
+    const settings = loadSettings()
+    const notesDir = settings.notesDir
+    const note = getNote(notesDir, id)
+    if (!note) throw new Error('Note not found.')
+    if (!note.markdown.trim()) throw new Error('This note has no content to study.')
+
+    const directKey = getSecret('llmApiKey')
+    const groqKey = getSecret('groqApiKey')
+    const key =
+      settings.llm.provider === 'groq' ? groqKey ?? '' : directKey ?? ''
+    const keyless = settings.llm.provider === 'ollama'
+    if (!key && !keyless && !demoMode) {
+      throw new Error('Add the notes model key in Settings first.')
+    }
+
+    const cards = await generateStudyCards(
+      {
+        noteTitle: note.title,
+        courseName: note.courseName,
+        markdown: note.markdown,
+        segments: note.transcript
+      },
+      {
+        apiKey: key || (keyless ? '' : 'demo'),
+        baseURL: settings.llm.baseURL,
+        model: settings.llm.model,
+        provider: settings.llm.provider,
+        sessionId: `study_${note.id}`,
+        maxTokens: 5_000
+      }
+    )
+    return createStudySet(notesDir, note, cards)
+  })
+  ipcMain.handle(
+    'notes:rateStudyCard',
+    (
+      _event,
+      id: string,
+      cardId: string,
+      confidence: StudyConfidence
+    ) => rateStudyCard(loadSettings().notesDir, id, cardId, confidence)
+  )
+  ipcMain.handle('notes:exportStudy', async (_event, id: string) => {
+    const settings = loadSettings()
+    const set = loadStudySet(settings.notesDir, id)
+    if (!set) throw new Error('Generate a study set for this note first.')
+    const target = await chooseSavePath(
+      `${sanitizeFilename(set.noteTitle)} - estudo.md`,
+      'md',
+      'Markdown'
+    )
+    if (!target) {
+      return {
+        canceled: true,
+        message: mainText(settings.uiLanguage, 'Export canceled.')
+      }
+    }
+    fs.writeFileSync(target, studyMarkdown(set), 'utf8')
+    return {
+      canceled: false,
+      path: target,
+      message: mainText(settings.uiLanguage, 'Study set exported: {path}', {
+        path: target
+      })
+    }
+  })
   ipcMain.handle('notes:delete', (_event, id: string) => {
     deleteNote(loadSettings().notesDir, id)
   })

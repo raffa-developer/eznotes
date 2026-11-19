@@ -32,6 +32,10 @@ function indexFile(notesDir: string): string {
   return path.join(notesMetaDir(notesDir), 'index.json')
 }
 
+export function noteMetadataDir(notesDir: string): string {
+  return notesMetaDir(notesDir)
+}
+
 export function noteRecordingDir(recordingId: string): string {
   return path.join(app.getPath('userData'), 'recordings', recordingId)
 }
@@ -809,6 +813,14 @@ export function deleteNote(notesDir: string, id: string, deleteAudio = true): vo
 
   fs.rmSync(noteTranscriptPath(notesDir, id), { force: true })
   fs.rmSync(noteHistoryDir(notesDir, id), { recursive: true, force: true })
+  fs.rmSync(
+    path.join(
+      notesMetaDir(notesDir),
+      'study',
+      `${createHash('sha1').update(id).digest('hex')}.json`
+    ),
+    { force: true }
+  )
 
   commitNotes(
     notesDir,

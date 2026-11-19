@@ -122,7 +122,7 @@ section “Next implementation wave”.
 ### P2 — Study and course workflows
 
 - [x] **N-8** Editable notes/transcripts, speaker renaming, and undo/history
-- [ ] **N-9** Source-linked flashcards and quiz study mode
+- [x] **N-9** Source-linked flashcards and quiz study mode
 - [ ] **N-10** `.ics` schedule import with exceptions and timezone handling
 - [ ] **N-11** Validated local backup and restore, excluding secrets by default
 

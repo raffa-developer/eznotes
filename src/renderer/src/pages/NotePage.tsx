@@ -14,6 +14,7 @@ import {
   Copy,
   FileText,
   FolderOpen,
+  GraduationCap,
   History,
   List,
   Mic,
@@ -29,11 +30,13 @@ import type {
   NoteDetail,
   NoteExportFormat,
   NoteVersionMeta,
+  StudySource,
   TranscriptSegment
 } from '../../../shared/types'
 import { useApp } from '../state/AppContext'
 import { Badge, Button, Card, EmptyState, Modal } from '../components/ui'
 import ExportMenu from '../components/ExportMenu'
+import StudyModal from '../components/StudyModal'
 import { t, uiLocale } from '../i18n'
 import { formatDate, formatDuration, formatTimestamp } from '../lib/format'
 
@@ -65,6 +68,7 @@ export default function NotePage(): React.JSX.Element {
   const [transcriptDraft, setTranscriptDraft] = useState<TranscriptSegment[]>([])
   const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({})
   const [savingTranscript, setSavingTranscript] = useState(false)
+  const [studyOpen, setStudyOpen] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
@@ -72,6 +76,7 @@ export default function NotePage(): React.JSX.Element {
     setLoading(true)
     setEditingNote(false)
     setTranscriptOpen(false)
+    setStudyOpen(false)
     window.ezNotes.notes
       .get(id)
       .then((next) => setNote(next))
@@ -300,6 +305,30 @@ export default function NotePage(): React.JSX.Element {
     void audioRef.current.play()
   }
 
+  function jumpToStudySource(source: StudySource): void {
+    setStudyOpen(false)
+    window.setTimeout(() => {
+      if (source.timestamp !== undefined) seek(source.timestamp)
+      if (source.heading) {
+        const headings = Array.from(
+          document.querySelectorAll<HTMLElement>(
+            '.markdown-body h2, .markdown-body h3'
+          )
+        )
+        const target = headings.find((heading) =>
+          heading.textContent
+            ?.toLocaleLowerCase()
+            .includes(source.heading!.toLocaleLowerCase())
+        )
+        target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      } else if (source.timestamp !== undefined) {
+        document
+          .querySelector('.audio-card')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }, 150)
+  }
+
   const readMinutes = Math.max(1, Math.ceil((note?.wordCount ?? 0) / 200))
   const displayMarkdown = note
     ? note.markdown
@@ -346,6 +375,14 @@ export default function NotePage(): React.JSX.Element {
               {copied ? t('Copied') : t('Copy note')}
             </Button>
             <ExportMenu onExport={exportNote} busy={exporting} />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setStudyOpen(true)}
+            >
+              <GraduationCap size={15} />
+              {t('Study')}
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -658,6 +695,13 @@ export default function NotePage(): React.JSX.Element {
           ) : null}
         </aside>
       </div>
+
+      <StudyModal
+        open={studyOpen}
+        note={note}
+        onClose={() => setStudyOpen(false)}
+        onJumpToSource={jumpToStudySource}
+      />
 
       <Modal
         open={deleteOpen}

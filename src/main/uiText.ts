@@ -69,6 +69,7 @@ const PT: Record<string, string> = {
   'Saved to Obsidian: {path}': 'Guardado no Obsidian: {path}',
   'Markdown exported: {path}': 'Markdown exportado: {path}',
   'PDF exported: {path}': 'PDF exportado: {path}',
+  'Study set exported: {path}': 'Conjunto de estudo exportado: {path}',
   'The note view did not finish loading for PDF export.':
     'A vista da nota não terminou de carregar para a exportação em PDF.'
 }

@@ -426,6 +426,21 @@ export interface NotePromptInput {
   segments: TranscriptSegment[]
 }
 
+export interface GeneratedStudyCard {
+  question: string
+  answer: string
+  heading?: string
+  timestamp?: number
+  excerpt?: string
+}
+
+export interface StudyPromptInput {
+  noteTitle: string
+  courseName: string
+  markdown: string
+  segments: TranscriptSegment[]
+}
+
 export async function generateNotes(
   input: NotePromptInput,
   options: LlmOptions
@@ -577,6 +592,168 @@ ${recentTranscript.slice(-5000)}`
     .map((line) => line.replace(/^\s*[-*•]\s*/, '').trim())
     .filter((line) => line.length > 0 && line.length < 140)
     .slice(0, 6)
+}
+
+export async function generateStudyCards(
+  input: StudyPromptInput,
+  options: LlmOptions
+): Promise<GeneratedStudyCard[]> {
+  if (demoMode) {
+    return demoStudyCards(input)
+  }
+
+  const headings = extractHeadings(input.markdown)
+  const headingText = headings.length
+    ? headings.map((heading) => `- ${heading}`).join('\n')
+    : '(sem secções nomeadas)'
+  const transcript = transcriptToText(input.segments)
+
+  const reply = await chat(
+    [
+      {
+        role: 'system',
+        content: `És um assistente de estudo que cria flashcards em português europeu (pt-PT) a partir de apontamentos de uma aula.
+
+Regras:
+- Cria entre 8 e 12 cartões curtos, cada um com uma pergunta específica e uma resposta clara.
+- Usa apenas informação presente nos apontamentos ou na transcrição. Não inventes factos, números, fórmulas, nomes ou datas.
+- Cada cartão deve testar compreensão, não copiar uma frase inteira.
+- Indica uma secção existente em "heading" quando a resposta estiver lá.
+- Quando a transcrição ajudar, indica um timestamp inteiro em segundos no campo "timestamp".
+- "excerpt" deve ser uma citação curta da fonte, com no máximo 240 caracteres.
+- Responde APENAS com um array JSON válido, sem Markdown, sem comentários e sem texto antes ou depois.
+- Formato exato:
+[{"question":"...","answer":"...","heading":"...","timestamp":123,"excerpt":"..."}]
+- Omite "timestamp" ou "heading" quando não se aplicarem.`
+      },
+      {
+        role: 'user',
+        content: `Aula: ${input.noteTitle}
+Disciplina: ${input.courseName}
+
+Secções dos apontamentos:
+${headingText}
+
+Apontamentos:
+${input.markdown.slice(0, 30_000)}
+
+Transcrição com timestamps:
+${transcript.slice(0, 45_000)}`
+      }
+    ],
+    {
+      ...options,
+      maxTokens: 5_000,
+      temperature: 0.2,
+      timeoutMs: Math.max(options.timeoutMs ?? 180_000, 180_000)
+    }
+  )
+
+  return parseStudyCards(reply, headings)
+}
+
+export function parseStudyCards(
+  reply: string,
+  headings: string[] = []
+): GeneratedStudyCard[] {
+  const cleaned = reply
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+  const start = cleaned.indexOf('[')
+  const end = cleaned.lastIndexOf(']')
+  if (start < 0 || end <= start) {
+    throw new Error('The study model did not return a JSON card list.')
+  }
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(cleaned.slice(start, end + 1))
+  } catch {
+    throw new Error('The study model returned invalid JSON. Try again.')
+  }
+  if (!Array.isArray(parsed)) {
+    throw new Error('The study model did not return a card list.')
+  }
+
+  const cards: GeneratedStudyCard[] = []
+  for (const item of parsed) {
+    if (!item || typeof item !== 'object') continue
+    const record = item as Record<string, unknown>
+    const question =
+      typeof record.question === 'string' ? record.question.trim() : ''
+    const answer =
+      typeof record.answer === 'string' ? record.answer.trim() : ''
+    if (!question || !answer) continue
+
+    const rawHeading =
+      typeof record.heading === 'string' ? record.heading.trim() : ''
+    const heading = matchHeading(rawHeading, headings)
+    const timestamp =
+      typeof record.timestamp === 'number' &&
+      Number.isFinite(record.timestamp) &&
+      record.timestamp >= 0
+        ? Math.round(record.timestamp)
+        : undefined
+    const excerpt =
+      typeof record.excerpt === 'string' && record.excerpt.trim()
+        ? record.excerpt.trim().slice(0, 240)
+        : undefined
+
+    cards.push({
+      question: question.slice(0, 2_000),
+      answer: answer.slice(0, 4_000),
+      ...(heading ? { heading } : {}),
+      ...(timestamp !== undefined ? { timestamp } : {}),
+      ...(excerpt ? { excerpt } : {})
+    })
+    if (cards.length >= 30) break
+  }
+
+  if (!cards.length) {
+    throw new Error('The study model returned no usable cards. Try again.')
+  }
+  return cards
+}
+
+function extractHeadings(markdown: string): string[] {
+  return [...markdown.matchAll(/^#{2,3}\s+(.+)$/gm)]
+    .map((match) => match[1].replace(/[*_`]/g, '').trim())
+    .filter(Boolean)
+    .slice(0, 40)
+}
+
+function matchHeading(
+  candidate: string,
+  headings: string[]
+): string | undefined {
+  if (!candidate) return undefined
+  const lower = candidate.toLocaleLowerCase()
+  return (
+    headings.find((heading) => heading.toLocaleLowerCase() === lower) ??
+    headings.find((heading) => heading.toLocaleLowerCase().includes(lower)) ??
+    candidate.slice(0, 160)
+  )
+}
+
+function demoStudyCards(input: StudyPromptInput): GeneratedStudyCard[] {
+  const headings = extractHeadings(input.markdown)
+  const topics = headings.length
+    ? headings.slice(0, 4)
+    : ['Conceitos principais', 'Definições', 'Exemplos']
+  const firstTimestamp = input.segments[0]?.start
+
+  return topics.map((heading, index) => ({
+    question:
+      index === 0
+        ? `O que deves saber sobre ${heading}?`
+        : `Como explicarias ${heading} numa frase?`,
+    answer: `Revê a secção “${heading}” nos apontamentos e explica-a pelas tuas palavras.`,
+    heading,
+    ...(firstTimestamp !== undefined
+      ? { timestamp: Math.round(firstTimestamp + index * 60) }
+      : {})
+  }))
 }
 
 const NOTES_SYSTEM_PROMPT = `És um assistente de estudo que transforma a transcrição de uma aula em apontamentos estruturados em português europeu (pt-PT). O objetivo é produzir material útil para estudar e para exames, não uma ata da aula.

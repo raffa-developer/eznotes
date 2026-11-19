@@ -318,12 +318,17 @@ verify reliability-sensitive changes with tests, and tick each item here and in
     A desktop pass edited and restored a note, then renamed a speaker and
     corrected transcript text with timestamps intact. 120 tests pass.
 
-- [ ] **N-9 Add a source-linked study mode**
+- [x] **N-9 Add a source-linked study mode**
   New study UI and persistence under `.eznotes`; reuse note/transcript data
   - Generate flashcards and short quizzes from selected notes. Link each answer
     to its source note section and, when available, transcript timestamp.
   - *Done when:* users can review, mark confidence, revisit missed cards, and
     verify generated answers against their source; study data is exportable.
+  - *Verified:* the note reader now opens a Study modal that generates 8–12
+    pt-PT cards, stores confidence and attempts under `.eznotes/study`, filters
+    by “Needs review”, jumps to the cited heading/timestamp, and exports a
+    Markdown study set. Demo mode generated and rated cards in Electron; 126
+    tests pass.
 
 - [ ] **N-10 Import schedules from `.ics`**
   `src/main/schedule.ts`, `src/shared/types.ts`,
