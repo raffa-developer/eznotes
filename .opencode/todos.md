@@ -115,7 +115,7 @@ section “Next implementation wave”.
 - [x] **N-2** Isolate high-frequency microphone-level updates from app-wide renders
 - [x] **N-3** Incremental note index, external-file discovery, and global search
 - [x] **N-4** Fail-closed secret storage; migrate legacy plaintext fallback
-- [ ] **N-5** Provider-aware first-run setup and connection checks
+- [x] **N-5** Provider-aware first-run setup and connection checks
 - [ ] **N-6** Recording health checks for mic loss, disk, and write failures
 - [ ] **N-7** Windows installer CI, smoke tests, and explicit signing state
 

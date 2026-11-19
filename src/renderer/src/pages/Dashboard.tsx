@@ -11,6 +11,7 @@ import {
   Clock,
   Copy,
   KeyRound,
+  Loader2,
   Mic,
   Sparkles,
   UserRound
@@ -18,7 +19,7 @@ import {
 import { useApp } from '../state/AppContext'
 import { useNow } from '../hooks/useNow'
 import StartRecordingDialog from '../components/StartRecordingDialog'
-import type { RecoverableRecording } from '../../../shared/types'
+import type { LlmProvider, RecoverableRecording } from '../../../shared/types'
 import { Badge, Button, Card, EmptyState } from '../components/ui'
 import {
   countdown,
@@ -29,6 +30,17 @@ import {
   weekdayLong
 } from '../lib/format'
 import { t, uiLocale } from '../i18n'
+
+const PROVIDER_NAMES: Record<LlmProvider, string> = {
+  'opencode-go': 'OpenCode Go',
+  'opencode-console': 'OpenCode Console',
+  groq: 'Groq',
+  ollama: 'Ollama',
+  anthropic: 'Anthropic',
+  gemini: 'Google Gemini',
+  'openai-responses': 'OpenAI',
+  custom: 'Custom'
+}
 
 export default function Dashboard(): React.JSX.Element {
   const {
@@ -43,6 +55,7 @@ export default function Dashboard(): React.JSX.Element {
   } = useApp()
   const [startOpen, setStartOpen] = useState(false)
   const [copiedNote, setCopiedNote] = useState<string | null>(null)
+  const [checkingConnections, setCheckingConnections] = useState(false)
   const [recoverable, setRecoverable] = useState<RecoverableRecording[]>([])
   const now = useNow()
   const navigate = useNavigate()
@@ -83,6 +96,28 @@ export default function Dashboard(): React.JSX.Element {
     : false
   const needsCourses = schedule.courses.length === 0
   const setupComplete = !needsGroq && !needsLlm && !needsCourses
+  const providerName = llmProvider ? PROVIDER_NAMES[llmProvider] : ''
+  const notesStepTitle =
+    llmProvider === 'ollama'
+      ? t('Local notes model')
+      : llmProvider === 'groq'
+        ? t('Groq key for notes')
+        : t('{provider} key for notes', { provider: providerName })
+  const notesStepHint =
+    llmProvider === 'ollama'
+      ? t('Uses Ollama on this PC')
+      : llmProvider === 'groq'
+        ? needsLlm
+          ? t('Add the Groq key above')
+          : t('Uses your Groq key')
+        : needsLlm
+          ? t('Add a key in Settings')
+          : t('Connected')
+  const connectionsReady =
+    !settings?.demoMode && !needsGroq && !needsLlm
+  const microphoneLabel = settings?.settings.microphoneId
+    ? t('Selected microphone')
+    : t('Default microphone')
 
   async function copyRecent(noteId: string): Promise<void> {
     try {
@@ -102,6 +137,34 @@ export default function Dashboard(): React.JSX.Element {
       navigate('/live')
     } catch (error) {
       toast(error instanceof Error ? error.message : String(error), 'error')
+    }
+  }
+
+  async function checkConnections(): Promise<void> {
+    if (!settings || settings.demoMode) return
+    setCheckingConnections(true)
+    try {
+      const [stt, llm] = await Promise.all([
+        window.ezNotes.settings.testStt(),
+        window.ezNotes.settings.testLlm()
+      ])
+      if (stt.ok && llm.ok) {
+        toast(t('Connections look good.'), 'success')
+        return
+      }
+
+      const messages: string[] = []
+      if (!stt.ok) {
+        messages.push(t('Listening: {message}', { message: stt.message }))
+      }
+      if (!llm.ok) {
+        messages.push(t('Notes: {message}', { message: llm.message }))
+      }
+      toast(messages.join(' '), 'error')
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'error')
+    } finally {
+      setCheckingConnections(false)
     }
   }
 
@@ -257,12 +320,45 @@ export default function Dashboard(): React.JSX.Element {
                     {needsLlm ? <KeyRound size={18} /> : <CheckCircle2 size={18} />}
                   </span>
                   <span>
-                    <strong>{t('OpenCode key for notes')}</strong>
-                    <small>{needsLlm ? t('Live outline and structure') : t('Connected')}</small>
+                    <strong>{notesStepTitle}</strong>
+                    <small>{notesStepHint}</small>
                   </span>
                   <ArrowRight size={15} />
                 </button>
               </>
+            ) : null}
+            {!settings?.demoMode ? (
+              <div className="setup-foot">
+                <span className="setup-mic-fact">
+                  <Mic size={14} />
+                  {microphoneLabel}
+                </span>
+                <div className="setup-foot-actions">
+                  <button
+                    className="text-link"
+                    onClick={() => navigate('/settings')}
+                  >
+                    {t('Change microphone')}
+                  </button>
+                  {connectionsReady ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void checkConnections()}
+                      disabled={checkingConnections}
+                    >
+                      {checkingConnections ? (
+                        <Loader2 size={14} className="spin" />
+                      ) : (
+                        <Check size={14} />
+                      )}
+                      {checkingConnections
+                        ? t('Checking…')
+                        : t('Check connections')}
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
             ) : null}
           </div>
         </Card>

@@ -258,7 +258,7 @@ verify reliability-sensitive changes with tests, and tick each item here and in
     without plaintext in `secrets.json`; Settings reports secure storage and
     disables Save when unavailable. 109 tests pass.
 
-- [ ] **N-5 Make first-run setup provider-aware**
+- [x] **N-5 Make first-run setup provider-aware**
   `src/renderer/src/pages/Dashboard.tsx`,
   `src/renderer/src/pages/SettingsPage.tsx`,
   `src/renderer/src/locales/`
@@ -268,6 +268,10 @@ verify reliability-sensitive changes with tests, and tick each item here and in
   - *Done when:* each supported provider shows the right credential/setup
     instructions, local Ollama does not request a cloud key, and the user can
     confirm readiness before the first recording.
+  - *Verified:* Anthropic shows “Anthropic key for notes”; Ollama shows “Local
+    notes model” without a cloud key; Groq points back to the Groq key above.
+    The card shows the selected/default microphone, links to Settings, and adds
+    Check connections once both services are configured. 109 tests pass.
 
 - [ ] **N-6 Detect recording health problems**
   `src/renderer/src/hooks/useAudioCapture.ts`,

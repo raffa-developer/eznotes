@@ -838,6 +838,30 @@ select {
   background: var(--surface-3);
 }
 
+.setup-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 3px;
+  padding: 4px 2px 0;
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.setup-mic-fact {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.setup-foot-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 /* Dashboard */
 
 .dashboard-grid {
