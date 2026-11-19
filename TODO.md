@@ -227,7 +227,7 @@ verify reliability-sensitive changes with tests, and tick each item here and in
     Live and Island meter components. A fake-microphone smoke test rendered 18
     live bars with changing heights after three seconds. 97 tests pass.
 
-- [ ] **N-3 Make note indexing incremental and searchable**
+- [x] **N-3 Make note indexing incremental and searchable**
   `src/main/notes.ts`, `src/main/index.ts`, `src/shared/types.ts`,
   `src/renderer/src/pages/Library.tsx`
   - Avoid recursively scanning the notes folder on every `notes:list` call.
@@ -237,6 +237,14 @@ verify reliability-sensitive changes with tests, and tick each item here and in
   - *Done when:* tests cover external file changes and index rebuilds; a seeded
     large library can open/search without repeated full scans or blocking the
     main process.
+  - *Verified:* the index now scans once per notes folder, then serves cached
+    results; a debounced recursive watcher applies changed paths in place and
+    broadcasts refreshes. Tests cover additions, edits, renames, deletions,
+    explicit rescans, watcher updates, index persistence, and content/transcript
+    search. A 1,000-note benchmark took 212 ms for the initial scan, 0.4 ms for
+    the first capped search, and 8 ms for a one-file refresh. The Library shows
+    content matches with transcript timestamps and has a Rescan action. 103
+    tests pass.
 
 - [ ] **N-4 Fail closed when secure secret storage is unavailable**
   `src/main/store.ts`, `src/shared/types.ts`,

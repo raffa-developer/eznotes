@@ -45,7 +45,11 @@ import {
   getNote,
   listNotes,
   removeNoteAudio,
+  rescanNotes,
   sanitizeFilename,
+  searchNotes,
+  startNotesWatcher,
+  stopNotesWatcher,
   updateNoteMarkdown
 } from './notes'
 import { RecordingManager } from './recording'
@@ -293,6 +297,14 @@ function restoreMainWindow(): void {
   hideIsland()
 }
 
+function notifyNotesChanged(): void {
+  mainWindow?.webContents.send('notes:changed')
+}
+
+function syncNotesWatcher(): void {
+  startNotesWatcher(loadSettings().notesDir, notifyNotesChanged)
+}
+
 async function chooseSavePath(
   defaultName: string,
   extension: string,
@@ -400,7 +412,9 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
 
   ipcMain.handle('settings:get', () => settingsStatus())
   ipcMain.handle('settings:update', (_event, patch: Partial<Settings>) => {
+    const previousNotesDir = loadSettings().notesDir
     const next = updateSettings(patch)
+    if (next.notesDir !== previousNotesDir) syncNotesWatcher()
     syncGlobalHotkey()
     updateTrayMenu()
     return settingsStatusFor(next)
@@ -429,6 +443,7 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
     if (!result.canceled && result.filePaths[0]) {
       fs.mkdirSync(result.filePaths[0], { recursive: true })
       updateSettings({ notesDir: result.filePaths[0] })
+      syncNotesWatcher()
     }
     return settingsStatus()
   })
@@ -489,6 +504,12 @@ function registerIpc(): void {  ipcMain.handle('app:info', (): AppInfo => ({
   )
 
   ipcMain.handle('notes:list', () => listNotes(loadSettings().notesDir))
+  ipcMain.handle('notes:search', (_event, query: string) =>
+    searchNotes(loadSettings().notesDir, query)
+  )
+  ipcMain.handle('notes:rescan', () =>
+    rescanNotes(loadSettings().notesDir)
+  )
   ipcMain.handle('notes:get', (_event, id: string) =>
     getNote(loadSettings().notesDir, id)
   )
@@ -1101,6 +1122,7 @@ if (!gotLock) {
     registerAudioProtocol()
     createWindow()
     createTray()
+    syncNotesWatcher()
     syncGlobalHotkey()
     startAutoStartScheduler()
 
@@ -1127,6 +1149,7 @@ if (!gotLock) {
   })
 
   app.on('will-quit', () => {
+    stopNotesWatcher()
     cancelDiarization()
     globalShortcut.unregisterAll()
     tray?.destroy()

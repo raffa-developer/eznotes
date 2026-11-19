@@ -2,15 +2,17 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { createHash } from 'node:crypto'
 import { app } from 'electron'
-import type { NoteDetail, NoteMeta, TranscriptSegment } from '../shared/types'
-import { readJson, writeJson } from './store'
+import type {
+  NoteDetail,
+  NoteMeta,
+  NoteSearchResult,
+  TranscriptSegment
+} from '../shared/types'
+import { writeJson } from './store'
 import { extractSummary, extractTitle } from './llm'
 import { readCachedTranscript } from './stt'
 import { formatTimestamp } from './stt'
-
-interface NotesIndex {
-  notes: NoteMeta[]
-}
+import { log } from './log'
 
 function notesMetaDir(notesDir: string): string {
   const current = path.join(notesDir, '.eznotes')
@@ -48,6 +50,7 @@ export function writeNoteTranscript(
 ): void {
   fs.mkdirSync(noteTranscriptDir(notesDir), { recursive: true })
   fs.writeFileSync(noteTranscriptPath(notesDir, noteId), JSON.stringify(segments, null, 2))
+  clearSearchCache()
 }
 
 export function readNoteTranscript(
@@ -74,52 +77,267 @@ export function noteAudioPath(recordingId: string | null): string | null {
   return null
 }
 
+interface NotesCache {
+  dir: string
+  notes: NoteMeta[]
+}
+
+interface SearchTextEntry {
+  mtimeMs: number
+  body: string
+  transcript: TranscriptSegment[]
+}
+
+const WATCH_DEBOUNCE_MS = 350
+const SEARCH_MIN_LENGTH = 2
+const SEARCH_LIMIT = 40
+
+let notesCache: NotesCache | null = null
+let notesWatcher: fs.FSWatcher | null = null
+let notesWatchRoot: string | null = null
+let notesWatchTimer: NodeJS.Timeout | null = null
+let notesWatchListener: (() => void) | null = null
+let notesWatchPaths = new Set<string>()
+const searchTextCache = new Map<string, SearchTextEntry>()
+
 export function listNotes(notesDir: string): NoteMeta[] {
-  const index = readJson<NotesIndex>(indexFile(notesDir), { notes: [] })
-  const existing = index.notes.filter((note) => fs.existsSync(note.path))
+  return [...ensureNotesCache(notesDir)]
+}
 
-  if (existing.length !== index.notes.length) {
-    writeJson(indexFile(notesDir), { notes: existing })
-  }
+function ensureNotesCache(notesDir: string): NoteMeta[] {
+  if (notesCache?.dir === notesDir) return notesCache.notes
+  return commitNotes(notesDir, scanNotes(notesDir))
+}
 
-  if (!existing.length) {
-    const rebuilt = rebuildNotesIndex(notesDir)
-    if (rebuilt.length) return sortNotes(rebuilt)
-  } else {
-    const known = new Set(existing.map((note) => path.resolve(note.path)))
-    const discovered = findMarkdownFiles(notesDir).filter(
-      (file) => !known.has(path.resolve(file))
-    )
-    if (discovered.length) {
-      const merged = [...existing, ...discovered.map(metaFromFile)]
-      writeJson(indexFile(notesDir), { notes: merged })
-      return sortNotes(merged)
-    }
-  }
+function scanNotes(notesDir: string): NoteMeta[] {
+  return sortNotes(findMarkdownFiles(notesDir).map(metaFromFile))
+}
 
-  return sortNotes(
-    existing.map((note) => ({
-      ...note,
-      hasAudio: Boolean(noteAudioPath(note.recordingId))
-    }))
-  )
+function commitNotes(notesDir: string, notes: NoteMeta[]): NoteMeta[] {
+  const sorted = sortNotes(notes)
+  notesCache = { dir: notesDir, notes: sorted }
+  writeJson(indexFile(notesDir), { notes: sorted })
+  clearSearchCache()
+  return sorted
 }
 
 export function rebuildNotesIndex(notesDir: string): NoteMeta[] {
-  const notes = findMarkdownFiles(notesDir)
-    .map(metaFromFile)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  writeJson(indexFile(notesDir), { notes })
-  return notes
+  return commitNotes(notesDir, scanNotes(notesDir))
+}
+
+/** Explicit recovery path for changes made outside the running app. */
+export function rescanNotes(notesDir: string): NoteMeta[] {
+  return commitNotes(notesDir, scanNotes(notesDir))
 }
 
 function sortNotes(notes: NoteMeta[]): NoteMeta[] {
-  return notes
-    .map((note) => ({
-      ...note,
-      hasAudio: Boolean(noteAudioPath(note.recordingId))
-    }))
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  return [...notes].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  )
+}
+
+/**
+ * Apply a batch of watched paths without walking the whole notes folder.
+ * Unknown or directory-sized changes fall back to a full rescan.
+ */
+export function refreshNotesFromPaths(
+  notesDir: string,
+  changedPaths: string[]
+): NoteMeta[] {
+  const current = ensureNotesCache(notesDir)
+  let notes = current
+  const dirtyDirs = new Set<string>()
+
+  for (const relative of changedPaths) {
+    if (!relative || !relative.toLowerCase().endsWith('.md')) {
+      return rescanNotes(notesDir)
+    }
+
+    const target = path.resolve(notesDir, relative)
+    if (!isInside(notesDir, target)) continue
+
+    if (fs.existsSync(target) && fs.statSync(target).isFile()) {
+      const meta = metaFromFile(target)
+      notes = notes.filter(
+        (note) => note.path !== target && note.id !== meta.id
+      )
+      notes = [...notes, meta]
+    } else {
+      notes = notes.filter((note) => note.path !== target)
+    }
+    dirtyDirs.add(path.dirname(target))
+  }
+
+  for (const dir of dirtyDirs) {
+    const existing = new Set(
+      findMarkdownFilesIn(dir).map((file) => path.resolve(file))
+    )
+    notes = notes.filter(
+      (note) =>
+        path.dirname(note.path) !== dir || existing.has(note.path)
+    )
+    const known = new Set(notes.map((note) => note.path))
+    for (const file of existing) {
+      if (!known.has(file)) notes = [...notes, metaFromFile(file)]
+    }
+  }
+
+  return commitNotes(notesDir, notes)
+}
+
+export function startNotesWatcher(
+  notesDir: string,
+  onChange: () => void
+): void {
+  const root = path.resolve(notesDir)
+  if (notesWatchRoot === root && notesWatcher) {
+    notesWatchListener = onChange
+    return
+  }
+  stopNotesWatcher()
+  ensureNotesCache(notesDir)
+  notesWatchRoot = root
+  notesWatchListener = onChange
+
+  try {
+    notesWatcher = fs.watch(root, { recursive: true }, (_event, filename) => {
+      const relative = filename ? filename.toString() : ''
+      if (relative && isIgnoredWatchPath(relative)) return
+      if (relative) notesWatchPaths.add(relative)
+      else notesWatchPaths.add('')
+      if (notesWatchTimer) clearTimeout(notesWatchTimer)
+      notesWatchTimer = setTimeout(() => {
+        notesWatchTimer = null
+        const paths = [...notesWatchPaths]
+        notesWatchPaths = new Set()
+        if (!paths.length) return
+        try {
+          refreshNotesFromPaths(notesDir, paths)
+          notesWatchListener?.()
+        } catch (error) {
+          log('notes', 'could not refresh watched notes', {
+            message: error instanceof Error ? error.message : String(error)
+          })
+        }
+      }, WATCH_DEBOUNCE_MS)
+    })
+    notesWatcher.on('error', (error) => {
+      log('notes', 'notes watcher stopped', {
+        message: error instanceof Error ? error.message : String(error)
+      })
+    })
+  } catch (error) {
+    notesWatchRoot = null
+    log('notes', 'could not watch notes folder', {
+      message: error instanceof Error ? error.message : String(error)
+    })
+  }
+}
+
+export function stopNotesWatcher(): void {
+  if (notesWatchTimer) clearTimeout(notesWatchTimer)
+  notesWatchTimer = null
+  notesWatchPaths = new Set()
+  notesWatchListener = null
+  notesWatchRoot = null
+  notesWatcher?.close()
+  notesWatcher = null
+}
+
+function isIgnoredWatchPath(relative: string): boolean {
+  return relative
+    .split(/[\\/]/)
+    .some((part) => part.startsWith('.'))
+}
+
+function isInside(root: string, target: string): boolean {
+  const relative = path.relative(path.resolve(root), target)
+  return Boolean(relative) && !relative.startsWith('..') && !path.isAbsolute(relative)
+}
+
+export function searchNotes(
+  notesDir: string,
+  query: string,
+  limit = SEARCH_LIMIT
+): NoteSearchResult[] {
+  const term = query.trim().toLocaleLowerCase()
+  if (term.length < SEARCH_MIN_LENGTH) return []
+
+  const results: NoteSearchResult[] = []
+  for (const note of listNotes(notesDir)) {
+    const metadata = [note.title, note.courseName, note.summary, ...note.tags]
+      .join(' ')
+      .toLocaleLowerCase()
+    if (metadata.includes(term)) {
+      results.push({
+        note,
+        kind: 'note',
+        excerpt: note.summary || note.title
+      })
+    } else {
+      const entry = noteSearchEntry(notesDir, note)
+      if (!entry) continue
+      const body = entry.body.toLocaleLowerCase()
+      const bodyIndex = body.indexOf(term)
+      if (bodyIndex >= 0) {
+        results.push({
+          note,
+          kind: 'note',
+          excerpt: excerptAround(entry.body, bodyIndex)
+        })
+      } else {
+        const segment = entry.transcript.find((item) =>
+          item.text.toLocaleLowerCase().includes(term)
+        )
+        if (segment) {
+          results.push({
+            note,
+            kind: 'transcript',
+            excerpt: excerptAround(segment.text, segment.text.toLocaleLowerCase().indexOf(term)),
+            timestamp: segment.start
+          })
+        }
+      }
+    }
+    if (results.length >= Math.max(1, limit)) break
+  }
+
+  return results
+}
+
+function noteSearchEntry(
+  notesDir: string,
+  note: NoteMeta
+): SearchTextEntry | null {
+  try {
+    const stat = fs.statSync(note.path)
+    const cached = searchTextCache.get(note.path)
+    if (cached && cached.mtimeMs === stat.mtimeMs) return cached
+
+    const raw = fs.readFileSync(note.path, 'utf8')
+    const entry: SearchTextEntry = {
+      mtimeMs: stat.mtimeMs,
+      body: splitFrontmatter(raw).body,
+      transcript: readNoteTranscript(notesDir, note.id, note.recordingId)
+    }
+    searchTextCache.set(note.path, entry)
+    return entry
+  } catch {
+    return null
+  }
+}
+
+function excerptAround(text: string, index: number): string {
+  const clean = text.replace(/\s+/g, ' ').trim()
+  const start = Math.max(0, index - 70)
+  const end = Math.min(clean.length, index + 130)
+  return `${start > 0 ? '…' : ''}${clean.slice(start, end).trim()}${
+    end < clean.length ? '…' : ''
+  }`
+}
+
+function clearSearchCache(): void {
+  searchTextCache.clear()
 }
 
 function findMarkdownFiles(dir: string): string[] {
@@ -137,6 +355,22 @@ function findMarkdownFiles(dir: string): string[] {
 
   walk(dir)
   return files
+}
+
+function findMarkdownFilesIn(dir: string): string[] {
+  try {
+    return fs
+      .readdirSync(dir, { withFileTypes: true })
+      .filter(
+        (entry) =>
+          !entry.name.startsWith('.') &&
+          entry.isFile() &&
+          entry.name.toLowerCase().endsWith('.md')
+      )
+      .map((entry) => path.join(dir, entry.name))
+  } catch {
+    return []
+  }
 }
 
 function metaFromFile(file: string): NoteMeta {
@@ -264,9 +498,11 @@ export function saveNote(input: SaveNoteInput): NoteMeta {
     wordCount
   }
 
-  const index = readJson<NotesIndex>(indexFile(input.notesDir), { notes: [] })
-  index.notes = [meta, ...index.notes.filter((note) => note.id !== meta.id)]
-  writeJson(indexFile(input.notesDir), index)
+  const index = ensureNotesCache(input.notesDir)
+  commitNotes(input.notesDir, [
+    meta,
+    ...index.filter((note) => note.id !== meta.id)
+  ])
   return meta
 }
 
@@ -275,8 +511,8 @@ export function updateNoteMarkdown(
   id: string,
   markdown: string
 ): NoteMeta {
-  const index = readJson<NotesIndex>(indexFile(notesDir), { notes: [] })
-  const meta = index.notes.find((note) => note.id === id)
+  const index = ensureNotesCache(notesDir)
+  const meta = index.find((note) => note.id === id)
   if (!meta) throw new Error('Note not found.')
 
   const raw = fs.readFileSync(meta.path, 'utf8')
@@ -298,28 +534,32 @@ export function updateNoteMarkdown(
     summary: extractSummary(cleanMarkdown),
     wordCount: cleanMarkdown.split(/\s+/).filter(Boolean).length
   }
-  index.notes = index.notes.map((note) => (note.id === id ? next : note))
-  writeJson(indexFile(notesDir), index)
+  commitNotes(
+    notesDir,
+    index.map((note) => (note.id === id ? next : note))
+  )
   return next
 }
 
 export function removeNoteAudio(notesDir: string, id: string): NoteMeta {
-  const index = readJson<NotesIndex>(indexFile(notesDir), { notes: [] })
-  const meta = index.notes.find((note) => note.id === id)
+  const index = ensureNotesCache(notesDir)
+  const meta = index.find((note) => note.id === id)
   if (!meta) throw new Error('Note not found.')
 
   if (meta.recordingId) {
     fs.rmSync(noteRecordingDir(meta.recordingId), { recursive: true, force: true })
   }
   const next: NoteMeta = { ...meta, hasAudio: false }
-  index.notes = index.notes.map((note) => (note.id === id ? next : note))
-  writeJson(indexFile(notesDir), index)
+  commitNotes(
+    notesDir,
+    index.map((note) => (note.id === id ? next : note))
+  )
   return next
 }
 
 export function deleteNote(notesDir: string, id: string, deleteAudio = true): void {
-  const index = readJson<NotesIndex>(indexFile(notesDir), { notes: [] })
-  const meta = index.notes.find((note) => note.id === id)
+  const index = ensureNotesCache(notesDir)
+  const meta = index.find((note) => note.id === id)
   if (!meta) return
 
   try {
@@ -334,8 +574,10 @@ export function deleteNote(notesDir: string, id: string, deleteAudio = true): vo
 
   fs.rmSync(noteTranscriptPath(notesDir, id), { force: true })
 
-  index.notes = index.notes.filter((note) => note.id !== id)
-  writeJson(indexFile(notesDir), index)
+  commitNotes(
+    notesDir,
+    index.filter((note) => note.id !== id)
+  )
 }
 
 export function transcriptWithOffsets(

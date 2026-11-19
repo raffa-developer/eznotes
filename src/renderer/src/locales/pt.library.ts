@@ -8,6 +8,18 @@ export const library: Record<string, string> = {
   'Every lecture becomes a file you own.':
     'Cada aula torna-se num ficheiro que é seu.',
   'Open folder': 'Abrir pasta',
+  Rescan: 'Atualizar',
+  'Rescan notes folder': 'Atualizar pasta de notas',
+  'Notes folder rescanned. {count} notes.':
+    'Pasta de notas atualizada. {count} notas.',
+  'Content matches': 'Correspondências no conteúdo',
+  'Searching note text…': 'A pesquisar no texto das notas…',
+  '{count} result': '{count} resultado',
+  '{count} results': '{count} resultados',
+  Transcript: 'Transcrição',
+  'Note text': 'Texto da nota',
+  'No note text or transcript matches “{query}”.':
+    'Nenhum texto de nota ou transcrição corresponde a “{query}”.',
   'Record lecture': 'Gravar aula',
   'Search titles, courses, summaries…':
     'Pesquisar títulos, disciplinas, resumos…',

@@ -131,6 +131,15 @@ export function AppProvider({ children }: { children: ReactNode }): React.JSX.El
       if (event.type === 'notice') toast(event.message, event.level)
     })
 
+    const unsubscribeNotes = window.ezNotes.notes.onChanged(() => {
+      void window.ezNotes.notes
+        .list()
+        .then((next) => {
+          if (mounted) setNotes(next)
+        })
+        .catch(() => undefined)
+    })
+
     const interval = window.setInterval(() => {
       void window.ezNotes.schedule.upcoming().then(setUpcoming)
     }, 60_000)
@@ -138,6 +147,7 @@ export function AppProvider({ children }: { children: ReactNode }): React.JSX.El
     return () => {
       mounted = false
       unsubscribe()
+      unsubscribeNotes()
       window.clearInterval(interval)
     }
   }, [toast])

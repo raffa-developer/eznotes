@@ -51,6 +51,8 @@ const api: EzNotesApi = {
   },
   notes: {
     list: () => ipcRenderer.invoke('notes:list'),
+    search: (query: string) => ipcRenderer.invoke('notes:search', query),
+    rescan: () => ipcRenderer.invoke('notes:rescan'),
     get: (id: string) => ipcRenderer.invoke('notes:get', id),
     delete: (id: string) => ipcRenderer.invoke('notes:delete', id),
     deleteAudio: (id: string) => ipcRenderer.invoke('notes:deleteAudio', id),
@@ -59,7 +61,12 @@ const api: EzNotesApi = {
       ipcRenderer.invoke('notes:export', id, format),
     reveal: (id: string) => ipcRenderer.invoke('notes:reveal', id),
     openFolder: () => ipcRenderer.invoke('notes:openFolder'),
-    regenerate: (id: string) => ipcRenderer.invoke('notes:regenerate', id)
+    regenerate: (id: string) => ipcRenderer.invoke('notes:regenerate', id),
+    onChanged: (callback: () => void) => {
+      const listener = (): void => callback()
+      ipcRenderer.on('notes:changed', listener)
+      return () => ipcRenderer.removeListener('notes:changed', listener)
+    }
   },
   recording: {
     start: (input: StartRecordingInput) => ipcRenderer.invoke('recording:start', input),

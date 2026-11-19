@@ -1356,6 +1356,115 @@ textarea::placeholder {
   margin: 0;
 }
 
+.library-content-matches {
+  margin: -8px 0 24px;
+  padding: 15px 17px;
+}
+
+.library-content-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--line);
+}
+
+.library-content-head h2 {
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.library-content-head span {
+  color: var(--muted);
+  font-size: 9.5px;
+}
+
+.content-match-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.content-match {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 2px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.content-match:last-child {
+  border-bottom: 0;
+}
+
+.content-match:hover {
+  background: var(--surface-2);
+}
+
+.content-match-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 27px;
+  height: 27px;
+  border-radius: 7px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.content-match-main {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.content-match-main strong {
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.content-match-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.content-match-excerpt {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.content-match-kind {
+  flex: none;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 8.5px;
+}
+
+.content-match-empty {
+  padding-top: 10px;
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
 .shelf-list {
   display: flex;
   flex-direction: column;
@@ -3732,6 +3841,10 @@ body.island-window .crash-card .button {
 @media (max-width: 620px) {
   .note-paper-grid {
     grid-template-columns: 1fr;
+  }
+
+  .content-match-kind {
+    display: none;
   }
 
   .book-sheet-head {

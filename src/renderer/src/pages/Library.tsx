@@ -6,16 +6,18 @@ import {
   BookOpen,
   CalendarDays,
   Clock,
+  FileText,
   FolderOpen,
+  RefreshCw,
   Search,
   UserRound,
   X
 } from 'lucide-react'
-import type { NoteMeta } from '../../../shared/types'
+import type { NoteMeta, NoteSearchResult } from '../../../shared/types'
 import { useApp } from '../state/AppContext'
-import { Button, EmptyState } from '../components/ui'
+import { Button, Card, EmptyState } from '../components/ui'
 import { t, uiLocale } from '../i18n'
-import { formatDate, formatDuration } from '../lib/format'
+import { formatDate, formatDuration, formatTimestamp } from '../lib/format'
 
 interface CourseBook {
   key: string
@@ -33,7 +35,7 @@ interface CourseBook {
 }
 
 export default function Library(): React.JSX.Element {
-  const { notes, schedule, loading, toast } = useApp()
+  const { notes, schedule, loading, refreshNotes, toast } = useApp()
   const [query, setQuery] = useState('')
   const [onlyAudio, setOnlyAudio] = useState(false)
   const [sort, setSort] = useState<'newest' | 'oldest' | 'longest'>('newest')
@@ -43,6 +45,9 @@ export default function Library(): React.JSX.Element {
   const [bookSort, setBookSort] = useState<'newest' | 'oldest' | 'longest'>(
     'newest'
   )
+  const [contentMatches, setContentMatches] = useState<NoteSearchResult[]>([])
+  const [searchingContent, setSearchingContent] = useState(false)
+  const [rescanning, setRescanning] = useState(false)
   const navigate = useNavigate()
 
   const allBooks = useMemo(() => {
@@ -148,6 +153,9 @@ export default function Library(): React.JSX.Element {
     month: 'short'
   })
   const bookFiltersActive = Boolean(bookQuery.trim()) || bookOnlyAudio
+  const visibleContentMatches = onlyAudio
+    ? contentMatches.filter((match) => match.note.hasAudio)
+    : contentMatches
 
   const openNotes = useMemo(() => {
     if (!openBook) return []
@@ -174,6 +182,41 @@ export default function Library(): React.JSX.Element {
     setBookOnlyAudio(false)
     setBookSort('newest')
   }, [openBookKey])
+
+  useEffect(() => {
+    const term = query.trim()
+    if (term.length < 2) {
+      setContentMatches([])
+      setSearchingContent(false)
+      return
+    }
+
+    let active = true
+    setSearchingContent(true)
+    const timer = window.setTimeout(() => {
+      window.ezNotes.notes
+        .search(term)
+        .then((results) => {
+          if (active) setContentMatches(results)
+        })
+        .catch((error) => {
+          if (!active) return
+          setContentMatches([])
+          toast(
+            error instanceof Error ? error.message : String(error),
+            'error'
+          )
+        })
+        .finally(() => {
+          if (active) setSearchingContent(false)
+        })
+    }, 280)
+
+    return () => {
+      active = false
+      window.clearTimeout(timer)
+    }
+  }, [query, notes, toast])
 
   useEffect(() => {
     if (!openBook) return
@@ -209,6 +252,19 @@ export default function Library(): React.JSX.Element {
       await window.ezNotes.notes.openFolder()
     } catch (error) {
       toast(error instanceof Error ? error.message : String(error), 'error')
+    }
+  }
+
+  async function rescanFolder(): Promise<void> {
+    setRescanning(true)
+    try {
+      const next = await window.ezNotes.notes.rescan()
+      await refreshNotes()
+      toast(t('Notes folder rescanned. {count} notes.', { count: next.length }), 'success')
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'error')
+    } finally {
+      setRescanning(false)
     }
   }
 
@@ -394,6 +450,15 @@ export default function Library(): React.JSX.Element {
           </p>
         </div>
         <div className="page-actions">
+          <Button
+            variant="ghost"
+            onClick={() => void rescanFolder()}
+            disabled={rescanning}
+            title={t('Rescan notes folder')}
+          >
+            <RefreshCw size={16} className={rescanning ? 'spin' : ''} />
+            {t('Rescan')}
+          </Button>
           <Button variant="ghost" onClick={() => void openFolder()}>
             <FolderOpen size={16} />
             {t('Open folder')}
@@ -463,6 +528,60 @@ export default function Library(): React.JSX.Element {
             </div>
           ) : null}
         </div>
+      ) : null}
+
+      {query.trim().length >= 2 ? (
+        <Card className="library-content-matches">
+          <div className="library-content-head">
+            <h2>{t('Content matches')}</h2>
+            <span>
+              {searchingContent
+                ? t('Searching note text…')
+                : t(
+                    visibleContentMatches.length === 1
+                      ? '{count} result'
+                      : '{count} results',
+                    { count: visibleContentMatches.length }
+                  )}
+            </span>
+          </div>
+          {visibleContentMatches.length ? (
+            <div className="content-match-list">
+              {visibleContentMatches.map((match) => (
+                <button
+                  key={match.note.id}
+                  type="button"
+                  className="content-match"
+                  onClick={() => navigate(`/notes/${match.note.id}`)}
+                >
+                  <span className="content-match-icon">
+                    <FileText size={15} />
+                  </span>
+                  <span className="content-match-main">
+                    <strong>{match.note.title}</strong>
+                    <span className="content-match-meta">
+                      <span>{match.note.courseName}</span>
+                      <span>{formatDate(match.note.date)}</span>
+                      {match.timestamp !== undefined ? (
+                        <span>{formatTimestamp(match.timestamp)}</span>
+                      ) : null}
+                    </span>
+                    <span className="content-match-excerpt">{match.excerpt}</span>
+                  </span>
+                  <span className="content-match-kind">
+                    {match.kind === 'transcript' ? t('Transcript') : t('Note text')}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : !searchingContent ? (
+            <p className="content-match-empty">
+              {t('No note text or transcript matches “{query}”.', {
+                query: query.trim()
+              })}
+            </p>
+          ) : null}
+        </Card>
       ) : null}
 
       {loading ? (

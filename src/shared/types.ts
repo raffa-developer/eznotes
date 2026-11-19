@@ -103,6 +103,15 @@ export interface NoteMeta {
   wordCount: number
 }
 
+export type NoteSearchKind = 'note' | 'transcript'
+
+export interface NoteSearchResult {
+  note: NoteMeta
+  kind: NoteSearchKind
+  excerpt: string
+  timestamp?: number
+}
+
 export interface TranscriptSegment {
   id: string
   start: number
@@ -259,6 +268,8 @@ export interface EzNotesApi {
   }
   notes: {
     list: () => Promise<NoteMeta[]>
+    search: (query: string) => Promise<NoteSearchResult[]>
+    rescan: () => Promise<NoteMeta[]>
     get: (id: string) => Promise<NoteDetail | null>
     delete: (id: string) => Promise<void>
     deleteAudio: (id: string) => Promise<NoteDetail | null>
@@ -267,6 +278,7 @@ export interface EzNotesApi {
     reveal: (id: string) => Promise<void>
     openFolder: () => Promise<void>
     regenerate: (id: string) => Promise<NoteDetail>
+    onChanged: (callback: () => void) => () => void
   }
   recording: {
     start: (input: StartRecordingInput) => Promise<RecordingSnapshot>
