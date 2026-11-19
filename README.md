@@ -3,7 +3,7 @@
 [![CI](https://github.com/raffa-developer/eznotes/actions/workflows/ci.yml/badge.svg)](https://github.com/raffa-developer/eznotes/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Platform: Windows, macOS, Linux](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D6)
-![Version](https://img.shields.io/badge/version-0.6.0-007AFF)
+![Version](https://img.shields.io/badge/version-0.6.1-007AFF)
 
 **Lectures in, study notes out.** ezNotes is a cross-platform desktop app that
 records a lecture, transcribes it, and writes structured Markdown notes you can
@@ -57,11 +57,11 @@ built around **European Portuguese lectures** and writes the final notes in
 
 ## Status
 
-`0.6.0` is early but usable. It runs on **Windows 10/11**, with initial
-**macOS** and **Linux** packages. Windows remains the most complete platform:
-offline speaker detection is Windows-only in this release. No public installer
-has been published from this repository yet; the release workflow builds and
-smoke-tests Windows installers and builds macOS/Linux packages.
+`0.6.1` is early but usable. It runs on **Windows 10/11**, with initial
+**macOS** and **Linux** packages. Windows has the most install-test coverage;
+macOS and Linux still need platform smoke tests. No public installer has been
+published from this repository yet; the release workflow builds and tests
+Windows installers and builds macOS/Linux packages.
 
 The full pipeline works end-to-end with local mock services and demo mode. Real
 Groq and notes-model calls require your own API keys.
@@ -144,14 +144,12 @@ Groq and notes-model calls require your own API keys.
 | Microphone | Any input device, selectable in Settings |
 | Network | Required for Groq transcription and cloud notes models. Not required when using a local Ollama notes model. |
 | API keys | A Groq key for transcription, plus an OpenCode/Groq key or local Ollama for notes |
-| Speaker labels | Optional on Windows: about 45 MB of models and a small local Node runtime; CPU time grows with lecture length |
+| Speaker labels | Optional on all supported platforms: about 45 MB of models; CPU time grows with lecture length |
 
-The tray, recording island, global hotkey, exports, backup/restore, and secure
-storage work across platforms. Offline speaker detection currently has a
-Windows x64 runtime; on macOS and Linux the option is disabled with an
-explanation. Linux secure storage requires a working Secret Service/keyring
-(libsecret); if it is unavailable, ezNotes refuses to store API keys in
-plaintext.
+The tray, recording island, global hotkey, exports, backup/restore, secure
+storage, and offline speaker detection work across platforms. Linux secure
+storage requires a working Secret Service/keyring (libsecret); if it is
+unavailable, ezNotes refuses to store API keys in plaintext.
 
 macOS asks for microphone permission the first time you record.
 
@@ -324,14 +322,15 @@ fully offline transcription would need local Whisper support.
 ## Speaker labels
 
 Turn on **Settings → Listening → Detect speakers after class**. Speaker detection
-is optional and runs locally; it never delays the note. It is currently
-Windows-only; macOS and Linux builds show the option disabled.
+is optional and runs locally on Windows, macOS, and Linux; it never delays the
+note.
 
 - The note is saved first, then diarization runs in the background.
 - It runs only when the lecture audio is kept, because it needs the WAV.
 - The first run downloads about 45 MB of models: pyannote segmentation and
   NVIDIA TitaNet, stored in the app data folder under `models/sherpa/`.
-- A bundled Node runtime adds about 90 MB to the installer.
+- The worker runs through Electron's built-in Node mode, so no separate Node
+  runtime is bundled.
 - A 90-minute lecture can use roughly 350 MB of memory while diarizing.
 - Labels are `Speaker 1`, `Speaker 2`, … in order of first appearance. The note
   prompt treats the most active speaker as the lecturer and marks student
@@ -473,7 +472,7 @@ On a note page, use **Copy note** or the **Export** menu:
 | `npm run typecheck` | Typecheck the Node and web TypeScript projects |
 | `npm test` | Run the Vitest suite |
 | `npm run test:watch` | Run tests in watch mode |
-| `npm run fetch:node` | Download the Windows x64 speaker runtime (skipped elsewhere) |
+| `npm run fetch:sherpa` | Download the sherpa native package for the current platform |
 | `npm run preview` | Preview the production build |
 | `npm run pack` | Build an unpacked app for the current platform |
 | `npm run dist` | Build a package for the current platform |
@@ -483,7 +482,7 @@ On a note page, use **Copy note** or the **Export** menu:
 
 ### Tests and CI
 
-There are **136 tests in 20 files**. Coverage includes:
+There are **137 tests in 20 files**. Coverage includes:
 
 - Transcript overlap trimming and segment deduplication.
 - Speech/VAD analysis and low-confidence Whisper filtering.
@@ -520,11 +519,11 @@ src/
 tests/         Node stubs for unit tests
 scripts/       CDP, mock-service, and Node-runtime helpers
 resources/     App icon and packaged extras
-vendor/        Node runtime fetched by npm run fetch:node (gitignored)
+vendor/        sherpa native packages fetched by npm run fetch:sherpa (gitignored)
 ```
 
-`npm run pack` and `npm run dist` fetch the Node runtime automatically and copy
-it, the diarization worker, and the sherpa native modules into `resources/`.
+`npm run pack` and `npm run dist` fetch the sherpa native package for the
+current platform and copy the worker and addon into `resources/`.
 
 ### Local mocks and UI inspection
 
@@ -556,8 +555,8 @@ work.
 ## Known limitations
 
 - Windows 10/11, macOS 12+, and modern x64 Linux are supported.
-- Speaker detection is Windows-only in this release. The setting is disabled
-  with an explanation elsewhere.
+- macOS and Linux packages are new; install and desktop-environment smoke tests
+  are still being expanded.
 - Linux secure storage requires a working Secret Service/keyring.
 - Live transcription requires a network connection to Groq. Local Whisper is not
   implemented yet.
@@ -594,8 +593,8 @@ compact Opus audio with WAV integrity fallback, native Anthropic/Gemini/OpenAI
 adapters, retrying notes-model calls, close-to-tray finalization, the weekly
 timetable grid, the course-book library, note and transcript editing with
 history, source-linked study cards, `.ics` import with exceptions, local
-backup/restore, a Windows installer release workflow, and the first macOS/Linux
-packaging foundation.
+backup/restore, a Windows installer release workflow, the first macOS/Linux
+packaging foundation, and the speaker worker on all three platforms.
 
 ## Contributing
 

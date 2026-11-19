@@ -3,7 +3,8 @@ import {
   decryptSecret,
   encryptSecret,
   migratePlainSecrets,
-  SECURE_STORAGE_UNAVAILABLE
+  SECURE_STORAGE_UNAVAILABLE,
+  secureStorageUsable
 } from './secretStorage'
 
 function adapter(available = true): {
@@ -70,5 +71,12 @@ describe('secure secret storage', () => {
       throw new Error('bad ciphertext')
     }
     expect(decryptSecret(storage, 'dpapi:broken')).toBeNull()
+  })
+
+  it('refuses Linux basic_text storage', () => {
+    expect(secureStorageUsable('linux', true, 'basic_text')).toBe(false)
+    expect(secureStorageUsable('linux', true, 'gnome_libsecret')).toBe(true)
+    expect(secureStorageUsable('win32', true)).toBe(true)
+    expect(secureStorageUsable('darwin', false)).toBe(false)
   })
 })

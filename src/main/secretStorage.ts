@@ -19,6 +19,20 @@ export function canStoreSecrets(storage: SecureStorageAdapter): boolean {
   return storage.isEncryptionAvailable()
 }
 
+/**
+ * Linux can fall back to Electron's basic_text backend, which is not real
+ * encryption. Treat that as unavailable so keys are never stored insecurely.
+ */
+export function secureStorageUsable(
+  platform: NodeJS.Platform,
+  encryptionAvailable: boolean,
+  linuxBackend?: string
+): boolean {
+  if (!encryptionAvailable) return false
+  if (platform === 'linux' && linuxBackend === 'basic_text') return false
+  return true
+}
+
 export function encryptSecret(
   storage: SecureStorageAdapter,
   value: string

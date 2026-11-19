@@ -1400,7 +1400,28 @@ if (!gotLock) {
 
   app.whenReady().then(() => {
     app.setAppUserModelId('app.eznotes')
-    Menu.setApplicationMenu(null)
+    if (process.platform === 'darwin') {
+      Menu.setApplicationMenu(
+        Menu.buildFromTemplate([
+          {
+            label: app.name,
+            submenu: [
+              { role: 'about' },
+              { type: 'separator' },
+              { role: 'hide' },
+              { role: 'hideOthers' },
+              { role: 'unhide' },
+              { type: 'separator' },
+              { role: 'quit' }
+            ]
+          },
+          { role: 'editMenu' },
+          { role: 'windowMenu' }
+        ])
+      )
+    } else {
+      Menu.setApplicationMenu(null)
+    }
     session.defaultSession.setPermissionRequestHandler(
       (_webContents, permission, callback) => {
         callback(permission === 'media')

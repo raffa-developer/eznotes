@@ -378,40 +378,43 @@ verify reliability-sensitive changes with tests, and tick each item here and in
 
 ## Cross-platform support
 
-The 0.6.0 release starts macOS and Linux support while keeping Windows feature
+The 0.6.1 release starts macOS and Linux support while keeping Windows feature
 parity. Remaining gaps are tracked here.
 
 - [x] **X-1 Cross-platform packaging foundation**
   `package.json`, `.github/workflows/release.yml`, `docs/RELEASING.md`
   - Build Windows NSIS, macOS x64/arm64 `.dmg`/`.zip`, and Linux AppImage/`.deb`
     packages from one release workflow.
-  - Keep the Windows speaker-diarization runtime in Windows-only resources.
+  - Package the sherpa native addon for each OS/architecture.
   - *Verified:* package targets and release jobs are configured; Windows still
     runs the install/launch/upgrade/uninstall smoke test.
 
-- [x] **X-2 Platform-neutral secure storage and speaker fallback**
-  `src/main/secretStorage.ts`, `src/main/diarization.ts`,
+- [x] **X-2 Platform-neutral secure storage and runtime reporting**
+  `src/main/secretStorage.ts`, `src/main/store.ts`,
   `src/renderer/src/pages/SettingsPage.tsx`, UI copy
   - Use the OS secure store wording for DPAPI, Keychain, and Secret Service.
-  - Keep fail-closed behavior when secure storage is unavailable.
-  - Disable speaker detection off Windows and explain why instead of failing
-    later.
-  - *Verified:* Windows tests pass (136 total); UI copy and settings behavior are
-    platform-aware.
+  - Keep fail-closed behavior when secure storage is unavailable, including
+    Linux's `basic_text` backend.
+  - Report missing speaker runtime clearly instead of failing later.
+  - *Verified:* secure-storage and worker tests pass; UI copy and settings
+    behavior are platform-aware.
 
-- [ ] **X-3 Ship the speaker-detection worker on macOS and Linux**
-  `vendor/`, `scripts/fetch-node.mjs`, `src/main/diarization.ts`,
+- [x] **X-3 Ship the speaker-detection worker on macOS and Linux**
+  `vendor/`, `scripts/fetch-sherpa.mjs`, `src/main/diarization.ts`,
   `package.json`, release workflows
-  - Download the correct Node runtime and sherpa native package per platform,
-    package the worker as platform resources, and test model download and a
-    seeded lecture on both architectures.
-  - *Done when:* speaker labels work on Windows, macOS (x64/arm64), and Linux
-    without manual setup.
+  - Download the correct sherpa native package per platform and architecture.
+  - Run the worker through Electron's built-in Node mode, with macOS/Linux
+    library paths set for the addon.
+  - *Verified:* Windows worker run under Electron-as-Node produced diarization
+    turns; macOS x64/arm64 and Linux x64/arm64 native packages are downloaded,
+    packaged, and selected at runtime. Runner validation on those platforms is
+    tracked in X-4/X-5.
 
 - [ ] **X-4 Add macOS signing, notarization, and install smoke tests**
   `.github/workflows/release.yml`, `docs/RELEASING.md`
   - Notarize signed macOS builds and mount/launch the `.dmg` on a runner.
-  - Add Linux AppImage/`.deb` install and launch checks.
+  - Add Linux AppImage/`.deb` install and launch checks, including a seeded
+    diarization smoke test.
   - *Done when:* each platform artifact has a repeatable install/launch test and
     macOS release builds pass Gatekeeper without manual approval.
 

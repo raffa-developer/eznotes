@@ -1,6 +1,6 @@
 {
   "name": "eznotes",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Lecture notes that listen, filter, and structure themselves.",
   "main": "./out/main/index.js",
   "author": {
@@ -16,12 +16,12 @@
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "fetch:node": "node scripts/fetch-node.mjs",
-    "pack": "npm run fetch:node && npm run build && electron-builder --dir",
-    "dist": "npm run fetch:node && npm run build && electron-builder",
-    "dist:win": "npm run fetch:node && npm run build && electron-builder --win",
-    "dist:mac": "npm run build && electron-builder --mac --x64 --arm64",
-    "dist:linux": "npm run build && electron-builder --linux"
+    "fetch:sherpa": "node scripts/fetch-sherpa.mjs",
+    "pack": "npm run fetch:sherpa && npm run build && electron-builder --dir",
+    "dist": "npm run fetch:sherpa && npm run build && electron-builder",
+    "dist:win": "node scripts/fetch-sherpa.mjs win-x64 && npm run build && electron-builder --win",
+    "dist:mac": "node scripts/fetch-sherpa.mjs darwin-x64 darwin-arm64 && npm run build && electron-builder --mac --x64 --arm64",
+    "dist:linux": "node scripts/fetch-sherpa.mjs linux-x64 linux-arm64 && npm run build && electron-builder --linux"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.137.0",
@@ -67,6 +67,14 @@
       {
         "from": "licenses",
         "to": "licenses"
+      },
+      {
+        "from": "src/main/diarizer/diarization-worker.cjs",
+        "to": "diarizer/diarization-worker.cjs"
+      },
+      {
+        "from": "node_modules/sherpa-onnx-node",
+        "to": "diarizer/node_modules/sherpa-onnx-node"
       }
     ],
     "win": {
@@ -74,23 +82,7 @@
       "icon": "resources/icon.png",
       "extraResources": [
         {
-          "from": "vendor/node/node.exe",
-          "to": "node/node.exe"
-        },
-        {
-          "from": "vendor/node/LICENSE",
-          "to": "node/LICENSE"
-        },
-        {
-          "from": "src/main/diarizer/diarization-worker.cjs",
-          "to": "diarizer/diarization-worker.cjs"
-        },
-        {
-          "from": "node_modules/sherpa-onnx-node",
-          "to": "diarizer/node_modules/sherpa-onnx-node"
-        },
-        {
-          "from": "node_modules/sherpa-onnx-win-x64",
+          "from": "vendor/sherpa/sherpa-onnx-win-x64",
           "to": "diarizer/node_modules/sherpa-onnx-win-x64"
         }
       ]
@@ -104,6 +96,16 @@
       "icon": "resources/icon-1024.png",
       "entitlements": "resources/entitlements.mac.plist",
       "entitlementsInherit": "resources/entitlements.mac.plist",
+      "extraResources": [
+        {
+          "from": "vendor/sherpa/sherpa-onnx-darwin-x64",
+          "to": "diarizer/node_modules/sherpa-onnx-darwin-x64"
+        },
+        {
+          "from": "vendor/sherpa/sherpa-onnx-darwin-arm64",
+          "to": "diarizer/node_modules/sherpa-onnx-darwin-arm64"
+        }
+      ],
       "extendInfo": {
         "NSMicrophoneUsageDescription": "ezNotes records a lecture when you start a recording."
       }
@@ -114,7 +116,17 @@
         "deb"
       ],
       "category": "Education",
-      "icon": "resources/icon-1024.png"
+      "icon": "resources/icon-1024.png",
+      "extraResources": [
+        {
+          "from": "vendor/sherpa/sherpa-onnx-linux-x64",
+          "to": "diarizer/node_modules/sherpa-onnx-linux-x64"
+        },
+        {
+          "from": "vendor/sherpa/sherpa-onnx-linux-arm64",
+          "to": "diarizer/node_modules/sherpa-onnx-linux-arm64"
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,

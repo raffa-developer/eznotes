@@ -11,7 +11,9 @@ import { diarizationStatus } from './diarization'
 import {
   decryptSecret,
   encryptSecret,
-  migratePlainSecrets
+  migratePlainSecrets,
+  secureStorageUsable,
+  type SecureStorageAdapter
 } from './secretStorage'
 import { DEFAULT_HOTKEY, HOTKEY_OPTIONS } from '../shared/hotkeys'
 
@@ -82,6 +84,26 @@ function settingsFile(): string {
 
 function secretsFile(): string {
   return userDataPath('secrets.json')
+}
+
+const secureStorage: SecureStorageAdapter = {
+  isEncryptionAvailable: (): boolean => {
+    const backend =
+      process.platform === 'linux'
+        ? (
+            safeStorage as typeof safeStorage & {
+              getSelectedStorageBackend?: () => string
+            }
+          ).getSelectedStorageBackend?.()
+        : undefined
+    return secureStorageUsable(
+      process.platform,
+      safeStorage.isEncryptionAvailable(),
+      backend
+    )
+  },
+  encryptString: (value) => safeStorage.encryptString(value),
+  decryptString: (value) => safeStorage.decryptString(value)
 }
 
 export function defaultSettings(): Settings {
@@ -246,7 +268,7 @@ interface SecretStore {
 
 function loadSecrets(): SecretStore {
   const store = readJson<SecretStore>(secretsFile(), { encrypted: {} })
-  if (migratePlainSecrets(safeStorage, store)) {
+  if (migratePlainSecrets(secureStorage, store)) {
     writeJson(secretsFile(), store)
   }
   return store
@@ -256,7 +278,7 @@ export function setSecret(key: SecretKey, value: string): void {
   const store = loadSecrets()
   const trimmed = value.trim()
   if (trimmed) {
-    store.encrypted[key] = encryptSecret(safeStorage, trimmed)
+    store.encrypted[key] = encryptSecret(secureStorage, trimmed)
   } else {
     delete store.encrypted[key]
   }
@@ -264,7 +286,7 @@ export function setSecret(key: SecretKey, value: string): void {
 }
 
 export function getSecret(key: SecretKey): string | null {
-  return decryptSecret(safeStorage, loadSecrets().encrypted[key])
+  return decryptSecret(secureStorage, loadSecrets().encrypted[key])
 }
 
 export function clearSecret(key: SecretKey): void {
@@ -283,7 +305,7 @@ export function settingsStatus(): SettingsStatus {
     settings,
     hasGroqKey: hasSecret('groqApiKey'),
     hasLlmKey: hasSecret('llmApiKey'),
-    secureStorageAvailable: safeStorage.isEncryptionAvailable(),
+    secureStorageAvailable: secureStorage.isEncryptionAvailable(),
     notesDir: settings.notesDir,
     appVersion: app.getVersion(),
     recordingsDir: recordingsDir(),

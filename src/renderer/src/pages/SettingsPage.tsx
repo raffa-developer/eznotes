@@ -570,7 +570,7 @@ export default function SettingsPage(): React.JSX.Element {
                       { size: settings.diarization.modelsSizeMb }
                     )
                   : t(
-                      'Offline speaker detection is currently available on Windows only. Recording, transcription, notes, editing, and study mode work on this platform.'
+                      'Offline speaker detection is not available on this platform.'
                     )}
               </small>
             </span>
@@ -581,7 +581,7 @@ export default function SettingsPage(): React.JSX.Element {
               {!settings.diarization.runtimeReady ? (
                 <span>
                   {t('The offline speaker runtime is missing. In development, run')}{' '}
-                  <code>npm run fetch:node</code>.
+                  <code>npm run fetch:sherpa</code>.
                 </span>
               ) : settings.diarization.modelsReady ? (
                 <span>

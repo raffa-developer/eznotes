@@ -44,8 +44,8 @@ export function embeddingPath(): string {
 
 export function diarizationStatus(): DiarizationStatus {
   return {
-    platformSupported: process.platform === 'win32',
-    runtimeReady: fs.existsSync(nodeExePath()),
+    platformSupported: ['win32', 'darwin', 'linux'].includes(process.platform),
+    runtimeReady: runtimeReady(),
     modelsReady: diarizationModelsReady(),
     modelsSizeMb: MODELS_SIZE_MB
   }
@@ -85,21 +85,13 @@ export function downloadDiarizationModels(): Promise<TestResult> {
 }
 
 async function doDownloadModels(): Promise<TestResult> {
-  if (process.platform !== 'win32') {
+  if (!runtimeReady()) {
     return {
       ok: false,
       message:
-        'Offline speaker detection is currently available on Windows only.'
+        'The offline speaker-detection runtime is missing. Reinstall ezNotes or run npm run fetch:sherpa in development.'
     }
   }
-  if (!fs.existsSync(nodeExePath())) {
-    return {
-      ok: false,
-      message:
-        'The offline speaker-detection runtime is missing. Reinstall ezNotes or run npm run fetch:node in development.'
-    }
-  }
-
   try {
     fs.mkdirSync(modelsDir(), { recursive: true })
     log('diarization', 'downloading speaker models')
@@ -161,15 +153,10 @@ function copyAtomic(source: string, destination: string): void {
 }
 
 export async function runDiarization(audioPath: string): Promise<DiarizationTurn[]> {
-  if (process.platform !== 'win32') {
-    throw new Error('Offline speaker detection is currently available on Windows only.')
-  }
-  const node = nodeExePath()
-  const worker = workerPath()
-
-  if (!fs.existsSync(node)) {
+  if (!runtimeReady()) {
     throw new Error('The offline speaker-detection runtime is missing.')
   }
+  const worker = workerPath()
   if (!fs.existsSync(worker)) {
     throw new Error('The offline speaker-detection worker is missing.')
   }
@@ -187,7 +174,7 @@ export async function runDiarization(audioPath: string): Promise<DiarizationTurn
 
   try {
     await runProcess(
-      node,
+      process.execPath,
       [
         worker,
         audioPath,
@@ -196,7 +183,8 @@ export async function runDiarization(audioPath: string): Promise<DiarizationTurn
         output,
         String(THRESHOLD)
       ],
-      RUN_TIMEOUT_MS
+      RUN_TIMEOUT_MS,
+      diarizationEnv()
     )
 
     const parsed = JSON.parse(fs.readFileSync(output, 'utf8')) as {
@@ -261,11 +249,46 @@ export function assignSpeakers(
   })
 }
 
-function nodeExePath(): string {
-  if (process.platform !== 'win32') return ''
+function runtimeReady(): boolean {
+  return (
+    ['win32', 'darwin', 'linux'].includes(process.platform) &&
+    fs.existsSync(workerPath()) &&
+    fs.existsSync(path.join(runtimeNodeModules(), 'sherpa-onnx-node')) &&
+    fs.existsSync(
+      path.join(runtimeNodeModules(), platformPackageName(), 'sherpa-onnx.node')
+    )
+  )
+}
+
+function runtimeNodeModules(): string {
   return app.isPackaged
-    ? path.join(process.resourcesPath, 'node', 'node.exe')
-    : path.join(app.getAppPath(), 'vendor', 'node', 'node.exe')
+    ? path.join(process.resourcesPath, 'diarizer', 'node_modules')
+    : path.join(app.getAppPath(), 'node_modules')
+}
+
+function platformPackageName(): string {
+  const platform = process.platform === 'win32' ? 'win' : process.platform
+  return `sherpa-onnx-${platform}-${process.arch}`
+}
+
+function diarizationEnv(): NodeJS.ProcessEnv {
+  const packageDir = path.join(runtimeNodeModules(), platformPackageName())
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    ELECTRON_RUN_AS_NODE: '1'
+  }
+  if (process.platform === 'darwin') {
+    env.DYLD_LIBRARY_PATH = [packageDir, env.DYLD_LIBRARY_PATH]
+      .filter(Boolean)
+      .join(':')
+  } else if (process.platform === 'linux') {
+    env.LD_LIBRARY_PATH = [packageDir, env.LD_LIBRARY_PATH]
+      .filter(Boolean)
+      .join(':')
+  } else {
+    env.PATH = [packageDir, env.PATH].filter(Boolean).join(';')
+  }
+  return env
 }
 
 function workerPath(): string {
@@ -289,10 +312,14 @@ function tarExecutable(): string {
 function runProcess(
   command: string,
   args: string[],
-  timeoutMs: number
+  timeoutMs: number,
+  env?: NodeJS.ProcessEnv
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { windowsHide: true })
+    const child = spawn(command, args, {
+      windowsHide: true,
+      ...(env ? { env } : {})
+    })
     activeProcesses.add(child)
     let stderr = ''
     let settled = false

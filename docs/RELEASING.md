@@ -10,8 +10,9 @@ npm run dist:mac    # macOS .dmg and .zip, x64 and arm64
 npm run dist:linux  # Linux AppImage and .deb
 ```
 
-Packages land in `release/`. The Windows speech-diarization runtime is fetched
-only on Windows; `npm run dist:mac` and `npm run dist:linux` skip it.
+Packages land in `release/`. `npm run dist:mac` and `npm run dist:linux` fetch
+the matching sherpa native packages; the diarization worker runs through
+Electron's built-in Node mode, so no separate Node runtime is bundled.
 
 Unsigned packages may be blocked by SmartScreen on Windows or Gatekeeper on
 macOS. Linux packages are not code-signed.
@@ -64,7 +65,7 @@ $installer = Get-ChildItem release -Filter '*.exe' |
 1. Update `package.json`, `package-lock.json`, and the README version.
 2. Run `npm run typecheck`, `npm test`, and `npm run build`.
 3. Commit the version bump.
-4. Push a tag such as `v0.6.0`.
+4. Push a tag such as `v0.6.1`.
 5. Watch the release workflow and confirm Windows, macOS, and Linux assets.
 6. Install each platform package once on a clean profile.
 

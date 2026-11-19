@@ -5,18 +5,11 @@ the following third-party components.
 
 ## Bundled with the app
 
-### Node.js
-
-- Purpose: runtime for the offline speaker-diarization worker (Electron's own
-  Node build cannot load the native addon because of the V8 memory cage).
-- Version: recorded in `vendor/node/VERSION` and fetched by
-  `npm run fetch:node`; packaged as `resources/node/node.exe`.
-- License: MIT. The license text is packaged as `resources/node/LICENSE`.
-- <https://nodejs.org>
-
 ### sherpa-onnx
 
 - Purpose: offline speaker segmentation and embedding runtime.
+- Version: fetched by `npm run fetch:sherpa` and packaged under
+  `resources/diarizer/node_modules/` for the target platform.
 - License: Apache-2.0. See [licenses/Apache-2.0.txt](licenses/Apache-2.0.txt).
 - <https://github.com/k2-fsa/sherpa-onnx>
 
@@ -46,8 +39,8 @@ the following third-party components.
 
 ## Downloaded on first use
 
-These models are downloaded by the app into
-`%APPDATA%\ezNotes\models\sherpa\` and are not redistributed with ezNotes.
+These models are downloaded by the app into the app data folder under
+`models/sherpa/` and are not redistributed with ezNotes.
 
 ### pyannote segmentation 3.0
 

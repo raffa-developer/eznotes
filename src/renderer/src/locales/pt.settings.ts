@@ -204,8 +204,8 @@ export const settings: Record<string, string> = {
   'Notes and the searchable library': 'Notas e a biblioteca pesquisável',
   'API keys, encrypted with system secure storage':
     'Chaves de API, encriptadas com o armazenamento seguro do sistema',
-  'Offline speaker detection is currently available on Windows only. Recording, transcription, notes, editing, and study mode work on this platform.':
-    'A deteção offline de oradores está atualmente disponível apenas no Windows. A gravação, transcrição, notas, edição e modo de estudo funcionam nesta plataforma.',
+  'Offline speaker detection is not available on this platform.':
+    'A deteção offline de oradores não está disponível nesta plataforma.',
   'Leaves this PC': 'Sai deste PC',
   'Audio chunks go to Groq for transcription':
     'Fragmentos de áudio são enviados para o Groq para transcrição',
