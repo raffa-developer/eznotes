@@ -19,6 +19,11 @@ import type {
 } from '../../../shared/types'
 import { formatTimer, formatTimestamp } from '../lib/format'
 import { setUiLanguage, t } from '../i18n'
+import {
+  resetAudioLevel,
+  setAudioLevel,
+  useAudioLevel
+} from '../state/audioLevel'
 
 type Phase = 'recording' | 'stopped' | 'processing' | 'done' | 'error'
 
@@ -31,11 +36,27 @@ const PANEL_HEIGHTS: Record<Phase, number> = {
   error: 144
 }
 
+function IslandLevelMeter(): React.JSX.Element {
+  const level = useAudioLevel()
+  return (
+    <span className="island-level" aria-hidden="true">
+      {Array.from({ length: 8 }).map((_, index) => (
+        <i
+          key={index}
+          style={{
+            height: `${3 + level * 11 * (0.4 + Math.abs(Math.sin(index * 1.7)))}px`,
+            opacity: level > 0.02 ? 0.5 + level * 0.5 : 0.25
+          }}
+        />
+      ))}
+    </span>
+  )
+}
+
 export default function Island(): React.JSX.Element {
   const [snapshot, setSnapshot] = useState<RecordingSnapshot | null>(null)
   const [segments, setSegments] = useState<LiveTranscriptSegment[]>([])
   const [outline, setOutline] = useState<string[]>([])
-  const [level, setLevel] = useState(0)
   const [elapsed, setElapsed] = useState(0)
   const [expanded, setExpanded] = useState(false)
   const [phase, setPhase] = useState<Phase>('recording')
@@ -86,6 +107,12 @@ export default function Island(): React.JSX.Element {
       if (event.type === 'state') {
         setSnapshot(event.snapshot)
         if (event.snapshot) applySnapshot(event.snapshot)
+        if (
+          !event.snapshot ||
+          !['recording', 'paused'].includes(event.snapshot.status)
+        ) {
+          resetAudioLevel()
+        }
       }
       if (event.type === 'transcript') {
         setSegments((current) => {
@@ -94,7 +121,7 @@ export default function Island(): React.JSX.Element {
         })
       }
       if (event.type === 'outline') setOutline(event.outline.bullets)
-      if (event.type === 'level') setLevel(event.level)
+      if (event.type === 'level') setAudioLevel(event.level)
       if (event.type === 'processing') {
         setProcessing({ step: event.step, progress: event.progress })
         setPhase('processing')
@@ -263,17 +290,7 @@ export default function Island(): React.JSX.Element {
           <span className="island-course">{courseName}</span>
           <span className="island-timer">{formatTimer(elapsed)}</span>
 
-          <span className="island-level" aria-hidden="true">
-            {Array.from({ length: 8 }).map((_, index) => (
-              <i
-                key={index}
-                style={{
-                  height: `${3 + level * 11 * (0.4 + Math.abs(Math.sin(index * 1.7)))}px`,
-                  opacity: level > 0.02 ? 0.5 + level * 0.5 : 0.25
-                }}
-              />
-            ))}
-          </span>
+          <IslandLevelMeter />
 
           {phase === 'recording' ? (
             <>

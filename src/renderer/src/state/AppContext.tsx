@@ -16,6 +16,10 @@ import type {
   UpcomingClass
 } from '../../../shared/types'
 import { setUiLanguage } from '../i18n'
+import {
+  resetAudioLevel,
+  setAudioLevel
+} from './audioLevel'
 
 export type ToastTone = 'info' | 'success' | 'warn' | 'error'
 
@@ -31,7 +35,6 @@ interface AppContextValue {
   upcoming: UpcomingClass[]
   notes: NoteMeta[]
   recording: RecordingSnapshot | null
-  level: number
   loading: boolean
   toasts: Toast[]
   nextClass: UpcomingClass | null
@@ -52,7 +55,6 @@ export function AppProvider({ children }: { children: ReactNode }): React.JSX.El
   const [upcoming, setUpcoming] = useState<UpcomingClass[]>([])
   const [notes, setNotes] = useState<NoteMeta[]>([])
   const [recording, setRecording] = useState<RecordingSnapshot | null>(null)
-  const [level, setLevel] = useState(0)
   const [loading, setLoading] = useState(true)
   const [toasts, setToasts] = useState<Toast[]>([])
   const toastId = useRef(1)
@@ -116,8 +118,16 @@ export function AppProvider({ children }: { children: ReactNode }): React.JSX.El
       })
 
     const unsubscribe = window.ezNotes.recording.onEvent((event) => {
-      if (event.type === 'state') setRecording(event.snapshot)
-      if (event.type === 'level') setLevel(event.level)
+      if (event.type === 'state') {
+        setRecording(event.snapshot)
+        if (
+          !event.snapshot ||
+          !['recording', 'paused'].includes(event.snapshot.status)
+        ) {
+          resetAudioLevel()
+        }
+      }
+      if (event.type === 'level') setAudioLevel(event.level)
       if (event.type === 'notice') toast(event.message, event.level)
     })
 
@@ -153,7 +163,6 @@ export function AppProvider({ children }: { children: ReactNode }): React.JSX.El
       upcoming,
       notes,
       recording,
-      level,
       loading,
       toasts,
       nextClass: upcoming[0] ?? null,
@@ -171,7 +180,6 @@ export function AppProvider({ children }: { children: ReactNode }): React.JSX.El
       upcoming,
       notes,
       recording,
-      level,
       loading,
       toasts,
       refreshSettings,

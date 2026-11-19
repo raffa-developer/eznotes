@@ -112,7 +112,7 @@ section “Next implementation wave”.
 ### P1 — Reliability, performance, and setup
 
 - [x] **N-1** Optimize audio capture buffering and writes; preserve crash recovery
-- [ ] **N-2** Isolate high-frequency microphone-level updates from app-wide renders
+- [x] **N-2** Isolate high-frequency microphone-level updates from app-wide renders
 - [ ] **N-3** Incremental note index, external-file discovery, and global search
 - [ ] **N-4** Fail-closed secret storage; migrate legacy plaintext fallback
 - [ ] **N-5** Provider-aware first-run setup and connection checks

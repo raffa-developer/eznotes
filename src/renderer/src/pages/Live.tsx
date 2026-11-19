@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import type { LiveTranscriptSegment, StoppedRecording } from '../../../shared/types'
 import { useApp } from '../state/AppContext'
+import { useAudioLevel } from '../state/audioLevel'
 import { Badge, Button, Card, Modal } from '../components/ui'
 import {
   formatDuration,
@@ -25,12 +26,28 @@ import {
 } from '../lib/format'
 import { t, uiLocale } from '../i18n'
 
+function MicrophoneMeter(): React.JSX.Element {
+  const level = useAudioLevel()
+  return (
+    <span className="level-meter" aria-label={t('Microphone level')}>
+      {Array.from({ length: 18 }).map((_, index) => (
+        <i
+          key={index}
+          style={{
+            height: `${6 + level * 26 * (0.35 + Math.abs(Math.sin(index * 1.7)))}px`,
+            opacity: level > 0.02 ? 0.45 + level * 0.55 : 0.2
+          }}
+        />
+      ))}
+    </span>
+  )
+}
+
 export default function Live(): React.JSX.Element {
   const {
     recording,
     settings,
     schedule,
-    level,
     setRecording,
     refreshNotes,
     toast
@@ -378,17 +395,7 @@ export default function Live(): React.JSX.Element {
           </div>
 
           <div className="transcript-foot">
-            <span className="level-meter" aria-label={t('Microphone level')}>
-              {Array.from({ length: 18 }).map((_, index) => (
-                <i
-                  key={index}
-                  style={{
-                    height: `${6 + level * 26 * (0.35 + Math.abs(Math.sin(index * 1.7)))}px`,
-                    opacity: level > 0.02 ? 0.45 + level * 0.55 : 0.2
-                  }}
-                />
-              ))}
-            </span>
+            <MicrophoneMeter />
             <span className="transcript-mic">
               {settings?.settings.microphoneId
                 ? t('Selected microphone')

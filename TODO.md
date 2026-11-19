@@ -215,13 +215,17 @@ verify reliability-sensitive changes with tests, and tick each item here and in
     The write batcher flushes at 16 KB and on every checkpoint, pause/resume, and
     stop. 94 tests pass.
 
-- [ ] **N-2 Isolate microphone-level rendering**
+- [x] **N-2 Isolate microphone-level rendering**
+  `src/renderer/src/state/audioLevel.ts`,
   `src/renderer/src/state/AppContext.tsx`, `src/renderer/src/pages/Live.tsx`,
   `src/renderer/src/pages/Island.tsx`
   - Move high-frequency level updates out of the app-wide context, or otherwise
     restrict them to the meter components; coalesce updates to display cadence.
   - *Done when:* meter animation remains responsive while unrelated pages and
     shell components do not rerender on every level event.
+  - *Verified:* levels now flow through an external store consumed only by the
+    Live and Island meter components. A fake-microphone smoke test rendered 18
+    live bars with changing heights after three seconds. 97 tests pass.
 
 - [ ] **N-3 Make note indexing incremental and searchable**
   `src/main/notes.ts`, `src/main/index.ts`, `src/shared/types.ts`,
