@@ -8,6 +8,11 @@ import type {
 } from '../shared/types'
 import { demoMode } from './mock'
 import { diarizationStatus } from './diarization'
+import {
+  decryptSecret,
+  encryptSecret,
+  migratePlainSecrets
+} from './secretStorage'
 import { DEFAULT_HOTKEY, HOTKEY_OPTIONS } from '../shared/hotkeys'
 
 const STT_MODELS = new Set(['whisper-large-v3', 'whisper-large-v3-turbo'])
@@ -235,36 +240,26 @@ interface SecretStore {
 }
 
 function loadSecrets(): SecretStore {
-  return readJson<SecretStore>(secretsFile(), { encrypted: {} })
+  const store = readJson<SecretStore>(secretsFile(), { encrypted: {} })
+  if (migratePlainSecrets(safeStorage, store)) {
+    writeJson(secretsFile(), store)
+  }
+  return store
 }
 
 export function setSecret(key: SecretKey, value: string): void {
   const store = loadSecrets()
   const trimmed = value.trim()
-  if (!trimmed) {
-    delete store.encrypted[key]
-  } else if (safeStorage.isEncryptionAvailable()) {
-    store.encrypted[key] = `dpapi:${safeStorage.encryptString(trimmed).toString('base64')}`
+  if (trimmed) {
+    store.encrypted[key] = encryptSecret(safeStorage, trimmed)
   } else {
-    store.encrypted[key] = `plain:${Buffer.from(trimmed, 'utf8').toString('base64')}`
+    delete store.encrypted[key]
   }
   writeJson(secretsFile(), store)
 }
 
 export function getSecret(key: SecretKey): string | null {
-  const stored = loadSecrets().encrypted[key]
-  if (!stored) return null
-  try {
-    if (stored.startsWith('dpapi:')) {
-      return safeStorage.decryptString(Buffer.from(stored.slice(6), 'base64'))
-    }
-    if (stored.startsWith('plain:')) {
-      return Buffer.from(stored.slice(6), 'base64').toString('utf8')
-    }
-  } catch {
-    return null
-  }
-  return null
+  return decryptSecret(safeStorage, loadSecrets().encrypted[key])
 }
 
 export function clearSecret(key: SecretKey): void {
@@ -283,6 +278,7 @@ export function settingsStatus(): SettingsStatus {
     settings,
     hasGroqKey: hasSecret('groqApiKey'),
     hasLlmKey: hasSecret('llmApiKey'),
+    secureStorageAvailable: safeStorage.isEncryptionAvailable(),
     notesDir: settings.notesDir,
     appVersion: app.getVersion(),
     recordingsDir: recordingsDir(),

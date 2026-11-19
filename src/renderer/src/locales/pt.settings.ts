@@ -3,6 +3,8 @@ export const settings: Record<string, string> = {
   'Settings saved.': 'Definições guardadas.',
   'Paste a key first.': 'Cole primeiro uma chave.',
   'Key saved and encrypted.': 'Chave guardada e encriptada.',
+  'Secure key storage is unavailable on this PC. ezNotes will not save API keys in plain text.':
+    'O armazenamento seguro de chaves não está disponível neste PC. O ezNotes não guarda chaves de API em texto simples.',
   'Key removed.': 'Chave removida.',
   'Notes folder: {path}': 'Pasta de notas: {path}',
   'Obsidian vault: {path}': 'Cofre do Obsidian: {path}',

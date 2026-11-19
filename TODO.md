@@ -246,14 +246,17 @@ verify reliability-sensitive changes with tests, and tick each item here and in
     content matches with transcript timestamps and has a Rescan action. 103
     tests pass.
 
-- [ ] **N-4 Fail closed when secure secret storage is unavailable**
-  `src/main/store.ts`, `src/shared/types.ts`,
+- [x] **N-4 Fail closed when secure secret storage is unavailable**
+  `src/main/store.ts`, `src/main/secretStorage.ts`, `src/shared/types.ts`,
   `src/renderer/src/pages/SettingsPage.tsx`, `src/renderer/src/locales/`
   - Do not describe base64-encoded plaintext as encryption. Migrate legacy
     `plain:` values to `safeStorage` when available; otherwise refuse new secret
     storage and show a clear localized warning.
   - *Done when:* tests verify encryption, migration, unavailable-storage
     behavior, and that secrets never appear in settings responses or logs.
+  - *Verified:* Windows DPAPI migrated a seeded legacy key and stored a new key
+    without plaintext in `secrets.json`; Settings reports secure storage and
+    disables Save when unavailable. 109 tests pass.
 
 - [ ] **N-5 Make first-run setup provider-aware**
   `src/renderer/src/pages/Dashboard.tsx`,

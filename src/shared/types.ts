@@ -42,6 +42,7 @@ export interface SettingsStatus {
   settings: Settings
   hasGroqKey: boolean
   hasLlmKey: boolean
+  secureStorageAvailable: boolean
   notesDir: string
   appVersion: string
   recordingsDir: string

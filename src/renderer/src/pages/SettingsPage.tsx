@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  AlertTriangle,
   BookOpen,
   CheckCircle2,
   Clock,
@@ -224,6 +225,15 @@ export default function SettingsPage(): React.JSX.Element {
       toast(t('Paste a key first.'), 'warn')
       return
     }
+    if (!settings?.secureStorageAvailable) {
+      toast(
+        t(
+          'Secure key storage is unavailable on this PC. ezNotes will not save API keys in plain text.'
+        ),
+        'error'
+      )
+      return
+    }
     try {
       await window.ezNotes.settings.setSecret(key, value.trim())
       setGroqKey('')
@@ -348,6 +358,17 @@ export default function SettingsPage(): React.JSX.Element {
         </div>
       ) : null}
 
+      {!settings.secureStorageAvailable ? (
+        <div className="banner banner-error" style={{ marginBottom: 24 }}>
+          <AlertTriangle size={17} />
+          <span>
+            {t(
+              'Secure key storage is unavailable on this PC. ezNotes will not save API keys in plain text.'
+            )}
+          </span>
+        </div>
+      ) : null}
+
       <section className="settings-section">
         <div className="settings-section-head">
           <span className="settings-icon">
@@ -392,6 +413,7 @@ export default function SettingsPage(): React.JSX.Element {
               <Button
                 variant="outline"
                 onClick={() => void saveSecret('groqApiKey', groqKey)}
+                disabled={!settings.secureStorageAvailable}
               >
                 {t('Save key')}
               </Button>
@@ -791,7 +813,7 @@ export default function SettingsPage(): React.JSX.Element {
                     autoComplete="off"
                   />
                 </div>
-                <Button variant="outline" onClick={() => void saveSecret('llmApiKey', llmKey)}>
+                <Button variant="outline" onClick={() => void saveSecret('llmApiKey', llmKey)} disabled={!settings.secureStorageAvailable}>
                   {t('Save key')}
                 </Button>
                 {hasLlm ? (
